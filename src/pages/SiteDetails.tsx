@@ -1,0 +1,713 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Heading,
+  Button,
+  Box,
+  Flex,
+  Text,
+  Badge,
+  VStack,
+  HStack,
+  Spinner,
+  Center,
+  Grid,
+  GridItem,
+  Divider,
+  Code,
+  useColorModeValue,
+  useToast,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
+} from '@chakra-ui/react';
+import {
+  ArrowBackIcon,
+  DeleteIcon,
+  SettingsIcon,
+} from '@chakra-ui/icons';
+import { Config, UpdateStatus, TokenInfo } from '../types';
+import { api } from '../utils/api';
+
+const SiteDetails: React.FC = () => {
+  const { siteUrl } = useParams<{ siteUrl: string }>();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [config, setConfig] = useState<Config | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingButton, setLoadingButton] = useState<string | null>(null);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalContent, setModalContent] = useState<React.ReactNode>(null);
+
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const hoverBg = useColorModeValue('gray.50', 'gray.700');
+
+  useEffect(() => {
+    loadConfig();
+  }, []);
+
+  const loadConfig = async () => {
+    try {
+      const configData = await api.getConfig();
+      setConfig(configData);
+    } catch (error) {
+      console.error('Error loading config:', error);
+    }
+  };
+
+  const decodedSiteUrl = decodeURIComponent(siteUrl || '');
+  const site = config?.sites?.[decodedSiteUrl];
+
+  const showModal = (title: string, content: React.ReactNode) => {
+    setModalTitle(title);
+    setModalContent(content);
+    onOpen();
+  };
+
+  const handleUpdateStatus = async () => {
+    setLoadingButton('update-status');
+    try {
+      const data = await api.getUpdateStatus();
+      
+      const formatUpdateInfo = (data: UpdateStatus) => {
+        return (
+          <VStack spacing={4} align="stretch">
+            {data.composer && (
+              <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+                <Heading size="md" mb={3}>Composer Status</Heading>
+                {data.composer.current_version && data.composer.latest_version ? (
+                  <VStack spacing={2} align="start">
+                    <Text><strong>Current Version:</strong> {data.composer.current_version}</Text>
+                    <Text><strong>Latest Version:</strong> {data.composer.latest_version}</Text>
+                    {data.composer.current_version !== data.composer.latest_version ? (
+                      <Badge colorScheme="orange">Update Available!</Badge>
+                    ) : (
+                      <Badge colorScheme="green">Up to Date</Badge>
+                    )}
+                  </VStack>
+                ) : null}
+                <Accordion allowToggle mt={4}>
+                  <AccordionItem>
+                    <AccordionButton>
+                      <Box flex="1" textAlign="left">
+                        Show full response
+                      </Box>
+                      <AccordionIcon />
+                    </AccordionButton>
+                    <AccordionPanel pb={4}>
+                      <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
+                        {JSON.stringify(data.composer, null, 2)}
+                      </Code>
+                    </AccordionPanel>
+                  </AccordionItem>
+                </Accordion>
+              </Box>
+            )}
+            
+            {data.selfUpdate && (
+              <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+                <Heading size="md" mb={3}>Self-Update Status</Heading>
+                {data.selfUpdate.current_version && data.selfUpdate.latest_version ? (
+                  <VStack spacing={2} align="start">
+                    <Text><strong>Current Version:</strong> {data.selfUpdate.current_version}</Text>
+                    <Text><strong>Latest Version:</strong> {data.selfUpdate.latest_version}</Text>
+                    {data.selfUpdate.current_version !== data.selfUpdate.latest_version ? (
+                      <Badge colorScheme="orange">Update Available!</Badge>
+                    ) : (
+                      <Badge colorScheme="green">Up to Date</Badge>
+                    )}
+                  </VStack>
+                ) : null}
+                <Accordion allowToggle mt={4}>
+                  <AccordionItem>
+                    <AccordionButton>
+                      <Box flex="1" textAlign="left">
+                        Show full response
+                      </Box>
+                      <AccordionIcon />
+                    </AccordionButton>
+                    <AccordionPanel pb={4}>
+                      <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
+                        {JSON.stringify(data.selfUpdate, null, 2)}
+                      </Code>
+                    </AccordionPanel>
+                  </AccordionItem>
+                </Accordion>
+              </Box>
+            )}
+
+            {data.errors && Object.keys(data.errors).length > 0 && (
+              <Alert status="error">
+                <AlertIcon />
+                <Box>
+                  <AlertTitle>Errors!</AlertTitle>
+                  <AlertDescription>
+                    {data.errors.composer && (
+                      <Text><strong>Composer:</strong> {data.errors.composer}</Text>
+                    )}
+                    {data.errors.selfUpdate && (
+                      <Text><strong>Self-Update:</strong> {data.errors.selfUpdate}</Text>
+                    )}
+                  </AlertDescription>
+                </Box>
+              </Alert>
+            )}
+          </VStack>
+        );
+      };
+
+      showModal('Update Status', formatUpdateInfo(data));
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Error getting update status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoadingButton(null);
+    }
+  };
+
+  const handleApiCall = async (apiCall: () => Promise<any>, title: string, formatResponse?: (data: any) => React.ReactNode) => {
+    setLoadingButton('api-call');
+    try {
+      const data = await apiCall();
+      
+      const content = formatResponse ? formatResponse(data) : (
+        <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
+          {JSON.stringify(data, null, 2)}
+        </Code>
+      );
+
+      showModal(title, content);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Error calling ${title}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoadingButton(null);
+    }
+  };
+
+  const handleApiCallWithButton = async (buttonId: string, apiCall: () => Promise<any>, title: string, formatResponse?: (data: any) => React.ReactNode) => {
+    setLoadingButton(buttonId);
+    try {
+      const data = await apiCall();
+      
+      const content = formatResponse ? formatResponse(data) : (
+        <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
+          {JSON.stringify(data, null, 2)}
+        </Code>
+      );
+
+      showModal(title, content);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Error calling ${title}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoadingButton(null);
+    }
+  };
+
+  const handleTokenInfo = async () => {
+    const formatTokenInfo = (data: { success: boolean; tokenInfo: TokenInfo; error?: string }) => {
+      if (!data.success) {
+        return (
+          <Alert status="error">
+            <AlertIcon />
+            <AlertTitle>Error!</AlertTitle>
+            <AlertDescription>
+              {data.error || 'Failed to get token info'}
+            </AlertDescription>
+          </Alert>
+        );
+      }
+
+      const tokenInfo = data.tokenInfo;
+      const scopeOrder = ['read', 'update', 'install', 'admin'];
+      const currentLevel = scopeOrder.indexOf(tokenInfo.scope);
+
+      return (
+        <VStack spacing={4} align="stretch">
+          <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+            <Heading size="md" mb={3}>🔑 Token Information</Heading>
+            <VStack spacing={2} align="start">
+              {tokenInfo.scope && (
+                <Text><strong>Current Scope:</strong> <Badge colorScheme="blue">{tokenInfo.scope}</Badge></Text>
+              )}
+              {tokenInfo.username && (
+                <Text><strong>Username:</strong> {tokenInfo.username}</Text>
+              )}
+              {tokenInfo.totp_enabled !== undefined && (
+                <Text><strong>TOTP Enabled:</strong> {tokenInfo.totp_enabled ? 'Yes' : 'No'}</Text>
+              )}
+            </VStack>
+            <Accordion allowToggle mt={4}>
+              <AccordionItem>
+                <AccordionButton>
+                  <Box flex="1" textAlign="left">
+                    Show full token info
+                  </Box>
+                  <AccordionIcon />
+                </AccordionButton>
+                <AccordionPanel pb={4}>
+                  <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
+                    {JSON.stringify(tokenInfo, null, 2)}
+                  </Code>
+                </AccordionPanel>
+              </AccordionItem>
+            </Accordion>
+          </Box>
+
+          <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+            <Heading size="sm" mb={3}>Required Scopes</Heading>
+            <VStack spacing={2} align="start">
+              <Text><strong>Read operations:</strong> "read" or higher</Text>
+              <Text><strong>Update operations:</strong> "update" or higher</Text>
+              <Text><strong>Install operations:</strong> "install" or higher</Text>
+              <Text><strong>Admin operations:</strong> "admin"</Text>
+            </VStack>
+          </Box>
+
+          {currentLevel >= 0 && (
+            <Alert status="info">
+              <AlertIcon />
+              <Box>
+                <AlertTitle>Analysis: Your "{tokenInfo.scope}" scope allows:</AlertTitle>
+                <VStack spacing={1} align="start" mt={2}>
+                  <Text>{currentLevel >= 0 ? '✅' : '❌'} Read operations</Text>
+                  <Text>{currentLevel >= 1 ? '✅' : '❌'} Update operations</Text>
+                  <Text>{currentLevel >= 2 ? '✅' : '❌'} Install operations</Text>
+                  <Text>{currentLevel >= 3 ? '✅' : '❌'} Admin operations</Text>
+                </VStack>
+              </Box>
+            </Alert>
+          )}
+        </VStack>
+      );
+    };
+
+    await handleApiCallWithButton('token-info', api.getTokenInfo, 'Token Information', formatTokenInfo);
+  };
+
+  const handleSetTaskData = () => {
+    const availableTasks = [
+      {
+        name: 'composer/update',
+        title: 'Composer Update',
+        description: 'Updates the installed Composer packages',
+        data: { name: 'composer/update', config: { dry_run: false } }
+      },
+      {
+        name: 'composer/install',
+        title: 'Composer Install',
+        description: 'Installs Composer packages from lock file',
+        data: { name: 'composer/install', config: { dry_run: false } }
+      },
+      {
+        name: 'composer/clear-cache',
+        title: 'Clear Composer Cache',
+        description: 'Clears the Composer cache',
+        data: { name: 'composer/clear-cache' }
+      },
+      {
+        name: 'composer/dump-autoload',
+        title: 'Dump Autoload',
+        description: 'Dumps the Composer autoloader',
+        data: { name: 'composer/dump-autoload' }
+      },
+      {
+        name: 'contao/rebuild-cache',
+        title: 'Rebuild Contao Cache',
+        description: 'Clears and rebuilds the Contao/Symfony cache',
+        data: { name: 'contao/rebuild-cache', environment: 'prod', warmup: true }
+      },
+      {
+        name: 'contao/backup-create',
+        title: 'Create Database Backup',
+        description: 'Creates a full backup of the current database',
+        data: { name: 'contao/backup-create' }
+      },
+      {
+        name: 'manager/self-update',
+        title: 'Manager Self-Update',
+        description: 'Updates the Contao Manager to the latest version',
+        data: { name: 'manager/self-update' }
+      }
+    ];
+
+    const taskSelector = (
+      <VStack spacing={4} align="stretch">
+        <Text fontSize="md" color="gray.600" mb={2}>
+          Select a task to execute on the Contao Manager:
+        </Text>
+        {availableTasks.map((task) => (
+          <Button
+            key={task.name}
+            variant="outline"
+            size="lg"
+            height="auto"
+            p={6}
+            textAlign="left"
+            justifyContent="flex-start"
+            borderWidth="2px"
+            borderColor={borderColor}
+            _hover={{
+              borderColor: "blue.300",
+              bg: hoverBg,
+              transform: "translateY(-1px)",
+              boxShadow: "md"
+            }}
+            _active={{
+              transform: "translateY(0)",
+              boxShadow: "sm"
+            }}
+            onClick={() => handleTaskSelection(task.data)}
+          >
+            <VStack align="start" spacing={1} width="100%">
+              <Heading size="sm" color="blue.500">{task.title}</Heading>
+              <Text fontSize="sm" color="gray.600" fontWeight="normal">
+                {task.description}
+              </Text>
+            </VStack>
+          </Button>
+        ))}
+      </VStack>
+    );
+
+    showModal('Select Task to Execute', taskSelector);
+  };
+
+  const handleTaskSelection = async (taskData: any) => {
+    setModalContent(null);
+    onClose();
+    await handleApiCallWithButton('set-task', () => api.setTaskData(taskData), 'Set Task Data');
+  };
+
+  const handleRemoveSite = async () => {
+    if (!site) return;
+    
+    const confirmed = window.confirm(`Are you sure you want to remove "${site.name}"?`);
+    if (!confirmed) return;
+
+    try {
+      await api.removeSite(site.url);
+      toast({
+        title: 'Success',
+        description: `Site "${site.name}" has been removed`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      navigate('/');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to remove site: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  if (!site) {
+    return (
+      <Container maxW="4xl">
+        <Center h="300px">
+          <VStack>
+            <Text>Site not found</Text>
+            <Button 
+              leftIcon={<ArrowBackIcon />}
+              onClick={() => navigate('/')}
+            >
+              Back to Sites
+            </Button>
+          </VStack>
+        </Center>
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxW="4xl">
+      <Flex justify="space-between" align="center" mb={8}>
+        <VStack align="start" spacing={2}>
+          <Heading size="xl">{site.name}</Heading>
+          <Code 
+            fontSize="sm" 
+            as="a" 
+            href={site.url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            _hover={{ textDecoration: 'underline' }}
+            cursor="pointer"
+          >
+            {site.url}
+          </Code>
+        </VStack>
+        <Button
+          leftIcon={<ArrowBackIcon />}
+          variant="ghost"
+          onClick={() => navigate('/')}
+        >
+          Back to Sites
+        </Button>
+      </Flex>
+
+      <Box bg={cardBg} border="1px" borderColor={borderColor} borderRadius="lg" p={8}>
+        <Heading size="lg" mb={6}>Available Functions</Heading>
+        
+        <VStack spacing={8} align="stretch">
+          {/* Server Configuration */}
+          <Box>
+            <HStack spacing={2} mb={4}>
+              <SettingsIcon />
+              <Heading size="md" color="blue.500">Server Configuration</Heading>
+            </HStack>
+            <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
+              <GridItem>
+                <Button
+                  colorScheme="blue"
+                  onClick={handleUpdateStatus}
+                  isLoading={loadingButton === 'update-status'}
+                  width="full"
+                >
+                  Get Update Status
+                </Button>
+              </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="blue"
+                  onClick={() => handleApiCallWithButton('php-web-config', api.getPhpWebConfig, 'PHP Web Server Configuration')}
+                  isLoading={loadingButton === 'php-web-config'}
+                  width="full"
+                >
+                  PHP Web Config
+                </Button>
+              </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="blue"
+                  onClick={() => handleApiCallWithButton('contao-config', api.getContaoConfig, 'Contao Configuration')}
+                  isLoading={loadingButton === 'contao-config'}
+                  width="full"
+                >
+                  Contao Config
+                </Button>
+              </GridItem>
+            </Grid>
+          </Box>
+
+          {/* Users Section */}
+          <Box>
+            <Heading size="md" color="green.500" mb={4}>👥 Users</Heading>
+            <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
+              <GridItem>
+                <Button
+                  colorScheme="green"
+                  onClick={() => handleApiCallWithButton('users-list', api.getUsersList, 'User List')}
+                  isLoading={loadingButton === 'users-list'}
+                  width="full"
+                >
+                  User List
+                </Button>
+              </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="green"
+                  onClick={handleTokenInfo}
+                  isLoading={loadingButton === 'token-info'}
+                  width="full"
+                >
+                  Get Token Info
+                </Button>
+              </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="green"
+                  onClick={async () => {
+                    try {
+                      setLoadingButton('token-list');
+                      const tokenInfo = await api.getTokenInfo();
+                      if (tokenInfo.success && tokenInfo.tokenInfo.username) {
+                        await handleApiCallWithButton('token-list', () => api.getTokensList(tokenInfo.tokenInfo.username), 'Token List');
+                      } else {
+                        toast({
+                          title: 'Error',
+                          description: 'Could not get username from token info',
+                          status: 'error',
+                          duration: 3000,
+                          isClosable: true,
+                        });
+                        setLoadingButton(null);
+                      }
+                    } catch (error) {
+                      toast({
+                        title: 'Error',
+                        description: 'Failed to get token list',
+                        status: 'error',
+                        duration: 3000,
+                        isClosable: true,
+                      });
+                      setLoadingButton(null);
+                    }
+                  }}
+                  isLoading={loadingButton === 'token-list'}
+                  width="full"
+                >
+                  Token List
+                </Button>
+              </GridItem>
+            </Grid>
+          </Box>
+
+          {/* Contao API Section */}
+          <Box>
+            <Heading size="md" color="orange.500" mb={4}>🚀 Contao API</Heading>
+            <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
+              <GridItem>
+                <Button
+                  colorScheme="orange"
+                  onClick={() => handleApiCallWithButton('migration-status', api.getDatabaseMigrationStatus, 'Migration Task Status')}
+                  isLoading={loadingButton === 'migration-status'}
+                  width="full"
+                >
+                  Migration Status
+                </Button>
+              </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="orange"
+                  onClick={() => handleApiCallWithButton('maintenance-mode', api.getMaintenanceModeStatus, 'Maintenance Mode Status')}
+                  isLoading={loadingButton === 'maintenance-mode'}
+                  width="full"
+                >
+                  Maintenance Mode
+                </Button>
+              </GridItem>
+            </Grid>
+          </Box>
+
+          {/* Tasks Section */}
+          <Box>
+            <Heading size="md" color="cyan.500" mb={4}>📋 Tasks</Heading>
+            <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
+              <GridItem>
+                <Button
+                  colorScheme="cyan"
+                  onClick={() => handleApiCallWithButton('get-task-data', api.getTaskData, 'Task Data')}
+                  isLoading={loadingButton === 'get-task-data'}
+                  width="full"
+                >
+                  Get Task Data
+                </Button>
+              </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="cyan"
+                  onClick={handleSetTaskData}
+                  isLoading={loadingButton === 'set-task'}
+                  width="full"
+                >
+                  Set Task Data
+                </Button>
+              </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="red"
+                  onClick={() => handleApiCallWithButton('delete-task', api.deleteTaskData, 'Delete Task Data')}
+                  isLoading={loadingButton === 'delete-task'}
+                  width="full"
+                >
+                  Delete Task Data
+                </Button>
+              </GridItem>
+            </Grid>
+          </Box>
+
+          {/* Packages Section */}
+          <Box>
+            <Heading size="md" color="purple.500" mb={4}>📦 Packages</Heading>
+            <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
+              <GridItem>
+                <Button
+                  colorScheme="purple"
+                  onClick={() => handleApiCallWithButton('root-package', api.getRootPackageDetails, 'Root Package Details')}
+                  isLoading={loadingButton === 'root-package'}
+                  width="full"
+                >
+                  Root Package Details
+                </Button>
+              </GridItem>
+            </Grid>
+          </Box>
+        </VStack>
+
+        <Divider my={8} />
+        
+        <VStack spacing={4} align="start">
+          <Heading size="md" color="gray.500">Site Management</Heading>
+          <Button
+            leftIcon={<DeleteIcon />}
+            colorScheme="red"
+            onClick={handleRemoveSite}
+          >
+            Remove Site
+          </Button>
+        </VStack>
+
+        <Box mt={8} p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
+          <VStack spacing={2} align="start">
+            <Text fontSize="sm"><strong>Last Used:</strong> {new Date(site.lastUsed).toLocaleString()}</Text>
+            <Text fontSize="sm"><strong>Token:</strong> <Code>{site.token.substring(0, 8)}...</Code></Text>
+          </VStack>
+        </Box>
+      </Box>
+
+      <Modal isOpen={isOpen} onClose={onClose} size="4xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>{modalTitle}</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody maxH="70vh" overflowY="auto">
+            {modalContent}
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={onClose}>Close</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </Container>
+  );
+};
+
+export default SiteDetails;

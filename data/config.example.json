@@ -1,0 +1,11 @@
+{
+  "sites": {
+    "https://example.com/contao-manager.phar.php": {
+      "name": "Example Site",
+      "url": "https://example.com/contao-manager.phar.php",
+      "token": "your-api-token-here",
+      "lastUsed": "2025-01-01T00:00:00.000Z"
+    }
+  },
+  "activeSite": "https://example.com/contao-manager.phar.php"
+}

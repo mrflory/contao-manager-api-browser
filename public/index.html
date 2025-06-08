@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contao Manager API Browser</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], input[type="password"], input[type="url"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007cba;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #005a87;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .update-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            display: none;
+        }
+        .update-section {
+            margin-bottom: 15px;
+        }
+        .update-section h3 {
+            margin: 0 0 10px 0;
+            color: #495057;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        .site-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        .site-item:hover {
+            background-color: #e9ecef;
+            cursor: pointer;
+        }
+        .site-info {
+            flex: 1;
+        }
+        .site-name {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        .site-url {
+            font-size: 12px;
+            color: #6c757d;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Contao Manager API Browser</h1>
+        
+        <form id="authForm">
+            <div class="form-group">
+                <label for="url">Contao Manager URL:</label>
+                <input type="url" id="url" placeholder="https://example.com/contao-manager.phar.php" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="scope">Required Permissions:</label>
+                <select id="scope" required>
+                    <option value="read">Read Only</option>
+                    <option value="update">Read + Update</option>
+                    <option value="install">Read + Update + Install</option>
+                    <option value="admin">Full Admin Access</option>
+                </select>
+            </div>
+            
+            <button type="submit" id="authBtn">Generate API Token</button>
+        </form>
+        
+        <div id="tokenForm" style="display: none;">
+            <div class="form-group">
+                <label for="token">API Token (paste from redirect URL):</label>
+                <input type="text" id="token" placeholder="Enter your API token here">
+            </div>
+            <button type="button" id="saveTokenBtn">Save Token</button>
+        </div>
+        
+        <div id="siteSelector" style="display: none;">
+            <h2>Select Site</h2>
+            <div class="form-group">
+                <label>Available Sites:</label>
+                <div id="siteList"></div>
+            </div>
+            <div class="form-group">
+                <button type="button" id="addSiteBtn" style="background-color: #28a745;">Add New Site</button>
+            </div>
+        </div>
+
+        <div id="mainInterface" style="display: none;">
+            <h2>Contao Manager Functions</h2>
+            <div class="form-group">
+                <label>Active Site:</label>
+                <p id="connectedUrl" style="margin: 5px 0; padding: 8px; background-color: #f8f9fa; border-radius: 4px; font-family: monospace;"></p>
+            </div>
+            <div class="form-group">
+                <button type="button" id="updateBtn">Get Update Status</button>
+                <button type="button" id="tokenInfoBtn" style="background-color: #17a2b8;">Check Token Info</button>
+                <button type="button" id="backToSitesBtn" style="background-color: #6c757d;">← Back to Sites</button>
+                <button type="button" id="removeSiteBtn" style="background-color: #ffc107;">Remove Site</button>
+            </div>
+        </div>
+        
+        <div id="status" class="status"></div>
+        <div id="updateInfo" class="update-info"></div>
+    </div>
+
+    <script>
+        let currentConfig = null;
+
+        function showAuthInterface() {
+            document.getElementById('authForm').style.display = 'block';
+            document.getElementById('tokenForm').style.display = 'none';
+            document.getElementById('siteSelector').style.display = 'none';
+            document.getElementById('mainInterface').style.display = 'none';
+            
+            // Clear the form
+            document.getElementById('url').value = '';
+            document.getElementById('scope').value = 'admin';
+        }
+
+        function showSiteSelector() {
+            document.getElementById('authForm').style.display = 'none';
+            document.getElementById('tokenForm').style.display = 'none';
+            document.getElementById('siteSelector').style.display = 'block';
+            document.getElementById('mainInterface').style.display = 'none';
+            loadSites();
+        }
+
+        function showMainInterface() {
+            document.getElementById('authForm').style.display = 'none';
+            document.getElementById('tokenForm').style.display = 'none';
+            document.getElementById('siteSelector').style.display = 'none';
+            document.getElementById('mainInterface').style.display = 'block';
+            
+            if (currentConfig && currentConfig.activeSite) {
+                document.getElementById('connectedUrl').textContent = currentConfig.activeSite.name + ' (' + currentConfig.activeSite.url + ')';
+            }
+        }
+
+        async function loadSites() {
+            try {
+                const response = await fetch('/api/config');
+                currentConfig = await response.json();
+                
+                const siteList = document.getElementById('siteList');
+                siteList.innerHTML = '';
+                
+                if (currentConfig.sites && currentConfig.sites.length > 0) {
+                    currentConfig.sites.forEach(site => {
+                        const siteDiv = document.createElement('div');
+                        siteDiv.className = 'site-item';
+                        siteDiv.innerHTML = `
+                            <div class="site-info">
+                                <div class="site-name">${site.name}</div>
+                                <div class="site-url">${site.url}</div>
+                            </div>
+                        `;
+                        siteDiv.addEventListener('click', () => selectSite(site.url));
+                        siteList.appendChild(siteDiv);
+                    });
+                } else {
+                    siteList.innerHTML = '<p>No sites configured. Add your first site.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading sites:', error);
+            }
+        }
+
+        async function selectSite(url) {
+            try {
+                const response = await fetch('/api/set-active-site', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentConfig.activeSite = data.activeSite;
+                    showMainInterface();
+                }
+            } catch (error) {
+                console.error('Error selecting site:', error);
+            }
+        }
+
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const url = document.getElementById('url').value;
+            const scope = document.getElementById('scope').value;
+            
+            const authBtn = document.getElementById('authBtn');
+            const status = document.getElementById('status');
+            
+            authBtn.disabled = true;
+            authBtn.textContent = 'Redirecting...';
+            
+            try {
+                const managerUrlClean = url.replace(/\/$/, '');
+                const clientId = 'Contao Manager API Browser';
+                const redirectUri = window.location.origin + window.location.pathname + '#token';
+                
+                const oauthUrl = `${managerUrlClean}/#oauth?` + new URLSearchParams({
+                    response_type: 'token',
+                    scope: scope,
+                    client_id: clientId,
+                    redirect_uri: redirectUri
+                }).toString();
+                
+                status.className = 'status success';
+                status.textContent = 'Redirecting to Contao Manager for authentication...';
+                status.style.display = 'block';
+                
+                managerUrl = managerUrlClean;
+                localStorage.setItem('managerUrl', managerUrl);
+                
+                setTimeout(() => {
+                    window.location.href = oauthUrl;
+                }, 1000);
+                
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = `Error: ${error.message}`;
+                status.style.display = 'block';
+                
+                authBtn.disabled = false;
+                authBtn.textContent = 'Generate API Token';
+            }
+        });
+        
+        document.getElementById('saveTokenBtn').addEventListener('click', async () => {
+            const token = document.getElementById('token').value.trim();
+            const status = document.getElementById('status');
+            const saveTokenBtn = document.getElementById('saveTokenBtn');
+            
+            if (!token) {
+                status.className = 'status error';
+                status.textContent = 'Please enter a valid token';
+                status.style.display = 'block';
+                return;
+            }
+            
+            saveTokenBtn.disabled = true;
+            saveTokenBtn.textContent = 'Saving...';
+            
+            try {
+                const managerUrlStored = localStorage.getItem('managerUrl');
+                const response = await fetch('/api/save-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        token: token, 
+                        managerUrl: managerUrlStored 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    status.className = 'status success';
+                    status.textContent = 'Site added successfully!';
+                    status.style.display = 'block';
+                    
+                    // Refresh config and show site selector
+                    const configResponse = await fetch('/api/config');
+                    currentConfig = await configResponse.json();
+                    showSiteSelector();
+                } else {
+                    throw new Error(data.error || 'Failed to save token');
+                }
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = `Error: ${error.message}`;
+                status.style.display = 'block';
+            }
+            
+            saveTokenBtn.disabled = false;
+            saveTokenBtn.textContent = 'Save Token';
+        });
+        
+        
+        // Check for existing config on page load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/api/config');
+                currentConfig = await response.json();
+                
+                // If we have sites, show the site selector
+                if (currentConfig.sites && currentConfig.sites.length > 0) {
+                    showSiteSelector();
+                    return;
+                }
+            } catch (error) {
+                console.error('Error loading config:', error);
+            }
+            
+            // Check for token in URL hash
+            const hash = window.location.hash;
+            console.log('Current URL hash:', hash);
+            
+            // Try different hash formats
+            let token = null;
+            
+            if (hash.includes('access_token=')) {
+                console.log('Found access_token in hash');
+                
+                // Method 1: Extract from URL fragment properly
+                const hashParams = hash.substring(1); // Remove the #
+                const params = new URLSearchParams(hashParams);
+                token = params.get('access_token');
+                
+                console.log('Method 1 - URLSearchParams token:', token);
+                
+                // Method 2: Manual extraction as fallback
+                if (!token) {
+                    const match = hash.match(/access_token=([^&]+)/);
+                    if (match) {
+                        token = match[1];
+                        console.log('Method 2 - Regex token:', token);
+                    }
+                }
+                
+                console.log('Final extracted token:', token);
+                console.log('Token length:', token ? token.length : 'null');
+                
+                if (token) {
+                    document.getElementById('token').value = token;
+                    document.getElementById('tokenForm').style.display = 'block';
+                    document.getElementById('authForm').style.display = 'none';
+                    
+                    const status = document.getElementById('status');
+                    status.className = 'status success';
+                    status.textContent = 'Token received! Please save it to continue.';
+                    status.style.display = 'block';
+                    return;
+                }
+            } else {
+                console.log('No access_token found in hash');
+            }
+            
+            // Show auth interface if no token
+            showAuthInterface();
+        });
+
+        document.getElementById('updateBtn').addEventListener('click', async () => {
+            const updateBtn = document.getElementById('updateBtn');
+            const updateInfo = document.getElementById('updateInfo');
+            
+            updateBtn.disabled = true;
+            updateBtn.textContent = 'Getting Status...';
+            
+            try {
+                const response = await fetch('/api/update-status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('Update status response:', data);
+                
+                if (response.ok) {
+                    let html = '';
+                    
+                    // Composer Status
+                    if (data.composer) {
+                        html += '<div class="update-section">';
+                        html += '<h3>Composer Status</h3>';
+                        if (data.composer.current_version && data.composer.latest_version) {
+                            html += `<p><strong>Current Version:</strong> ${data.composer.current_version}</p>`;
+                            html += `<p><strong>Latest Version:</strong> ${data.composer.latest_version}</p>`;
+                            if (data.composer.current_version !== data.composer.latest_version) {
+                                html += '<p style="color: #e67e22;"><strong>Update Available!</strong></p>';
+                            } else {
+                                html += '<p style="color: #27ae60;"><strong>Up to Date</strong></p>';
+                            }
+                        }
+                        html += '<details><summary>Full Response</summary>';
+                        html += '<pre>' + JSON.stringify(data.composer, null, 2) + '</pre>';
+                        html += '</details></div>';
+                    } else if (data.errors && data.errors.composer) {
+                        html += '<div class="update-section">';
+                        html += '<h3>Composer Status</h3>';
+                        html += `<div class="status error">${data.errors.composer}</div>`;
+                        html += '</div>';
+                    }
+                    
+                    // Self-Update Status
+                    if (data.selfUpdate) {
+                        html += '<div class="update-section">';
+                        html += '<h3>Self-Update Status</h3>';
+                        if (data.selfUpdate.current_version && data.selfUpdate.latest_version) {
+                            html += `<p><strong>Current Version:</strong> ${data.selfUpdate.current_version}</p>`;
+                            html += `<p><strong>Latest Version:</strong> ${data.selfUpdate.latest_version}</p>`;
+                            if (data.selfUpdate.current_version !== data.selfUpdate.latest_version) {
+                                html += '<p style="color: #e67e22;"><strong>Update Available!</strong></p>';
+                            } else {
+                                html += '<p style="color: #27ae60;"><strong>Up to Date</strong></p>';
+                            }
+                        }
+                        html += '<details><summary>Full Response</summary>';
+                        html += '<pre>' + JSON.stringify(data.selfUpdate, null, 2) + '</pre>';
+                        html += '</details></div>';
+                    } else if (data.errors && data.errors.selfUpdate) {
+                        html += '<div class="update-section">';
+                        html += '<h3>Self-Update Status</h3>';
+                        html += `<div class="status error">${data.errors.selfUpdate}</div>`;
+                        html += '</div>';
+                    }
+                    
+                    // Show permission hint if we have errors
+                    if (data.errors && Object.keys(data.errors).length > 0) {
+                        html += '<div class="update-section">';
+                        html += '<h3>💡 Permission Info</h3>';
+                        html += '<p>Some endpoints require higher permissions:</p>';
+                        html += '<ul>';
+                        html += '<li><strong>Composer Status:</strong> Requires "read" scope or higher</li>';
+                        html += '<li><strong>Self-Update Status:</strong> Requires "update" scope or higher</li>';
+                        html += '</ul>';
+                        html += '<p>To access all features, regenerate your API token with "update" or "admin" scope.</p>';
+                        html += '</div>';
+                    }
+                    
+                    if (!html) {
+                        html = '<div class="status error">No update information received</div>';
+                    }
+                    
+                    updateInfo.innerHTML = html;
+                    updateInfo.style.display = 'block';
+                } else {
+                    throw new Error(data.error || 'Failed to get update status');
+                }
+            } catch (error) {
+                console.error('Update status error:', error);
+                updateInfo.innerHTML = `<div class="status error">Error: ${error.message}</div>`;
+                updateInfo.style.display = 'block';
+            }
+            
+            updateBtn.disabled = false;
+            updateBtn.textContent = 'Get Update Status';
+        });
+        
+        document.getElementById('tokenInfoBtn').addEventListener('click', async () => {
+            const tokenInfoBtn = document.getElementById('tokenInfoBtn');
+            const updateInfo = document.getElementById('updateInfo');
+            
+            tokenInfoBtn.disabled = true;
+            tokenInfoBtn.textContent = 'Checking...';
+            
+            try {
+                const response = await fetch('/api/token-info', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('Token info response:', data);
+                
+                if (response.ok && data.success) {
+                    let html = '<div class="update-section">';
+                    html += '<h3>🔑 Token Information</h3>';
+                    
+                    if (data.tokenInfo.scope) {
+                        html += `<p><strong>Current Scope:</strong> ${data.tokenInfo.scope}</p>`;
+                    }
+                    if (data.tokenInfo.username) {
+                        html += `<p><strong>Username:</strong> ${data.tokenInfo.username}</p>`;
+                    }
+                    if (data.tokenInfo.totp_enabled !== undefined) {
+                        html += `<p><strong>TOTP Enabled:</strong> ${data.tokenInfo.totp_enabled}</p>`;
+                    }
+                    
+                    html += '<details><summary>Full Token Info</summary>';
+                    html += '<pre>' + JSON.stringify(data.tokenInfo, null, 2) + '</pre>';
+                    html += '</details>';
+                    
+                    html += '<h4>Required Scopes:</h4>';
+                    html += '<ul>';
+                    html += '<li><strong>Composer Status:</strong> "read" or higher</li>';
+                    html += '<li><strong>Self-Update Status:</strong> "update" or higher</li>';
+                    html += '</ul>';
+                    
+                    const currentScope = data.tokenInfo.scope;
+                    const scopeOrder = ['read', 'update', 'install', 'admin'];
+                    const currentLevel = scopeOrder.indexOf(currentScope);
+                    
+                    if (currentLevel >= 0) {
+                        html += `<p><strong>Analysis:</strong> Your "${currentScope}" scope should allow:</p>`;
+                        html += '<ul>';
+                        if (currentLevel >= 0) html += '<li>✅ Composer Status (requires "read")</li>';
+                        if (currentLevel >= 1) html += '<li>✅ Self-Update Status (requires "update")</li>';
+                        if (currentLevel === 0) html += '<li>❌ Self-Update Status (requires "update")</li>';
+                        html += '</ul>';
+                    }
+                    
+                    html += '</div>';
+                    
+                    updateInfo.innerHTML = html;
+                    updateInfo.style.display = 'block';
+                } else {
+                    throw new Error(data.error || 'Failed to get token info');
+                }
+            } catch (error) {
+                console.error('Token info error:', error);
+                updateInfo.innerHTML = `<div class="status error">Error: ${error.message}</div>`;
+                updateInfo.style.display = 'block';
+            }
+            
+            tokenInfoBtn.disabled = false;
+            tokenInfoBtn.textContent = 'Check Token Info';
+        });
+        
+
+        // New site management event handlers
+        document.getElementById('addSiteBtn').addEventListener('click', () => {
+            // Clear any existing status
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('updateInfo').style.display = 'none';
+            showAuthInterface();
+        });
+
+        document.getElementById('backToSitesBtn').addEventListener('click', () => {
+            showSiteSelector();
+        });
+
+        document.getElementById('removeSiteBtn').addEventListener('click', async () => {
+            if (!currentConfig.activeSite) return;
+            
+            const confirmed = confirm(`Are you sure you want to remove "${currentConfig.activeSite.name}"?`);
+            if (!confirmed) return;
+            
+            try {
+                const response = await fetch(`/api/sites/${encodeURIComponent(currentConfig.activeSite.url)}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    // Refresh config and show appropriate interface
+                    const configResponse = await fetch('/api/config');
+                    currentConfig = await configResponse.json();
+                    
+                    if (currentConfig.sites && currentConfig.sites.length > 0) {
+                        showSiteSelector();
+                    } else {
+                        showAuthInterface();
+                    }
+                }
+            } catch (error) {
+                console.error('Error removing site:', error);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,691 @@
+const express = require('express');
+const axios = require('axios');
+const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const TOKEN_FILE = path.join(__dirname, 'data', 'config.json');
+
+app.use(cors());
+app.use(express.json());
+// Serve React build in production, public in development
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static('dist'));
+} else {
+    app.use(express.static('public'));
+}
+
+// Helper functions for multi-site config storage
+function loadConfig() {
+    try {
+        if (fs.existsSync(TOKEN_FILE)) {
+            const data = fs.readFileSync(TOKEN_FILE, 'utf8');
+            const config = JSON.parse(data);
+            
+            // Migrate old format to new format
+            if (config.token && config.managerUrl) {
+                console.log('Migrating old config format to multi-site format');
+                const oldConfig = { ...config };
+                const newConfig = {
+                    sites: {
+                        [oldConfig.managerUrl]: {
+                            name: extractSiteName(oldConfig.managerUrl),
+                            url: oldConfig.managerUrl,
+                            token: oldConfig.token,
+                            lastUsed: new Date().toISOString()
+                        }
+                    },
+                    activeSite: oldConfig.managerUrl
+                };
+                saveConfig(newConfig);
+                return newConfig;
+            }
+            
+            return config;
+        }
+    } catch (error) {
+        console.error('Error loading config:', error.message);
+    }
+    return { sites: {}, activeSite: null };
+}
+
+function saveConfig(config) {
+    try {
+        fs.writeFileSync(TOKEN_FILE, JSON.stringify(config, null, 2));
+        return true;
+    } catch (error) {
+        console.error('Error saving config:', error.message);
+        return false;
+    }
+}
+
+function extractSiteName(url) {
+    try {
+        const urlObj = new URL(url);
+        return urlObj.hostname;
+    } catch {
+        return url;
+    }
+}
+
+function addSite(url, token, name = null) {
+    const config = loadConfig();
+    const siteName = name || extractSiteName(url);
+    
+    config.sites[url] = {
+        name: siteName,
+        url: url,
+        token: token,
+        lastUsed: new Date().toISOString()
+    };
+    
+    // Set as active site if it's the first one or no active site
+    if (!config.activeSite || Object.keys(config.sites).length === 1) {
+        config.activeSite = url;
+    }
+    
+    return saveConfig(config);
+}
+
+function getActiveSite() {
+    const config = loadConfig();
+    if (config.activeSite && config.sites[config.activeSite]) {
+        return config.sites[config.activeSite];
+    }
+    return null;
+}
+
+function setActiveSite(url) {
+    const config = loadConfig();
+    if (config.sites[url]) {
+        config.activeSite = url;
+        config.sites[url].lastUsed = new Date().toISOString();
+        return saveConfig(config);
+    }
+    return false;
+}
+
+app.get('/api/config', (req, res) => {
+    try {
+        console.log('Loading config for /api/config endpoint');
+        const config = loadConfig();
+        const activeSite = getActiveSite();
+        
+        const response = { 
+            sites: config.sites || {},
+            activeSite: activeSite,
+            hasActiveSite: !!activeSite
+        };
+        
+        console.log('Config response:', JSON.stringify(response, null, 2));
+        res.json(response);
+    } catch (error) {
+        console.error('Error in /api/config:', error);
+        res.status(500).json({ error: 'Failed to load configuration' });
+    }
+});
+
+app.post('/api/set-active-site', (req, res) => {
+    const { url } = req.body;
+    
+    if (!url) {
+        return res.status(400).json({ error: 'Site URL is required' });
+    }
+    
+    if (setActiveSite(url)) {
+        const activeSite = getActiveSite();
+        res.json({ success: true, activeSite });
+    } else {
+        res.status(404).json({ error: 'Site not found' });
+    }
+});
+
+app.delete('/api/sites/:url', (req, res) => {
+    const url = decodeURIComponent(req.params.url);
+    const config = loadConfig();
+    
+    if (config.sites[url]) {
+        delete config.sites[url];
+        
+        // If this was the active site, set a new active site or none
+        if (config.activeSite === url) {
+            const remainingSites = Object.keys(config.sites);
+            config.activeSite = remainingSites.length > 0 ? remainingSites[0] : null;
+        }
+        
+        saveConfig(config);
+        res.json({ success: true });
+    } else {
+        res.status(404).json({ error: 'Site not found' });
+    }
+});
+
+app.get('/api/token-info', async (req, res) => {
+    try {
+        const activeSite = getActiveSite();
+        
+        if (!activeSite) {
+            return res.status(400).json({ error: 'No active site configured' });
+        }
+
+        console.log('Checking token info for:', activeSite.url);
+        console.log('Token length:', activeSite.token.length);
+        console.log('Token starts with:', activeSite.token.substring(0, 20) + '...');
+        
+        // Get session info to see token scope
+        let sessionResponse;
+        
+        // Try Contao-Manager-Auth header first (recommended by swagger)
+        try {
+            console.log('Trying Contao-Manager-Auth header for session');
+            sessionResponse = await axios.get(`${activeSite.url}/api/session`, {
+                headers: {
+                    'Contao-Manager-Auth': activeSite.token
+                },
+                timeout: 10000,
+                validateStatus: status => status < 500
+            });
+            console.log('Contao-Manager-Auth worked for session');
+        } catch (error) {
+            console.log('Contao-Manager-Auth failed for session, trying Authorization Bearer');
+            // Fallback to Authorization Bearer header
+            sessionResponse = await axios.get(`${activeSite.url}/api/session`, {
+                headers: {
+                    'Authorization': `Bearer ${activeSite.token}`
+                },
+                timeout: 10000,
+                validateStatus: status => status < 500
+            });
+            console.log('Authorization Bearer worked for session');
+        }
+        
+        console.log('Session response status:', sessionResponse.status);
+        console.log('Session response data:', sessionResponse.data);
+
+        if (sessionResponse.status === 200) {
+            res.json({
+                success: true,
+                tokenInfo: sessionResponse.data,
+                site: activeSite
+            });
+        } else {
+            res.status(sessionResponse.status).json({ 
+                error: 'Failed to get token info',
+                status: sessionResponse.status,
+                response: sessionResponse.data
+            });
+        }
+    } catch (error) {
+        console.error('Token info error:', error.message);
+        res.status(500).json({ error: 'Failed to get token info: ' + error.message });
+    }
+});
+
+app.post('/api/save-token', async (req, res) => {
+    try {
+        const { token, managerUrl } = req.body;
+        
+        if (!token || !managerUrl) {
+            return res.status(400).json({ error: 'Token and manager URL are required' });
+        }
+
+        // Validate token before saving
+        const testResponse = await axios.get(`${managerUrl}/api/session`, {
+            headers: {
+                'Contao-Manager-Auth': token
+            },
+            timeout: 10000,
+            validateStatus: status => status < 500
+        });
+
+        if (testResponse.status !== 200) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        if (addSite(managerUrl, token)) {
+            const activeSite = getActiveSite();
+            res.json({ success: true, activeSite });
+        } else {
+            res.status(500).json({ error: 'Failed to save site configuration' });
+        }
+    } catch (error) {
+        console.error('Save token error:', error.message);
+        res.status(500).json({ error: 'Failed to validate and save token' });
+    }
+});
+
+app.post('/api/validate-token', async (req, res) => {
+    try {
+        const { url, token } = req.body;
+        
+        if (!url || !token) {
+            return res.status(400).json({ error: 'URL and token are required' });
+        }
+
+        const managerUrl = url.replace(/\/$/, '');
+        
+        // Test the token by making a simple API call
+        let testResponse;
+        
+        // Try Authorization Bearer first
+        try {
+            console.log('Trying token validation with Authorization Bearer header');
+            testResponse = await axios.get(`${managerUrl}/api/session`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                timeout: 10000,
+                validateStatus: status => status < 500
+            });
+            console.log('Authorization Bearer worked for token validation');
+        } catch (error) {
+            console.log('Bearer auth failed for token validation, trying Contao-Manager-Auth header');
+            // Fallback to Contao-Manager-Auth header
+            testResponse = await axios.get(`${managerUrl}/api/session`, {
+                headers: {
+                    'Contao-Manager-Auth': token
+                },
+                timeout: 10000,
+                validateStatus: status => status < 500
+            });
+            console.log('Contao-Manager-Auth header worked for token validation');
+        }
+
+        if (testResponse.status === 200) {
+            res.json({ success: true, url: managerUrl });
+        } else {
+            res.status(401).json({ error: 'Invalid token' });
+        }
+    } catch (error) {
+        console.error('Token validation error:', error.message);
+        res.status(500).json({ error: 'Failed to validate token' });
+    }
+});
+
+app.post('/api/update-status', async (req, res) => {
+    try {
+        const activeSite = getActiveSite();
+        
+        if (!activeSite) {
+            return res.status(400).json({ error: 'No active site configured' });
+        }
+
+        console.log('Making requests to:', activeSite.url);
+        
+        const result = {
+            composer: null,
+            selfUpdate: null,
+            errors: {}
+        };
+
+        // Try composer endpoint
+        try {
+            let updateResponse;
+            
+            // Try Contao-Manager-Auth first (recommended by swagger)
+            try {
+                console.log('Trying composer endpoint with Contao-Manager-Auth header');
+                updateResponse = await axios.get(`${activeSite.url}/api/server/composer`, {
+                    headers: {
+                        'Contao-Manager-Auth': activeSite.token
+                    },
+                    timeout: 10000,
+                    validateStatus: status => status < 500
+                });
+                console.log('Contao-Manager-Auth worked for composer');
+            } catch (error) {
+                console.log('Contao-Manager-Auth failed for composer, trying Authorization Bearer');
+                // Fallback to Authorization Bearer header
+                updateResponse = await axios.get(`${activeSite.url}/api/server/composer`, {
+                    headers: {
+                        'Authorization': `Bearer ${activeSite.token}`
+                    },
+                    timeout: 10000,
+                    validateStatus: status => status < 500
+                });
+                console.log('Authorization Bearer worked for composer');
+            }
+            
+            console.log('Composer response status:', updateResponse.status);
+            console.log('Composer response data:', updateResponse.data);
+
+            if (updateResponse.status === 200) {
+                result.composer = updateResponse.data;
+            } else if (updateResponse.status === 403) {
+                result.errors.composer = 'Insufficient permissions for composer status (requires "read" scope or higher)';
+            } else {
+                result.errors.composer = `Request failed with status ${updateResponse.status}`;
+            }
+        } catch (error) {
+            console.error('Composer request error:', error.message);
+            result.errors.composer = `Failed to fetch composer status: ${error.message}`;
+        }
+
+        // Try self-update endpoint
+        try {
+            let statusResponse;
+            
+            // Try Contao-Manager-Auth first (recommended by swagger)
+            try {
+                console.log('Trying self-update endpoint with Contao-Manager-Auth header');
+                statusResponse = await axios.get(`${activeSite.url}/api/server/self-update`, {
+                    headers: {
+                        'Contao-Manager-Auth': activeSite.token
+                    },
+                    timeout: 10000,
+                    validateStatus: status => status < 500
+                });
+                console.log('Contao-Manager-Auth worked for self-update');
+            } catch (error) {
+                console.log('Contao-Manager-Auth failed for self-update, trying Authorization Bearer');
+                // Fallback to Authorization Bearer header
+                statusResponse = await axios.get(`${activeSite.url}/api/server/self-update`, {
+                    headers: {
+                        'Authorization': `Bearer ${activeSite.token}`
+                    },
+                    timeout: 10000,
+                    validateStatus: status => status < 500
+                });
+                console.log('Authorization Bearer worked for self-update');
+            }
+            
+            console.log('Self-update response status:', statusResponse.status);
+            console.log('Self-update response data:', statusResponse.data);
+
+            if (statusResponse.status === 200) {
+                result.selfUpdate = statusResponse.data;
+            } else if (statusResponse.status === 403) {
+                result.errors.selfUpdate = 'Insufficient permissions for self-update status (requires "update" scope)';
+            } else {
+                result.errors.selfUpdate = `Request failed with status ${statusResponse.status}`;
+            }
+        } catch (error) {
+            console.error('Self-update request error:', error.message);
+            result.errors.selfUpdate = `Failed to fetch self-update status: ${error.message}`;
+        }
+
+        // Return results even if some endpoints failed
+        res.json(result);
+    } catch (error) {
+        console.error('Update status error:', error.message);
+        console.error('Error details:', error.response?.data || error);
+        res.status(500).json({ error: 'Failed to get update status: ' + error.message });
+    }
+});
+
+// Generic proxy helper for Contao Manager API
+async function proxyToContaoManager(endpoint, method = 'GET', data = null) {
+    const activeSite = getActiveSite();
+    
+    if (!activeSite) {
+        throw new Error('No active site configured');
+    }
+
+    const config = {
+        method,
+        url: `${activeSite.url}${endpoint}`,
+        timeout: 10000,
+        validateStatus: status => status < 500
+    };
+
+    if (data) {
+        config.data = data;
+        config.headers = { 'Content-Type': 'application/json' };
+    }
+
+    console.log(`[API REQUEST] ${method} ${activeSite.url}${endpoint}`);
+    if (data) {
+        console.log('[API REQUEST BODY]', JSON.stringify(data, null, 2));
+    }
+
+    let response;
+    
+    // Try Contao-Manager-Auth header first (recommended by swagger)
+    try {
+        config.headers = {
+            ...config.headers,
+            'Contao-Manager-Auth': activeSite.token
+        };
+        console.log('[API REQUEST] Using Contao-Manager-Auth header');
+        response = await axios(config);
+        console.log('[API REQUEST] Contao-Manager-Auth worked');
+    } catch (error) {
+        console.log('[API REQUEST] Contao-Manager-Auth failed, trying Authorization Bearer');
+        // Fallback to Authorization Bearer header
+        config.headers = {
+            ...config.headers,
+            'Authorization': `Bearer ${activeSite.token}`
+        };
+        delete config.headers['Contao-Manager-Auth'];
+        response = await axios(config);
+        console.log('[API REQUEST] Authorization Bearer worked');
+    }
+
+    console.log(`[API RESPONSE] Status: ${response.status}`);
+    console.log('[API RESPONSE] Headers:', response.headers);
+    
+    // Log response data safely
+    if (response.data !== undefined) {
+        try {
+            const dataStr = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
+            console.log('[API RESPONSE] Data:', dataStr);
+            console.log('[API RESPONSE] Data type:', typeof response.data);
+            console.log('[API RESPONSE] Data length:', dataStr.length);
+        } catch (e) {
+            console.log('[API RESPONSE] Data (stringify failed):', response.data);
+            console.log('[API RESPONSE] Data type:', typeof response.data);
+        }
+    } else {
+        console.log('[API RESPONSE] No data in response');
+    }
+
+    return response;
+}
+
+// Helper function to handle API responses properly
+function handleApiResponse(endpoint, response, res) {
+    console.log(`[${endpoint}] Response status: ${response.status}`);
+    
+    // Handle 204 No Content responses (empty body)
+    if (response.status === 204) {
+        console.log(`[${endpoint}] No content response (204)`);
+        res.status(204).send();
+        return;
+    }
+    
+    // Handle responses with data
+    if (response.data !== undefined && response.data !== null) {
+        if (typeof response.data === 'string' && response.data.trim() === '') {
+            console.log(`[${endpoint}] Empty string response`);
+            res.status(response.status).json({});
+        } else {
+            console.log(`[${endpoint}] Sending response data`);
+            res.status(response.status).json(response.data);
+        }
+    } else {
+        console.log(`[${endpoint}] No data in response, sending empty object`);
+        res.status(response.status).json({});
+    }
+}
+
+// Server Configuration endpoints
+app.get('/api/server/config', async (req, res) => {
+    try {
+        console.log('[SERVER-CONFIG] Starting request');
+        const response = await proxyToContaoManager('/api/server/config');
+        handleApiResponse('SERVER-CONFIG', response, res);
+    } catch (error) {
+        console.error('[SERVER-CONFIG] Error:', error.message);
+        console.error('[SERVER-CONFIG] Full error:', error);
+        res.status(500).json({ error: 'Failed to get server configuration: ' + error.message });
+    }
+});
+
+app.get('/api/server/php-web', async (req, res) => {
+    try {
+        console.log('[PHP-WEB] Starting request');
+        const response = await proxyToContaoManager('/api/server/php-web');
+        handleApiResponse('PHP-WEB', response, res);
+    } catch (error) {
+        console.error('[PHP-WEB] Error:', error.message);
+        console.error('[PHP-WEB] Full error:', error);
+        res.status(500).json({ error: 'Failed to get PHP web configuration: ' + error.message });
+    }
+});
+
+app.get('/api/server/contao', async (req, res) => {
+    try {
+        console.log('[CONTAO-CONFIG] Starting request');
+        const response = await proxyToContaoManager('/api/server/contao');
+        handleApiResponse('CONTAO-CONFIG', response, res);
+    } catch (error) {
+        console.error('[CONTAO-CONFIG] Error:', error.message);
+        console.error('[CONTAO-CONFIG] Full error:', error);
+        res.status(500).json({ error: 'Failed to get Contao configuration: ' + error.message });
+    }
+});
+
+// Users endpoints
+app.get('/api/users', async (req, res) => {
+    try {
+        console.log('[USERS] Starting request');
+        const response = await proxyToContaoManager('/api/users');
+        handleApiResponse('USERS', response, res);
+    } catch (error) {
+        console.error('[USERS] Error:', error.message);
+        console.error('[USERS] Full error:', error);
+        res.status(500).json({ error: 'Failed to get users list: ' + error.message });
+    }
+});
+
+app.get('/api/users/:username/tokens', async (req, res) => {
+    try {
+        const username = req.params.username;
+        console.log(`[USER-TOKENS] Starting request for user: ${username}`);
+        const response = await proxyToContaoManager(`/api/users/${username}/tokens`);
+        handleApiResponse('USER-TOKENS', response, res);
+    } catch (error) {
+        console.error('[USER-TOKENS] Error:', error.message);
+        console.error('[USER-TOKENS] Full error:', error);
+        res.status(500).json({ error: 'Failed to get token list: ' + error.message });
+    }
+});
+
+app.get('/api/users/:username/tokens/:id', async (req, res) => {
+    try {
+        const { username, id } = req.params;
+        console.log(`[TOKEN-INFO] Starting request for user: ${username}, token: ${id}`);
+        const response = await proxyToContaoManager(`/api/users/${username}/tokens/${id}`);
+        handleApiResponse('TOKEN-INFO', response, res);
+    } catch (error) {
+        console.error('[TOKEN-INFO] Error:', error.message);
+        console.error('[TOKEN-INFO] Full error:', error);
+        res.status(500).json({ error: 'Failed to get token info: ' + error.message });
+    }
+});
+
+// Contao API endpoints
+app.get('/api/contao/database-migration', async (req, res) => {
+    try {
+        console.log('[MIGRATION] Starting request');
+        const response = await proxyToContaoManager('/api/contao/database-migration');
+        handleApiResponse('MIGRATION', response, res);
+    } catch (error) {
+        console.error('[MIGRATION] Error:', error.message);
+        console.error('[MIGRATION] Full error:', error);
+        res.status(500).json({ error: 'Failed to get migration status: ' + error.message });
+    }
+});
+
+app.get('/api/contao/maintenance-mode', async (req, res) => {
+    try {
+        console.log('[MAINTENANCE] Starting request');
+        const response = await proxyToContaoManager('/api/contao/maintenance-mode');
+        handleApiResponse('MAINTENANCE', response, res);
+    } catch (error) {
+        console.error('[MAINTENANCE] Error:', error.message);
+        console.error('[MAINTENANCE] Full error:', error);
+        res.status(500).json({ error: 'Failed to get maintenance mode status: ' + error.message });
+    }
+});
+
+// Tasks endpoints
+app.get('/api/task', async (req, res) => {
+    try {
+        console.log('[TASK-GET] Starting request');
+        const response = await proxyToContaoManager('/api/task');
+        handleApiResponse('TASK-GET', response, res);
+    } catch (error) {
+        console.error('[TASK-GET] Error:', error.message);
+        console.error('[TASK-GET] Full error:', error);
+        res.status(500).json({ error: 'Failed to get task data: ' + error.message });
+    }
+});
+
+app.put('/api/task', async (req, res) => {
+    try {
+        console.log('[TASK-PUT] Starting request');
+        console.log('[TASK-PUT] Request body:', JSON.stringify(req.body, null, 2));
+        const response = await proxyToContaoManager('/api/task', 'PUT', req.body);
+        handleApiResponse('TASK-PUT', response, res);
+    } catch (error) {
+        console.error('[TASK-PUT] Error:', error.message);
+        console.error('[TASK-PUT] Full error:', error);
+        res.status(500).json({ error: 'Failed to set task data: ' + error.message });
+    }
+});
+
+app.delete('/api/task', async (req, res) => {
+    try {
+        console.log('[TASK-DELETE] Starting request');
+        const response = await proxyToContaoManager('/api/task', 'DELETE');
+        handleApiResponse('TASK-DELETE', response, res);
+    } catch (error) {
+        console.error('[TASK-DELETE] Error:', error.message);
+        console.error('[TASK-DELETE] Full error:', error);
+        res.status(500).json({ error: 'Failed to delete task data: ' + error.message });
+    }
+});
+
+// Packages endpoints
+app.get('/api/packages/root', async (req, res) => {
+    try {
+        console.log('[PACKAGES] Starting request');
+        const response = await proxyToContaoManager('/api/packages/root');
+        handleApiResponse('PACKAGES', response, res);
+    } catch (error) {
+        console.error('[PACKAGES] Error:', error.message);
+        console.error('[PACKAGES] Full error:', error);
+        res.status(500).json({ error: 'Failed to get root package details: ' + error.message });
+    }
+});
+
+// Serve React app for all non-API routes
+app.get('/', (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    } else {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
+});
+
+// Catch-all handler for React Router (MUST be last)
+app.get('*', (req, res) => {
+    // Don't handle API routes
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    
+    // Serve React app for all other routes
+    if (process.env.NODE_ENV === 'production') {
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    } else {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
+});
+
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
