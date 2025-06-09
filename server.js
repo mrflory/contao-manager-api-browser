@@ -107,6 +107,18 @@ function setActiveSite(url) {
     return false;
 }
 
+function updateSiteVersionInfo(url, versionInfo) {
+    const config = loadConfig();
+    if (config.sites[url]) {
+        config.sites[url].versionInfo = {
+            ...versionInfo,
+            lastUpdated: new Date().toISOString()
+        };
+        return saveConfig(config);
+    }
+    return false;
+}
+
 app.get('/api/config', (req, res) => {
     try {
         console.log('Loading config for /api/config endpoint');
@@ -301,6 +313,143 @@ app.post('/api/validate-token', async (req, res) => {
     } catch (error) {
         console.error('Token validation error:', error.message);
         res.status(500).json({ error: 'Failed to validate token' });
+    }
+});
+
+app.post('/api/update-version-info', async (req, res) => {
+    try {
+        const activeSite = getActiveSite();
+        
+        if (!activeSite) {
+            return res.status(400).json({ error: 'No active site configured' });
+        }
+
+        console.log('Updating version info for:', activeSite.url);
+        
+        const versionInfo = {
+            contaoManagerVersion: null,
+            phpVersion: null,
+            contaoVersion: null
+        };
+
+        // Get Contao Manager version from self-update endpoint
+        try {
+            let selfUpdateResponse;
+            
+            try {
+                console.log('Getting Contao Manager version with Contao-Manager-Auth header');
+                selfUpdateResponse = await axios.get(`${activeSite.url}/api/server/self-update`, {
+                    headers: {
+                        'Contao-Manager-Auth': activeSite.token
+                    },
+                    timeout: 10000,
+                    validateStatus: status => status < 500
+                });
+                console.log('Contao-Manager-Auth worked for self-update version');
+            } catch (error) {
+                console.log('Contao-Manager-Auth failed for self-update version, trying Authorization Bearer');
+                selfUpdateResponse = await axios.get(`${activeSite.url}/api/server/self-update`, {
+                    headers: {
+                        'Authorization': `Bearer ${activeSite.token}`
+                    },
+                    timeout: 10000,
+                    validateStatus: status => status < 500
+                });
+                console.log('Authorization Bearer worked for self-update version');
+            }
+            
+            if (selfUpdateResponse.status === 200 && selfUpdateResponse.data.current_version) {
+                versionInfo.contaoManagerVersion = selfUpdateResponse.data.current_version;
+                console.log('Got Contao Manager version:', versionInfo.contaoManagerVersion);
+            }
+        } catch (error) {
+            console.error('Failed to get Contao Manager version:', error.message);
+        }
+
+        // Get PHP version from php-web endpoint
+        try {
+            let phpWebResponse;
+            
+            try {
+                console.log('Getting PHP version with Contao-Manager-Auth header');
+                phpWebResponse = await axios.get(`${activeSite.url}/api/server/php-web`, {
+                    headers: {
+                        'Contao-Manager-Auth': activeSite.token
+                    },
+                    timeout: 10000,
+                    validateStatus: status => status < 500
+                });
+                console.log('Contao-Manager-Auth worked for php-web version');
+            } catch (error) {
+                console.log('Contao-Manager-Auth failed for php-web version, trying Authorization Bearer');
+                phpWebResponse = await axios.get(`${activeSite.url}/api/server/php-web`, {
+                    headers: {
+                        'Authorization': `Bearer ${activeSite.token}`
+                    },
+                    timeout: 10000,
+                    validateStatus: status => status < 500
+                });
+                console.log('Authorization Bearer worked for php-web version');
+            }
+            
+            if (phpWebResponse.status === 200 && phpWebResponse.data.version) {
+                versionInfo.phpVersion = phpWebResponse.data.version;
+                console.log('Got PHP version:', versionInfo.phpVersion);
+            }
+        } catch (error) {
+            console.error('Failed to get PHP version:', error.message);
+        }
+
+        // Get Contao version from contao endpoint
+        try {
+            let contaoResponse;
+            
+            try {
+                console.log('Getting Contao version with Contao-Manager-Auth header');
+                contaoResponse = await axios.get(`${activeSite.url}/api/server/contao`, {
+                    headers: {
+                        'Contao-Manager-Auth': activeSite.token
+                    },
+                    timeout: 10000,
+                    validateStatus: status => status < 500
+                });
+                console.log('Contao-Manager-Auth worked for contao version');
+            } catch (error) {
+                console.log('Contao-Manager-Auth failed for contao version, trying Authorization Bearer');
+                contaoResponse = await axios.get(`${activeSite.url}/api/server/contao`, {
+                    headers: {
+                        'Authorization': `Bearer ${activeSite.token}`
+                    },
+                    timeout: 10000,
+                    validateStatus: status => status < 500
+                });
+                console.log('Authorization Bearer worked for contao version');
+            }
+            
+            if (contaoResponse.status === 200 && contaoResponse.data.version) {
+                versionInfo.contaoVersion = contaoResponse.data.version;
+                console.log('Got Contao version:', versionInfo.contaoVersion);
+            }
+        } catch (error) {
+            console.error('Failed to get Contao version:', error.message);
+        }
+
+        // Update the site configuration with version info
+        if (updateSiteVersionInfo(activeSite.url, versionInfo)) {
+            console.log('Version info updated successfully:', versionInfo);
+            res.json({ 
+                success: true, 
+                versionInfo: {
+                    ...versionInfo,
+                    lastUpdated: new Date().toISOString()
+                }
+            });
+        } else {
+            res.status(500).json({ error: 'Failed to save version information' });
+        }
+    } catch (error) {
+        console.error('Update version info error:', error.message);
+        res.status(500).json({ error: 'Failed to update version info: ' + error.message });
     }
 });
 
@@ -599,6 +748,43 @@ app.get('/api/contao/database-migration', async (req, res) => {
     }
 });
 
+app.put('/api/contao/database-migration', async (req, res) => {
+    try {
+        console.log('[MIGRATION-START] Starting request');
+        console.log('[MIGRATION-START] Request body:', JSON.stringify(req.body, null, 2));
+        const response = await proxyToContaoManager('/api/contao/database-migration', 'PUT', req.body);
+        handleApiResponse('MIGRATION-START', response, res);
+    } catch (error) {
+        console.error('[MIGRATION-START] Error:', error.message);
+        console.error('[MIGRATION-START] Full error:', error);
+        res.status(500).json({ error: 'Failed to start migration: ' + error.message });
+    }
+});
+
+app.delete('/api/contao/database-migration', async (req, res) => {
+    try {
+        console.log('[MIGRATION-DELETE] Starting request');
+        const response = await proxyToContaoManager('/api/contao/database-migration', 'DELETE');
+        handleApiResponse('MIGRATION-DELETE', response, res);
+    } catch (error) {
+        console.error('[MIGRATION-DELETE] Error:', error.message);
+        console.error('[MIGRATION-DELETE] Full error:', error);
+        res.status(500).json({ error: 'Failed to delete migration task: ' + error.message });
+    }
+});
+
+app.get('/api/contao/backup', async (req, res) => {
+    try {
+        console.log('[BACKUP] Starting request');
+        const response = await proxyToContaoManager('/api/contao/backup');
+        handleApiResponse('BACKUP', response, res);
+    } catch (error) {
+        console.error('[BACKUP] Error:', error.message);
+        console.error('[BACKUP] Full error:', error);
+        res.status(500).json({ error: 'Failed to get database backups: ' + error.message });
+    }
+});
+
 app.get('/api/contao/maintenance-mode', async (req, res) => {
     try {
         console.log('[MAINTENANCE] Starting request');
@@ -608,6 +794,30 @@ app.get('/api/contao/maintenance-mode', async (req, res) => {
         console.error('[MAINTENANCE] Error:', error.message);
         console.error('[MAINTENANCE] Full error:', error);
         res.status(500).json({ error: 'Failed to get maintenance mode status: ' + error.message });
+    }
+});
+
+app.put('/api/contao/maintenance-mode', async (req, res) => {
+    try {
+        console.log('[MAINTENANCE-ENABLE] Starting request');
+        const response = await proxyToContaoManager('/api/contao/maintenance-mode', 'PUT');
+        handleApiResponse('MAINTENANCE-ENABLE', response, res);
+    } catch (error) {
+        console.error('[MAINTENANCE-ENABLE] Error:', error.message);
+        console.error('[MAINTENANCE-ENABLE] Full error:', error);
+        res.status(500).json({ error: 'Failed to enable maintenance mode: ' + error.message });
+    }
+});
+
+app.delete('/api/contao/maintenance-mode', async (req, res) => {
+    try {
+        console.log('[MAINTENANCE-DISABLE] Starting request');
+        const response = await proxyToContaoManager('/api/contao/maintenance-mode', 'DELETE');
+        handleApiResponse('MAINTENANCE-DISABLE', response, res);
+    } catch (error) {
+        console.error('[MAINTENANCE-DISABLE] Error:', error.message);
+        console.error('[MAINTENANCE-DISABLE] Full error:', error);
+        res.status(500).json({ error: 'Failed to disable maintenance mode: ' + error.message });
     }
 });
 
@@ -659,6 +869,18 @@ app.get('/api/packages/root', async (req, res) => {
         console.error('[PACKAGES] Error:', error.message);
         console.error('[PACKAGES] Full error:', error);
         res.status(500).json({ error: 'Failed to get root package details: ' + error.message });
+    }
+});
+
+app.get('/api/packages/local/', async (req, res) => {
+    try {
+        console.log('[PACKAGES-LOCAL] Starting request');
+        const response = await proxyToContaoManager('/api/packages/local/');
+        handleApiResponse('PACKAGES-LOCAL', response, res);
+    } catch (error) {
+        console.error('[PACKAGES-LOCAL] Error:', error.message);
+        console.error('[PACKAGES-LOCAL] Full error:', error);
+        res.status(500).json({ error: 'Failed to get installed packages: ' + error.message });
     }
 });
 

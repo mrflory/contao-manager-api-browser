@@ -16,6 +16,8 @@ import {
   Spinner,
   Center,
   VStack,
+  HStack,
+  Badge,
   useColorModeValue,
   TableContainer,
 } from '@chakra-ui/react';
@@ -113,6 +115,7 @@ const SitesOverview: React.FC = () => {
                 <Tr>
                   <Th>Site Name</Th>
                   <Th>URL</Th>
+                  <Th>Version Info</Th>
                   <Th>Last Used</Th>
                 </Tr>
               </Thead>
@@ -133,6 +136,38 @@ const SitesOverview: React.FC = () => {
                       <Text fontFamily="mono" fontSize="sm" color="gray.600">
                         {site.url}
                       </Text>
+                    </Td>
+                    <Td>
+                      {site.versionInfo ? (
+                        <VStack spacing={1} align="start">
+                          <HStack spacing={2} wrap="wrap">
+                            {site.versionInfo.contaoManagerVersion && (
+                              <Badge colorScheme="blue" fontSize="xs">
+                                Manager: {site.versionInfo.contaoManagerVersion}
+                              </Badge>
+                            )}
+                            {site.versionInfo.phpVersion && (
+                              <Badge colorScheme="green" fontSize="xs">
+                                PHP: {site.versionInfo.phpVersion}
+                              </Badge>
+                            )}
+                            {site.versionInfo.contaoVersion && (
+                              <Badge colorScheme="orange" fontSize="xs">
+                                Contao: {site.versionInfo.contaoVersion}
+                              </Badge>
+                            )}
+                          </HStack>
+                          {site.versionInfo.lastUpdated && (
+                            <Text fontSize="xs" color="gray.500">
+                              Updated: {new Date(site.versionInfo.lastUpdated).toLocaleDateString()}
+                            </Text>
+                          )}
+                        </VStack>
+                      ) : (
+                        <Text fontSize="sm" color="gray.400">
+                          No version info
+                        </Text>
+                      )}
                     </Td>
                     <Td>
                       <Text color="gray.600">

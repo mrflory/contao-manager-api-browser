@@ -94,6 +94,14 @@ export const api = {
     return response.json();
   },
 
+  async updateVersionInfo(): Promise<{ success: boolean; versionInfo: any; error?: string }> {
+    const response = await fetch(`${API_BASE}/update-version-info`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return response.json();
+  },
+
   async getTokenInfo(): Promise<{ success: boolean; tokenInfo: TokenInfo; error?: string }> {
     const response = await fetch(`${API_BASE}/token-info`);
     return response.json();
@@ -130,8 +138,38 @@ export const api = {
     return makeApiCall('/contao/database-migration');
   },
 
+  async startDatabaseMigration(payload: any): Promise<any> {
+    return makeApiCall('/contao/database-migration', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async deleteDatabaseMigrationTask(): Promise<any> {
+    return makeApiCall('/contao/database-migration', {
+      method: 'DELETE'
+    });
+  },
+
+  async getDatabaseBackups(): Promise<any> {
+    return makeApiCall('/contao/backup');
+  },
+
   async getMaintenanceModeStatus(): Promise<any> {
     return makeApiCall('/contao/maintenance-mode');
+  },
+
+  async enableMaintenanceMode(): Promise<any> {
+    return makeApiCall('/contao/maintenance-mode', {
+      method: 'PUT'
+    });
+  },
+
+  async disableMaintenanceMode(): Promise<any> {
+    return makeApiCall('/contao/maintenance-mode', {
+      method: 'DELETE'
+    });
   },
 
   // Tasks endpoints
@@ -156,5 +194,9 @@ export const api = {
   // Packages endpoints
   async getRootPackageDetails(): Promise<any> {
     return makeApiCall('/packages/root');
+  },
+
+  async getInstalledPackages(): Promise<any> {
+    return makeApiCall('/packages/local/');
   }
 };

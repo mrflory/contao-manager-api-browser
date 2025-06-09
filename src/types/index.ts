@@ -1,8 +1,16 @@
+export interface VersionInfo {
+  contaoManagerVersion?: string;
+  phpVersion?: string;
+  contaoVersion?: string;
+  lastUpdated?: string;
+}
+
 export interface Site {
   name: string;
   url: string;
   token: string;
   lastUsed: string;
+  versionInfo?: VersionInfo;
 }
 
 export interface Config {

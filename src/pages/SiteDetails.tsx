@@ -35,11 +35,27 @@ import {
   AccordionButton,
   AccordionPanel,
   AccordionIcon,
+  Input,
+  FormControl,
+  FormLabel,
+  Checkbox,
+  Select,
+  Textarea,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
 } from '@chakra-ui/react';
 import {
   ArrowBackIcon,
   DeleteIcon,
   SettingsIcon,
+  EditIcon,
+  CheckIcon,
+  CloseIcon,
 } from '@chakra-ui/icons';
 import { Config, UpdateStatus, TokenInfo } from '../types';
 import { api } from '../utils/api';
@@ -49,6 +65,7 @@ const SiteDetails: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isMigrationModalOpen, onOpen: onMigrationModalOpen, onClose: onMigrationModalClose } = useDisclosure();
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingButton, setLoadingButton] = useState<string | null>(null);
@@ -237,6 +254,61 @@ const SiteDetails: React.FC = () => {
     }
   };
 
+  const handleStartDatabaseMigration = () => {
+    const migrationForm = (
+      <VStack spacing={4} align="stretch">
+        <Text fontSize="md" color="gray.600" mb={2}>
+          Configure database migration parameters:
+        </Text>
+        <FormControl>
+          <FormLabel>Migration Hash (optional)</FormLabel>
+          <Input
+            id="migration-hash"
+            placeholder="Leave empty for dry-run to get pending migrations"
+          />
+        </FormControl>
+        
+        <FormControl>
+          <FormLabel>Migration Type</FormLabel>
+          <Select id="migration-type" defaultValue="">
+            <option value="">All migrations and schema updates</option>
+            <option value="migrations-only">Migrations only</option>
+            <option value="schema-only">Schema updates only</option>
+          </Select>
+        </FormControl>
+
+        <FormControl>
+          <Checkbox id="with-deletes">
+            Execute migrations including DROP queries
+          </Checkbox>
+        </FormControl>
+
+        <Button
+          colorScheme="orange"
+          onClick={async () => {
+            const hash = (document.getElementById('migration-hash') as HTMLInputElement)?.value || undefined;
+            const type = (document.getElementById('migration-type') as HTMLSelectElement)?.value || undefined;
+            const withDeletes = (document.getElementById('with-deletes') as HTMLInputElement)?.checked || false;
+            
+            const payload: any = {};
+            if (hash) payload.hash = hash;
+            if (type) payload.type = type;
+            if (withDeletes) payload.withDeletes = withDeletes;
+            
+            onMigrationModalClose();
+            await handleApiCallWithButton('start-migration', () => api.startDatabaseMigration(payload), 'Start Database Migration');
+          }}
+        >
+          Start Migration
+        </Button>
+      </VStack>
+    );
+
+    setModalTitle('Start Database Migration');
+    setModalContent(migrationForm);
+    onMigrationModalOpen();
+  };
+
   const handleTokenInfo = async () => {
     const formatTokenInfo = (data: { success: boolean; tokenInfo: TokenInfo; error?: string }) => {
       if (!data.success) {
@@ -316,6 +388,215 @@ const SiteDetails: React.FC = () => {
     };
 
     await handleApiCallWithButton('token-info', api.getTokenInfo, 'Token Information', formatTokenInfo);
+  };
+
+  const handleUpdateVersionInfo = async () => {
+    setLoadingButton('update-version-info');
+    try {
+      const data = await api.updateVersionInfo();
+      
+      if (data.success) {
+        // Reload config to get updated version info
+        await loadConfig();
+        
+        toast({
+          title: 'Success',
+          description: 'Version information updated successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+
+        const formatVersionInfo = (versionInfo: any) => {
+          return (
+            <VStack spacing={4} align="stretch">
+              <Text fontSize="md" color="gray.600" mb={2}>
+                Version information updated successfully:
+              </Text>
+              <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+                <VStack spacing={2} align="start">
+                  <Text><strong>Contao Manager:</strong> {versionInfo.contaoManagerVersion || 'N/A'}</Text>
+                  <Text><strong>PHP:</strong> {versionInfo.phpVersion || 'N/A'}</Text>
+                  <Text><strong>Contao:</strong> {versionInfo.contaoVersion || 'N/A'}</Text>
+                  <Text><strong>Last Updated:</strong> {new Date(versionInfo.lastUpdated).toLocaleString()}</Text>
+                </VStack>
+              </Box>
+              <Box mt={4}>
+                <Accordion allowToggle>
+                  <AccordionItem>
+                    <AccordionButton>
+                      <Box flex="1" textAlign="left">
+                        Show raw version data
+                      </Box>
+                      <AccordionIcon />
+                    </AccordionButton>
+                    <AccordionPanel pb={4}>
+                      <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
+                        {JSON.stringify(versionInfo, null, 2)}
+                      </Code>
+                    </AccordionPanel>
+                  </AccordionItem>
+                </Accordion>
+              </Box>
+            </VStack>
+          );
+        };
+
+        showModal('Version Information Updated', formatVersionInfo(data.versionInfo));
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to update version information',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Error updating version information: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoadingButton(null);
+    }
+  };
+
+  const formatDatabaseBackups = (data: any[]) => {
+    if (!Array.isArray(data) || data.length === 0) {
+      return (
+        <Alert status="info">
+          <AlertIcon />
+          <AlertTitle>No backups found</AlertTitle>
+          <AlertDescription>
+            No database backups are available on this server.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    return (
+      <VStack spacing={4} align="stretch">
+        <Text fontSize="md" color="gray.600">
+          Found {data.length} database backup{data.length !== 1 ? 's' : ''}:
+        </Text>
+        <TableContainer>
+          <Table variant="simple" size="sm">
+            <Thead>
+              <Tr>
+                <Th>Backup Name</Th>
+                <Th>Created At</Th>
+                <Th>Size</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {data.map((backup, index) => (
+                <Tr key={index}>
+                  <Td>
+                    <Code fontSize="sm">{backup.name}</Code>
+                  </Td>
+                  <Td>{new Date(backup.createdAt).toLocaleString()}</Td>
+                  <Td>{(backup.size / 1024 / 1024).toFixed(2)} MB</Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </TableContainer>
+        <Box mt={4}>
+          <Accordion allowToggle>
+            <AccordionItem>
+              <AccordionButton>
+                <Box flex="1" textAlign="left">
+                  Show raw backup data
+                </Box>
+                <AccordionIcon />
+              </AccordionButton>
+              <AccordionPanel pb={4}>
+                <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
+                  {JSON.stringify(data, null, 2)}
+                </Code>
+              </AccordionPanel>
+            </AccordionItem>
+          </Accordion>
+        </Box>
+      </VStack>
+    );
+  };
+
+  const formatInstalledPackages = (data: any) => {
+    if (!data || typeof data !== 'object') {
+      return (
+        <Alert status="info">
+          <AlertIcon />
+          <AlertTitle>No packages found</AlertTitle>
+          <AlertDescription>
+            No installed packages data available.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    const packages = Object.entries(data);
+    
+    return (
+      <VStack spacing={4} align="stretch">
+        <Text fontSize="md" color="gray.600">
+          Found {packages.length} installed package{packages.length !== 1 ? 's' : ''}:
+        </Text>
+        <TableContainer maxH="400px" overflowY="auto">
+          <Table variant="simple" size="sm">
+            <Thead position="sticky" top={0} bg={cardBg}>
+              <Tr>
+                <Th>Package Name</Th>
+                <Th>Version</Th>
+                <Th>Type</Th>
+                <Th>Description</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {packages.map(([name, pkg]: [string, any]) => (
+                <Tr key={name}>
+                  <Td>
+                    <Code fontSize="sm">{name}</Code>
+                  </Td>
+                  <Td>
+                    <Badge colorScheme="blue" fontSize="xs">{pkg.version || 'N/A'}</Badge>
+                  </Td>
+                  <Td>
+                    <Badge colorScheme="green" fontSize="xs">{pkg.type || 'library'}</Badge>
+                  </Td>
+                  <Td>
+                    <Text fontSize="xs" noOfLines={2}>
+                      {pkg.description || 'No description available'}
+                    </Text>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </TableContainer>
+        <Box mt={4}>
+          <Accordion allowToggle>
+            <AccordionItem>
+              <AccordionButton>
+                <Box flex="1" textAlign="left">
+                  Show raw package data
+                </Box>
+                <AccordionIcon />
+              </AccordionButton>
+              <AccordionPanel pb={4}>
+                <Code display="block" whiteSpace="pre" p={3} borderRadius="md" maxH="300px" overflowY="auto">
+                  {JSON.stringify(data, null, 2)}
+                </Code>
+              </AccordionPanel>
+            </AccordionItem>
+          </Accordion>
+        </Box>
+      </VStack>
+    );
   };
 
   const handleSetTaskData = () => {
@@ -607,11 +888,65 @@ const SiteDetails: React.FC = () => {
               <GridItem>
                 <Button
                   colorScheme="orange"
+                  leftIcon={<EditIcon />}
+                  onClick={handleStartDatabaseMigration}
+                  isLoading={loadingButton === 'start-migration'}
+                  width="full"
+                >
+                  Start Migration
+                </Button>
+              </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="red"
+                  leftIcon={<DeleteIcon />}
+                  onClick={() => handleApiCallWithButton('delete-migration', api.deleteDatabaseMigrationTask, 'Delete Migration Task')}
+                  isLoading={loadingButton === 'delete-migration'}
+                  width="full"
+                >
+                  Delete Migration Task
+                </Button>
+              </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="orange"
+                  onClick={() => handleApiCallWithButton('db-backups', api.getDatabaseBackups, 'Database Backups', formatDatabaseBackups)}
+                  isLoading={loadingButton === 'db-backups'}
+                  width="full"
+                >
+                  Database Backups
+                </Button>
+              </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="orange"
                   onClick={() => handleApiCallWithButton('maintenance-mode', api.getMaintenanceModeStatus, 'Maintenance Mode Status')}
                   isLoading={loadingButton === 'maintenance-mode'}
                   width="full"
                 >
-                  Maintenance Mode
+                  Maintenance Status
+                </Button>
+              </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="green"
+                  leftIcon={<CheckIcon />}
+                  onClick={() => handleApiCallWithButton('enable-maintenance', api.enableMaintenanceMode, 'Enable Maintenance Mode')}
+                  isLoading={loadingButton === 'enable-maintenance'}
+                  width="full"
+                >
+                  Enable Maintenance
+                </Button>
+              </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="red"
+                  leftIcon={<CloseIcon />}
+                  onClick={() => handleApiCallWithButton('disable-maintenance', api.disableMaintenanceMode, 'Disable Maintenance Mode')}
+                  isLoading={loadingButton === 'disable-maintenance'}
+                  width="full"
+                >
+                  Disable Maintenance
                 </Button>
               </GridItem>
             </Grid>
@@ -668,6 +1003,16 @@ const SiteDetails: React.FC = () => {
                   Root Package Details
                 </Button>
               </GridItem>
+              <GridItem>
+                <Button
+                  colorScheme="purple"
+                  onClick={() => handleApiCallWithButton('installed-packages', api.getInstalledPackages, 'Installed Packages', formatInstalledPackages)}
+                  isLoading={loadingButton === 'installed-packages'}
+                  width="full"
+                >
+                  Installed Packages
+                </Button>
+              </GridItem>
             </Grid>
           </Box>
         </VStack>
@@ -676,19 +1021,74 @@ const SiteDetails: React.FC = () => {
         
         <VStack spacing={4} align="start">
           <Heading size="md" color="gray.500">Site Management</Heading>
-          <Button
-            leftIcon={<DeleteIcon />}
-            colorScheme="red"
-            onClick={handleRemoveSite}
-          >
-            Remove Site
-          </Button>
+          <HStack spacing={4}>
+            <Button
+              leftIcon={<SettingsIcon />}
+              colorScheme="blue"
+              onClick={handleUpdateVersionInfo}
+              isLoading={loadingButton === 'update-version-info'}
+            >
+              Update Version Info
+            </Button>
+            <Button
+              leftIcon={<DeleteIcon />}
+              colorScheme="red"
+              onClick={handleRemoveSite}
+            >
+              Remove Site
+            </Button>
+          </HStack>
         </VStack>
 
         <Box mt={8} p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
-          <VStack spacing={2} align="start">
-            <Text fontSize="sm"><strong>Last Used:</strong> {new Date(site.lastUsed).toLocaleString()}</Text>
-            <Text fontSize="sm"><strong>Token:</strong> <Code>{site.token.substring(0, 8)}...</Code></Text>
+          <VStack spacing={4} align="start">
+            <VStack spacing={2} align="start" width="100%">
+              <Text fontSize="sm"><strong>Last Used:</strong> {new Date(site.lastUsed).toLocaleString()}</Text>
+              <Text fontSize="sm"><strong>Token:</strong> <Code>{site.token.substring(0, 8)}...</Code></Text>
+            </VStack>
+            
+            {site.versionInfo && (
+              <>
+                <Divider />
+                <VStack spacing={2} align="start" width="100%">
+                  <Heading size="sm">Version Information</Heading>
+                  <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={2} width="100%">
+                    <GridItem>
+                      <Text fontSize="sm">
+                        <strong>Contao Manager:</strong> {site.versionInfo.contaoManagerVersion || 'N/A'}
+                      </Text>
+                    </GridItem>
+                    <GridItem>
+                      <Text fontSize="sm">
+                        <strong>PHP:</strong> {site.versionInfo.phpVersion || 'N/A'}
+                      </Text>
+                    </GridItem>
+                    <GridItem>
+                      <Text fontSize="sm">
+                        <strong>Contao:</strong> {site.versionInfo.contaoVersion || 'N/A'}
+                      </Text>
+                    </GridItem>
+                  </Grid>
+                  {site.versionInfo.lastUpdated && (
+                    <Text fontSize="xs" color="gray.500">
+                      <strong>Last Updated:</strong> {new Date(site.versionInfo.lastUpdated).toLocaleString()}
+                    </Text>
+                  )}
+                </VStack>
+              </>
+            )}
+            
+            {!site.versionInfo && (
+              <>
+                <Divider />
+                <VStack spacing={2} align="start" width="100%">
+                  <Heading size="sm">Version Information</Heading>
+                  <Text fontSize="sm" color="gray.500">
+                    No version information available. Click "Update Version Info" to fetch current versions.
+                  </Text>
+                </VStack>
+              </>
+            )}
           </VStack>
         </Box>
       </Box>
@@ -703,6 +1103,20 @@ const SiteDetails: React.FC = () => {
           </ModalBody>
           <ModalFooter>
             <Button onClick={onClose}>Close</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isMigrationModalOpen} onClose={onMigrationModalClose} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>{modalTitle}</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {modalContent}
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={onMigrationModalClose}>Cancel</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
