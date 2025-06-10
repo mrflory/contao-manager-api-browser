@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -26,6 +26,12 @@ import {
   ModalBody,
   ModalCloseButton,
   useDisclosure,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
   Alert,
   AlertIcon,
   AlertTitle,
@@ -48,6 +54,11 @@ import {
   Th,
   Td,
   TableContainer,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
 } from '@chakra-ui/react';
 import {
   ArrowBackIcon,
@@ -66,11 +77,13 @@ const SiteDetails: React.FC = () => {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isMigrationModalOpen, onOpen: onMigrationModalOpen, onClose: onMigrationModalClose } = useDisclosure();
+  const { isOpen: isRemoveDialogOpen, onOpen: onRemoveDialogOpen, onClose: onRemoveDialogClose } = useDisclosure();
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingButton, setLoadingButton] = useState<string | null>(null);
   const [modalTitle, setModalTitle] = useState('');
   const [modalContent, setModalContent] = useState<React.ReactNode>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
@@ -695,9 +708,7 @@ const SiteDetails: React.FC = () => {
 
   const handleRemoveSite = async () => {
     if (!site) return;
-    
-    const confirmed = window.confirm(`Are you sure you want to remove "${site.name}"?`);
-    if (!confirmed) return;
+    onRemoveDialogClose();
 
     try {
       await api.removeSite(site.url);
@@ -765,332 +776,369 @@ const SiteDetails: React.FC = () => {
       </Flex>
 
       <Box bg={cardBg} border="1px" borderColor={borderColor} borderRadius="lg" p={8}>
-        <Heading size="lg" mb={6}>Available Functions</Heading>
-        
-        <VStack spacing={8} align="stretch">
-          {/* Server Configuration */}
-          <Box>
-            <HStack spacing={2} mb={4}>
-              <SettingsIcon />
-              <Heading size="md" color="blue.500">Server Configuration</Heading>
-            </HStack>
-            <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
-              <GridItem>
-                <Button
-                  colorScheme="blue"
-                  onClick={handleUpdateStatus}
-                  isLoading={loadingButton === 'update-status'}
-                  width="full"
-                >
-                  Get Update Status
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="blue"
-                  onClick={() => handleApiCallWithButton('php-web-config', api.getPhpWebConfig, 'PHP Web Server Configuration')}
-                  isLoading={loadingButton === 'php-web-config'}
-                  width="full"
-                >
-                  PHP Web Config
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="blue"
-                  onClick={() => handleApiCallWithButton('contao-config', api.getContaoConfig, 'Contao Configuration')}
-                  isLoading={loadingButton === 'contao-config'}
-                  width="full"
-                >
-                  Contao Config
-                </Button>
-              </GridItem>
-            </Grid>
-          </Box>
+        <Tabs colorScheme="blue" variant="line">
+          <TabList>
+            <Tab>Site Info</Tab>
+            <Tab>Update</Tab>
+            <Tab>Expert</Tab>
+          </TabList>
 
-          {/* Users Section */}
-          <Box>
-            <Heading size="md" color="green.500" mb={4}>👥 Users</Heading>
-            <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
-              <GridItem>
-                <Button
-                  colorScheme="green"
-                  onClick={() => handleApiCallWithButton('users-list', api.getUsersList, 'User List')}
-                  isLoading={loadingButton === 'users-list'}
-                  width="full"
-                >
-                  User List
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="green"
-                  onClick={handleTokenInfo}
-                  isLoading={loadingButton === 'token-info'}
-                  width="full"
-                >
-                  Get Token Info
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="green"
-                  onClick={async () => {
-                    try {
-                      setLoadingButton('token-list');
-                      const tokenInfo = await api.getTokenInfo();
-                      if (tokenInfo.success && tokenInfo.tokenInfo.username) {
-                        await handleApiCallWithButton('token-list', () => api.getTokensList(tokenInfo.tokenInfo.username), 'Token List');
-                      } else {
-                        toast({
-                          title: 'Error',
-                          description: 'Could not get username from token info',
-                          status: 'error',
-                          duration: 3000,
-                          isClosable: true,
-                        });
-                        setLoadingButton(null);
-                      }
-                    } catch (error) {
-                      toast({
-                        title: 'Error',
-                        description: 'Failed to get token list',
-                        status: 'error',
-                        duration: 3000,
-                        isClosable: true,
-                      });
-                      setLoadingButton(null);
-                    }
-                  }}
-                  isLoading={loadingButton === 'token-list'}
-                  width="full"
-                >
-                  Token List
-                </Button>
-              </GridItem>
-            </Grid>
-          </Box>
+          <TabPanels>
+            {/* Tab 1: Site Info */}
+            <TabPanel>
+              <VStack spacing={6} align="stretch">
+                <Box>
+                  <Heading size="lg" mb={4}>Site Information</Heading>
+                  
+                  <VStack spacing={4} align="start">
+                    <VStack spacing={2} align="start" width="100%">
+                      <Text fontSize="sm"><strong>Last Used:</strong> {new Date(site.lastUsed).toLocaleString()}</Text>
+                      <Text fontSize="sm"><strong>Token:</strong> <Code>{site.token.substring(0, 8)}...</Code></Text>
+                    </VStack>
+                    
+                    {site.versionInfo && (
+                      <>
+                        <Divider />
+                        <VStack spacing={2} align="start" width="100%">
+                          <Heading size="sm">Version Information</Heading>
+                          <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={2} width="100%">
+                            <GridItem>
+                              <Text fontSize="sm">
+                                <strong>Contao Manager:</strong> {site.versionInfo.contaoManagerVersion || 'N/A'}
+                              </Text>
+                            </GridItem>
+                            <GridItem>
+                              <Text fontSize="sm">
+                                <strong>PHP:</strong> {site.versionInfo.phpVersion || 'N/A'}
+                              </Text>
+                            </GridItem>
+                            <GridItem>
+                              <Text fontSize="sm">
+                                <strong>Contao:</strong> {site.versionInfo.contaoVersion || 'N/A'}
+                              </Text>
+                            </GridItem>
+                          </Grid>
+                          {site.versionInfo.lastUpdated && (
+                            <Text fontSize="xs" color="gray.500">
+                              <strong>Last Updated:</strong> {new Date(site.versionInfo.lastUpdated).toLocaleString()}
+                            </Text>
+                          )}
+                        </VStack>
+                      </>
+                    )}
+                    
+                    {!site.versionInfo && (
+                      <>
+                        <Divider />
+                        <VStack spacing={2} align="start" width="100%">
+                          <Heading size="sm">Version Information</Heading>
+                          <Text fontSize="sm" color="gray.500">
+                            No version information available. Click "Update Version Info" to fetch current versions.
+                          </Text>
+                        </VStack>
+                      </>
+                    )}
+                  </VStack>
+                </Box>
 
-          {/* Contao API Section */}
-          <Box>
-            <Heading size="md" color="orange.500" mb={4}>🚀 Contao API</Heading>
-            <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
-              <GridItem>
-                <Button
-                  colorScheme="orange"
-                  onClick={() => handleApiCallWithButton('migration-status', api.getDatabaseMigrationStatus, 'Migration Task Status')}
-                  isLoading={loadingButton === 'migration-status'}
-                  width="full"
-                >
-                  Migration Status
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="orange"
-                  leftIcon={<EditIcon />}
-                  onClick={handleStartDatabaseMigration}
-                  isLoading={loadingButton === 'start-migration'}
-                  width="full"
-                >
-                  Start Migration
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="red"
-                  leftIcon={<DeleteIcon />}
-                  onClick={() => handleApiCallWithButton('delete-migration', api.deleteDatabaseMigrationTask, 'Delete Migration Task')}
-                  isLoading={loadingButton === 'delete-migration'}
-                  width="full"
-                >
-                  Delete Migration Task
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="orange"
-                  onClick={() => handleApiCallWithButton('db-backups', api.getDatabaseBackups, 'Database Backups', formatDatabaseBackups)}
-                  isLoading={loadingButton === 'db-backups'}
-                  width="full"
-                >
-                  Database Backups
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="orange"
-                  onClick={() => handleApiCallWithButton('maintenance-mode', api.getMaintenanceModeStatus, 'Maintenance Mode Status')}
-                  isLoading={loadingButton === 'maintenance-mode'}
-                  width="full"
-                >
-                  Maintenance Status
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="green"
-                  leftIcon={<CheckIcon />}
-                  onClick={() => handleApiCallWithButton('enable-maintenance', api.enableMaintenanceMode, 'Enable Maintenance Mode')}
-                  isLoading={loadingButton === 'enable-maintenance'}
-                  width="full"
-                >
-                  Enable Maintenance
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="red"
-                  leftIcon={<CloseIcon />}
-                  onClick={() => handleApiCallWithButton('disable-maintenance', api.disableMaintenanceMode, 'Disable Maintenance Mode')}
-                  isLoading={loadingButton === 'disable-maintenance'}
-                  width="full"
-                >
-                  Disable Maintenance
-                </Button>
-              </GridItem>
-            </Grid>
-          </Box>
-
-          {/* Tasks Section */}
-          <Box>
-            <Heading size="md" color="cyan.500" mb={4}>📋 Tasks</Heading>
-            <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
-              <GridItem>
-                <Button
-                  colorScheme="cyan"
-                  onClick={() => handleApiCallWithButton('get-task-data', api.getTaskData, 'Task Data')}
-                  isLoading={loadingButton === 'get-task-data'}
-                  width="full"
-                >
-                  Get Task Data
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="cyan"
-                  onClick={handleSetTaskData}
-                  isLoading={loadingButton === 'set-task'}
-                  width="full"
-                >
-                  Set Task Data
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="red"
-                  onClick={() => handleApiCallWithButton('delete-task', api.deleteTaskData, 'Delete Task Data')}
-                  isLoading={loadingButton === 'delete-task'}
-                  width="full"
-                >
-                  Delete Task Data
-                </Button>
-              </GridItem>
-            </Grid>
-          </Box>
-
-          {/* Packages Section */}
-          <Box>
-            <Heading size="md" color="purple.500" mb={4}>📦 Packages</Heading>
-            <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
-              <GridItem>
-                <Button
-                  colorScheme="purple"
-                  onClick={() => handleApiCallWithButton('root-package', api.getRootPackageDetails, 'Root Package Details')}
-                  isLoading={loadingButton === 'root-package'}
-                  width="full"
-                >
-                  Root Package Details
-                </Button>
-              </GridItem>
-              <GridItem>
-                <Button
-                  colorScheme="purple"
-                  onClick={() => handleApiCallWithButton('installed-packages', api.getInstalledPackages, 'Installed Packages', formatInstalledPackages)}
-                  isLoading={loadingButton === 'installed-packages'}
-                  width="full"
-                >
-                  Installed Packages
-                </Button>
-              </GridItem>
-            </Grid>
-          </Box>
-        </VStack>
-
-        <Divider my={8} />
-        
-        <VStack spacing={4} align="start">
-          <Heading size="md" color="gray.500">Site Management</Heading>
-          <HStack spacing={4}>
-            <Button
-              leftIcon={<SettingsIcon />}
-              colorScheme="blue"
-              onClick={handleUpdateVersionInfo}
-              isLoading={loadingButton === 'update-version-info'}
-            >
-              Update Version Info
-            </Button>
-            <Button
-              leftIcon={<DeleteIcon />}
-              colorScheme="red"
-              onClick={handleRemoveSite}
-            >
-              Remove Site
-            </Button>
-          </HStack>
-        </VStack>
-
-        <Box mt={8} p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
-          <VStack spacing={4} align="start">
-            <VStack spacing={2} align="start" width="100%">
-              <Text fontSize="sm"><strong>Last Used:</strong> {new Date(site.lastUsed).toLocaleString()}</Text>
-              <Text fontSize="sm"><strong>Token:</strong> <Code>{site.token.substring(0, 8)}...</Code></Text>
-            </VStack>
-            
-            {site.versionInfo && (
-              <>
                 <Divider />
-                <VStack spacing={2} align="start" width="100%">
-                  <Heading size="sm">Version Information</Heading>
-                  <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={2} width="100%">
+                
+                <VStack spacing={4} align="start">
+                  <Heading size="md" color="gray.500">Site Management</Heading>
+                  <HStack spacing={4}>
+                    <Button
+                      leftIcon={<SettingsIcon />}
+                      colorScheme="blue"
+                      onClick={handleUpdateVersionInfo}
+                      isLoading={loadingButton === 'update-version-info'}
+                    >
+                      Update Version Info
+                    </Button>
+                    <Button
+                      leftIcon={<DeleteIcon />}
+                      colorScheme="red"
+                      onClick={onRemoveDialogOpen}
+                    >
+                      Remove Site
+                    </Button>
+                  </HStack>
+                </VStack>
+              </VStack>
+            </TabPanel>
+
+            {/* Tab 2: Update */}
+            <TabPanel>
+              <VStack spacing={6} align="stretch">
+                <Heading size="lg" mb={4}>Update Management</Heading>
+                
+                <Box p={6} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
+                  <VStack spacing={4} align="center">
+                    <Heading size="md" color="gray.500">Coming Soon</Heading>
+                    <Text color="gray.500" textAlign="center">
+                      Update management features will be available here soon. This will include package updates, 
+                      system updates, and automated maintenance tools.
+                    </Text>
+                  </VStack>
+                </Box>
+              </VStack>
+            </TabPanel>
+
+            {/* Tab 3: Expert */}
+            <TabPanel>
+              <VStack spacing={8} align="stretch">
+                <Heading size="lg" mb={4}>Expert Functions</Heading>
+                
+                {/* Server Configuration */}
+                <Box>
+                  <HStack spacing={2} mb={4}>
+                    <SettingsIcon />
+                    <Heading size="md" color="blue.500">Server Configuration</Heading>
+                  </HStack>
+                  <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
                     <GridItem>
-                      <Text fontSize="sm">
-                        <strong>Contao Manager:</strong> {site.versionInfo.contaoManagerVersion || 'N/A'}
-                      </Text>
+                      <Button
+                        colorScheme="blue"
+                        onClick={handleUpdateStatus}
+                        isLoading={loadingButton === 'update-status'}
+                        width="full"
+                      >
+                        Get Update Status
+                      </Button>
                     </GridItem>
                     <GridItem>
-                      <Text fontSize="sm">
-                        <strong>PHP:</strong> {site.versionInfo.phpVersion || 'N/A'}
-                      </Text>
+                      <Button
+                        colorScheme="blue"
+                        onClick={() => handleApiCallWithButton('php-web-config', api.getPhpWebConfig, 'PHP Web Server Configuration')}
+                        isLoading={loadingButton === 'php-web-config'}
+                        width="full"
+                      >
+                        PHP Web Config
+                      </Button>
                     </GridItem>
                     <GridItem>
-                      <Text fontSize="sm">
-                        <strong>Contao:</strong> {site.versionInfo.contaoVersion || 'N/A'}
-                      </Text>
+                      <Button
+                        colorScheme="blue"
+                        onClick={() => handleApiCallWithButton('contao-config', api.getContaoConfig, 'Contao Configuration')}
+                        isLoading={loadingButton === 'contao-config'}
+                        width="full"
+                      >
+                        Contao Config
+                      </Button>
                     </GridItem>
                   </Grid>
-                  {site.versionInfo.lastUpdated && (
-                    <Text fontSize="xs" color="gray.500">
-                      <strong>Last Updated:</strong> {new Date(site.versionInfo.lastUpdated).toLocaleString()}
-                    </Text>
-                  )}
-                </VStack>
-              </>
-            )}
-            
-            {!site.versionInfo && (
-              <>
-                <Divider />
-                <VStack spacing={2} align="start" width="100%">
-                  <Heading size="sm">Version Information</Heading>
-                  <Text fontSize="sm" color="gray.500">
-                    No version information available. Click "Update Version Info" to fetch current versions.
-                  </Text>
-                </VStack>
-              </>
-            )}
-          </VStack>
-        </Box>
+                </Box>
+
+                {/* Users Section */}
+                <Box>
+                  <Heading size="md" color="green.500" mb={4}>👥 Users</Heading>
+                  <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
+                    <GridItem>
+                      <Button
+                        colorScheme="green"
+                        onClick={() => handleApiCallWithButton('users-list', api.getUsersList, 'User List')}
+                        isLoading={loadingButton === 'users-list'}
+                        width="full"
+                      >
+                        User List
+                      </Button>
+                    </GridItem>
+                    <GridItem>
+                      <Button
+                        colorScheme="green"
+                        onClick={handleTokenInfo}
+                        isLoading={loadingButton === 'token-info'}
+                        width="full"
+                      >
+                        Get Token Info
+                      </Button>
+                    </GridItem>
+                    <GridItem>
+                      <Button
+                        colorScheme="green"
+                        onClick={async () => {
+                          try {
+                            setLoadingButton('token-list');
+                            const tokenInfo = await api.getTokenInfo();
+                            if (tokenInfo.success && tokenInfo.tokenInfo.username) {
+                              await handleApiCallWithButton('token-list', () => api.getTokensList(tokenInfo.tokenInfo.username), 'Token List');
+                            } else {
+                              toast({
+                                title: 'Error',
+                                description: 'Could not get username from token info',
+                                status: 'error',
+                                duration: 3000,
+                                isClosable: true,
+                              });
+                              setLoadingButton(null);
+                            }
+                          } catch (error) {
+                            toast({
+                              title: 'Error',
+                              description: 'Failed to get token list',
+                              status: 'error',
+                              duration: 3000,
+                              isClosable: true,
+                            });
+                            setLoadingButton(null);
+                          }
+                        }}
+                        isLoading={loadingButton === 'token-list'}
+                        width="full"
+                      >
+                        Token List
+                      </Button>
+                    </GridItem>
+                  </Grid>
+                </Box>
+
+                {/* Contao API Section */}
+                <Box>
+                  <Heading size="md" color="orange.500" mb={4}>🚀 Contao API</Heading>
+                  <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
+                    <GridItem>
+                      <Button
+                        colorScheme="orange"
+                        onClick={() => handleApiCallWithButton('migration-status', api.getDatabaseMigrationStatus, 'Migration Task Status')}
+                        isLoading={loadingButton === 'migration-status'}
+                        width="full"
+                      >
+                        Migration Status
+                      </Button>
+                    </GridItem>
+                    <GridItem>
+                      <Button
+                        colorScheme="orange"
+                        leftIcon={<EditIcon />}
+                        onClick={handleStartDatabaseMigration}
+                        isLoading={loadingButton === 'start-migration'}
+                        width="full"
+                      >
+                        Start Migration
+                      </Button>
+                    </GridItem>
+                    <GridItem>
+                      <Button
+                        colorScheme="red"
+                        leftIcon={<DeleteIcon />}
+                        onClick={() => handleApiCallWithButton('delete-migration', api.deleteDatabaseMigrationTask, 'Delete Migration Task')}
+                        isLoading={loadingButton === 'delete-migration'}
+                        width="full"
+                      >
+                        Delete Migration Task
+                      </Button>
+                    </GridItem>
+                    <GridItem>
+                      <Button
+                        colorScheme="orange"
+                        onClick={() => handleApiCallWithButton('maintenance-mode', api.getMaintenanceModeStatus, 'Maintenance Mode Status')}
+                        isLoading={loadingButton === 'maintenance-mode'}
+                        width="full"
+                      >
+                        Maintenance Status
+                      </Button>
+                    </GridItem>
+                    <GridItem>
+                      <Button
+                        colorScheme="green"
+                        leftIcon={<CheckIcon />}
+                        onClick={() => handleApiCallWithButton('enable-maintenance', api.enableMaintenanceMode, 'Enable Maintenance Mode')}
+                        isLoading={loadingButton === 'enable-maintenance'}
+                        width="full"
+                      >
+                        Enable Maintenance
+                      </Button>
+                    </GridItem>
+                    <GridItem>
+                      <Button
+                        colorScheme="red"
+                        leftIcon={<CloseIcon />}
+                        onClick={() => handleApiCallWithButton('disable-maintenance', api.disableMaintenanceMode, 'Disable Maintenance Mode')}
+                        isLoading={loadingButton === 'disable-maintenance'}
+                        width="full"
+                      >
+                        Disable Maintenance
+                      </Button>
+                    </GridItem>
+                    <GridItem>
+                      <Button
+                        colorScheme="orange"
+                        onClick={() => handleApiCallWithButton('db-backups', api.getDatabaseBackups, 'Database Backups', formatDatabaseBackups)}
+                        isLoading={loadingButton === 'db-backups'}
+                        width="full"
+                      >
+                        Database Backups
+                      </Button>
+                    </GridItem>
+                  </Grid>
+                </Box>
+
+                {/* Tasks Section */}
+                <Box>
+                  <Heading size="md" color="cyan.500" mb={4}>📋 Tasks</Heading>
+                  <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
+                    <GridItem>
+                      <Button
+                        colorScheme="cyan"
+                        onClick={() => handleApiCallWithButton('get-task-data', api.getTaskData, 'Task Data')}
+                        isLoading={loadingButton === 'get-task-data'}
+                        width="full"
+                      >
+                        Get Task Data
+                      </Button>
+                    </GridItem>
+                    <GridItem>
+                      <Button
+                        colorScheme="cyan"
+                        onClick={handleSetTaskData}
+                        isLoading={loadingButton === 'set-task'}
+                        width="full"
+                      >
+                        Set Task Data
+                      </Button>
+                    </GridItem>
+                    <GridItem>
+                      <Button
+                        colorScheme="red"
+                        onClick={() => handleApiCallWithButton('delete-task', api.deleteTaskData, 'Delete Task Data')}
+                        isLoading={loadingButton === 'delete-task'}
+                        width="full"
+                      >
+                        Delete Task Data
+                      </Button>
+                    </GridItem>
+                  </Grid>
+                </Box>
+
+                {/* Packages Section */}
+                <Box>
+                  <Heading size="md" color="purple.500" mb={4}>📦 Packages</Heading>
+                  <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
+                    <GridItem>
+                      <Button
+                        colorScheme="purple"
+                        onClick={() => handleApiCallWithButton('root-package', api.getRootPackageDetails, 'Root Package Details')}
+                        isLoading={loadingButton === 'root-package'}
+                        width="full"
+                      >
+                        Root Package Details
+                      </Button>
+                    </GridItem>
+                    <GridItem>
+                      <Button
+                        colorScheme="purple"
+                        onClick={() => handleApiCallWithButton('installed-packages', api.getInstalledPackages, 'Installed Packages', formatInstalledPackages)}
+                        isLoading={loadingButton === 'installed-packages'}
+                        width="full"
+                      >
+                        Installed Packages
+                      </Button>
+                    </GridItem>
+                  </Grid>
+                </Box>
+              </VStack>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
       </Box>
 
       <Modal isOpen={isOpen} onClose={onClose} size="4xl">
@@ -1120,6 +1168,33 @@ const SiteDetails: React.FC = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      <AlertDialog
+        isOpen={isRemoveDialogOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onRemoveDialogClose}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Remove Site
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Are you sure you want to remove "{site?.name}"? This action cannot be undone.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onRemoveDialogClose}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={handleRemoveSite} ml={3}>
+                Remove
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Container>
   );
 };
