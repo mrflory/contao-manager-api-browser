@@ -67,6 +67,7 @@ import {
   EditIcon,
   CheckIcon,
   CloseIcon,
+  RepeatIcon,
 } from '@chakra-ui/icons';
 import { Config, UpdateStatus, TokenInfo } from '../types';
 import { api } from '../utils/api';
@@ -86,6 +87,8 @@ const SiteDetails: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsTotal, setLogsTotal] = useState(0);
+  const [reauthScope, setReauthScope] = useState('admin');
+  const [showReauthForm, setShowReauthForm] = useState(false);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
   const cardBg = useColorModeValue('white', 'gray.800');
@@ -95,6 +98,23 @@ const SiteDetails: React.FC = () => {
   useEffect(() => {
     loadConfig();
   }, []);
+
+  useEffect(() => {
+    // Check for token from reauthentication OAuth redirect
+    const hash = window.location.hash;
+    if (hash.includes('access_token=') && hash.includes('reauth=true')) {
+      const hashParams = hash.substring(1);
+      const params = new URLSearchParams(hashParams);
+      const extractedToken = params.get('access_token');
+      
+      if (extractedToken) {
+        handleReauthTokenSave(extractedToken);
+      }
+      
+      // Clear the hash
+      window.location.hash = '';
+    }
+  }, [config]); // Run when config changes (site data is available)
 
   const loadConfig = async () => {
     try {
@@ -123,6 +143,103 @@ const SiteDetails: React.FC = () => {
       });
     } finally {
       setLogsLoading(false);
+    }
+  };
+
+  const handleReauthenticate = () => {
+    setShowReauthForm(true);
+  };
+
+  const handleReauthSubmit = async () => {
+    if (!site) return;
+    
+    setLoadingButton('reauthenticate');
+    
+    try {
+      const clientId = 'Contao Manager API Browser';
+      const currentPath = window.location.pathname;
+      const redirectUri = `${window.location.origin}${currentPath}#reauth=true&token`;
+      
+      const oauthUrl = `${site.url}/#oauth?` + new URLSearchParams({
+        response_type: 'token',
+        scope: reauthScope,
+        client_id: clientId,
+        redirect_uri: redirectUri
+      }).toString();
+      
+      toast({
+        title: 'Redirecting',
+        description: 'Redirecting to Contao Manager for reauthentication...',
+        status: 'info',
+        duration: 3000,
+        isClosable: true,
+      });
+      
+      // Store site URL for reauthentication
+      localStorage.setItem('reauthSiteUrl', site.url);
+      
+      setTimeout(() => {
+        window.location.href = oauthUrl;
+      }, 1000);
+      
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      setLoadingButton(null);
+    }
+  };
+
+  const handleReauthTokenSave = async (token: string) => {
+    const siteUrl = localStorage.getItem('reauthSiteUrl');
+    if (!siteUrl) {
+      toast({
+        title: 'Error',
+        description: 'Site URL not found. Please try reauthenticating again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+    
+    setLoadingButton('saving-reauth-token');
+    
+    try {
+      const response = await api.saveToken(token, siteUrl);
+      
+      if (response.success) {
+        toast({
+          title: 'Success',
+          description: 'Site reauthenticated successfully! New token saved.',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+        
+        // Reload config to get updated token info
+        await loadConfig();
+        setShowReauthForm(false);
+        
+        // Clear stored URL
+        localStorage.removeItem('reauthSiteUrl');
+      } else {
+        throw new Error(response.error || 'Failed to save new token');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Error saving new token: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoadingButton(null);
     }
   };
 
@@ -870,23 +987,72 @@ const SiteDetails: React.FC = () => {
                 
                 <VStack spacing={4} align="start">
                   <Heading size="md" color="gray.500">Site Management</Heading>
-                  <HStack spacing={4}>
-                    <Button
-                      leftIcon={<SettingsIcon />}
-                      colorScheme="blue"
-                      onClick={handleUpdateVersionInfo}
-                      isLoading={loadingButton === 'update-version-info'}
-                    >
-                      Update Version Info
-                    </Button>
-                    <Button
-                      leftIcon={<DeleteIcon />}
-                      colorScheme="red"
-                      onClick={onRemoveDialogOpen}
-                    >
-                      Remove Site
-                    </Button>
-                  </HStack>
+                  {!showReauthForm ? (
+                    <HStack spacing={4} wrap="wrap">
+                      <Button
+                        leftIcon={<SettingsIcon />}
+                        colorScheme="blue"
+                        onClick={handleUpdateVersionInfo}
+                        isLoading={loadingButton === 'update-version-info'}
+                      >
+                        Update Version Info
+                      </Button>
+                      <Button
+                        leftIcon={<RepeatIcon />}
+                        colorScheme="orange"
+                        onClick={handleReauthenticate}
+                      >
+                        Reauthenticate
+                      </Button>
+                      <Button
+                        leftIcon={<DeleteIcon />}
+                        colorScheme="red"
+                        onClick={onRemoveDialogOpen}
+                      >
+                        Remove Site
+                      </Button>
+                    </HStack>
+                  ) : (
+                    <Box p={4} border="1px" borderColor={borderColor} borderRadius="md" width="100%">
+                      <VStack spacing={4} align="stretch">
+                        <Text fontSize="md" fontWeight="semibold">
+                          Reauthenticate with {site?.name}
+                        </Text>
+                        <Text fontSize="sm" color="gray.600">
+                          Select new permissions and generate a new API token. This will replace your current token.
+                        </Text>
+                        <FormControl>
+                          <FormLabel>Required Permissions</FormLabel>
+                          <Select
+                            value={reauthScope}
+                            onChange={(e) => setReauthScope(e.target.value)}
+                            maxW="300px"
+                          >
+                            <option value="read">Read Only</option>
+                            <option value="update">Read + Update</option>
+                            <option value="install">Read + Update + Install</option>
+                            <option value="admin">Full Admin Access</option>
+                          </Select>
+                        </FormControl>
+                        <HStack spacing={3}>
+                          <Button
+                            colorScheme="orange"
+                            onClick={handleReauthSubmit}
+                            isLoading={loadingButton === 'reauthenticate'}
+                            loadingText="Redirecting..."
+                          >
+                            Generate New Token
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() => setShowReauthForm(false)}
+                          >
+                            Cancel
+                          </Button>
+                        </HStack>
+                      </VStack>
+                    </Box>
+                  )}
                 </VStack>
               </VStack>
             </TabPanel>
