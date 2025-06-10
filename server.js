@@ -70,6 +70,37 @@ function extractSiteName(url) {
     }
 }
 
+function logApiCall(siteUrl, method, endpoint, statusCode, requestData = null, responseData = null, error = null) {
+    try {
+        const hostname = extractSiteName(siteUrl);
+        const logFile = path.join(__dirname, 'data', `${hostname}.log`);
+        
+        const timestamp = new Date().toISOString();
+        const logEntry = {
+            timestamp,
+            method,
+            endpoint,
+            statusCode,
+            requestData: requestData || null,
+            responseData: responseData || null,
+            error: error || null
+        };
+        
+        const logLine = JSON.stringify(logEntry) + '\n';
+        
+        // Ensure data directory exists
+        const dataDir = path.join(__dirname, 'data');
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+        }
+        
+        // Append to log file
+        fs.appendFileSync(logFile, logLine);
+    } catch (logError) {
+        console.error('Failed to write to log file:', logError.message);
+    }
+}
+
 function addSite(url, token, name = null) {
     const config = loadConfig();
     const siteName = name || extractSiteName(url);
@@ -216,6 +247,9 @@ app.get('/api/token-info', async (req, res) => {
         console.log('Session response status:', sessionResponse.status);
         console.log('Session response data:', sessionResponse.data);
 
+        // Log session request
+        logApiCall(activeSite.url, 'GET', '/api/session', sessionResponse.status, null, sessionResponse.data);
+
         if (sessionResponse.status === 200) {
             res.json({
                 success: true,
@@ -231,6 +265,10 @@ app.get('/api/token-info', async (req, res) => {
         }
     } catch (error) {
         console.error('Token info error:', error.message);
+        // Log failed session request
+        if (activeSite) {
+            logApiCall(activeSite.url, 'GET', '/api/session', error.response?.status || 500, null, null, error.message);
+        }
         res.status(500).json({ error: 'Failed to get token info: ' + error.message });
     }
 });
@@ -252,6 +290,9 @@ app.post('/api/save-token', async (req, res) => {
             validateStatus: status => status < 500
         });
 
+        // Log save-token validation request
+        logApiCall(managerUrl, 'GET', '/api/session', testResponse.status, null, testResponse.data);
+
         if (testResponse.status !== 200) {
             return res.status(401).json({ error: 'Invalid token' });
         }
@@ -264,6 +305,11 @@ app.post('/api/save-token', async (req, res) => {
         }
     } catch (error) {
         console.error('Save token error:', error.message);
+        // Log failed save-token validation request
+        const { managerUrl } = req.body;
+        if (managerUrl) {
+            logApiCall(managerUrl, 'GET', '/api/session', error.response?.status || 500, null, null, error.message);
+        }
         res.status(500).json({ error: 'Failed to validate and save token' });
     }
 });
@@ -306,8 +352,12 @@ app.post('/api/validate-token', async (req, res) => {
         }
 
         if (testResponse.status === 200) {
+            // Log successful token validation
+            logApiCall(managerUrl, 'GET', '/api/session', testResponse.status, null, testResponse.data);
             res.json({ success: true, url: managerUrl });
         } else {
+            // Log failed token validation
+            logApiCall(managerUrl, 'GET', '/api/session', testResponse.status, null, testResponse.data);
             res.status(401).json({ error: 'Invalid token' });
         }
     } catch (error) {
@@ -362,8 +412,13 @@ app.post('/api/update-version-info', async (req, res) => {
                 versionInfo.contaoManagerVersion = selfUpdateResponse.data.current_version;
                 console.log('Got Contao Manager version:', versionInfo.contaoManagerVersion);
             }
+            
+            // Log self-update version request
+            logApiCall(activeSite.url, 'GET', '/api/server/self-update', selfUpdateResponse.status, null, selfUpdateResponse.data);
         } catch (error) {
             console.error('Failed to get Contao Manager version:', error.message);
+            // Log failed self-update version request
+            logApiCall(activeSite.url, 'GET', '/api/server/self-update', error.response?.status || 500, null, null, error.message);
         }
 
         // Get PHP version from php-web endpoint
@@ -396,8 +451,13 @@ app.post('/api/update-version-info', async (req, res) => {
                 versionInfo.phpVersion = phpWebResponse.data.version;
                 console.log('Got PHP version:', versionInfo.phpVersion);
             }
+            
+            // Log php-web version request
+            logApiCall(activeSite.url, 'GET', '/api/server/php-web', phpWebResponse.status, null, phpWebResponse.data);
         } catch (error) {
             console.error('Failed to get PHP version:', error.message);
+            // Log failed php-web version request
+            logApiCall(activeSite.url, 'GET', '/api/server/php-web', error.response?.status || 500, null, null, error.message);
         }
 
         // Get Contao version from contao endpoint
@@ -430,8 +490,13 @@ app.post('/api/update-version-info', async (req, res) => {
                 versionInfo.contaoVersion = contaoResponse.data.version;
                 console.log('Got Contao version:', versionInfo.contaoVersion);
             }
+            
+            // Log contao version request
+            logApiCall(activeSite.url, 'GET', '/api/server/contao', contaoResponse.status, null, contaoResponse.data);
         } catch (error) {
             console.error('Failed to get Contao version:', error.message);
+            // Log failed contao version request
+            logApiCall(activeSite.url, 'GET', '/api/server/contao', error.response?.status || 500, null, null, error.message);
         }
 
         // Update the site configuration with version info
@@ -507,6 +572,9 @@ app.post('/api/update-status', async (req, res) => {
             } else {
                 result.errors.composer = `Request failed with status ${updateResponse.status}`;
             }
+            
+            // Log composer request
+            logApiCall(activeSite.url, 'GET', '/api/server/composer', updateResponse.status, null, updateResponse.data);
         } catch (error) {
             console.error('Composer request error:', error.message);
             result.errors.composer = `Failed to fetch composer status: ${error.message}`;
@@ -550,6 +618,9 @@ app.post('/api/update-status', async (req, res) => {
             } else {
                 result.errors.selfUpdate = `Request failed with status ${statusResponse.status}`;
             }
+            
+            // Log self-update request
+            logApiCall(activeSite.url, 'GET', '/api/server/self-update', statusResponse.status, null, statusResponse.data);
         } catch (error) {
             console.error('Self-update request error:', error.message);
             result.errors.selfUpdate = `Failed to fetch self-update status: ${error.message}`;
@@ -590,6 +661,7 @@ async function proxyToContaoManager(endpoint, method = 'GET', data = null) {
     }
 
     let response;
+    let requestError = null;
     
     // Try Contao-Manager-Auth header first (recommended by swagger)
     try {
@@ -603,31 +675,55 @@ async function proxyToContaoManager(endpoint, method = 'GET', data = null) {
     } catch (error) {
         console.log('[API REQUEST] Contao-Manager-Auth failed, trying Authorization Bearer');
         // Fallback to Authorization Bearer header
-        config.headers = {
-            ...config.headers,
-            'Authorization': `Bearer ${activeSite.token}`
-        };
-        delete config.headers['Contao-Manager-Auth'];
-        response = await axios(config);
-        console.log('[API REQUEST] Authorization Bearer worked');
+        try {
+            config.headers = {
+                ...config.headers,
+                'Authorization': `Bearer ${activeSite.token}`
+            };
+            delete config.headers['Contao-Manager-Auth'];
+            response = await axios(config);
+            console.log('[API REQUEST] Authorization Bearer worked');
+        } catch (fallbackError) {
+            requestError = fallbackError;
+            response = fallbackError.response || { status: 500, data: null };
+        }
     }
 
     console.log(`[API RESPONSE] Status: ${response.status}`);
     console.log('[API RESPONSE] Headers:', response.headers);
     
     // Log response data safely
+    let responseDataForLog = null;
     if (response.data !== undefined) {
         try {
             const dataStr = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
             console.log('[API RESPONSE] Data:', dataStr);
             console.log('[API RESPONSE] Data type:', typeof response.data);
             console.log('[API RESPONSE] Data length:', dataStr.length);
+            responseDataForLog = response.data;
         } catch (e) {
             console.log('[API RESPONSE] Data (stringify failed):', response.data);
             console.log('[API RESPONSE] Data type:', typeof response.data);
+            responseDataForLog = response.data;
         }
     } else {
         console.log('[API RESPONSE] No data in response');
+    }
+
+    // Log the API call
+    logApiCall(
+        activeSite.url,
+        method,
+        endpoint,
+        response.status,
+        data,
+        responseDataForLog,
+        requestError ? requestError.message : null
+    );
+
+    // If there was an error, throw it
+    if (requestError) {
+        throw requestError;
     }
 
     return response;
@@ -881,6 +977,57 @@ app.get('/api/packages/local/', async (req, res) => {
         console.error('[PACKAGES-LOCAL] Error:', error.message);
         console.error('[PACKAGES-LOCAL] Full error:', error);
         res.status(500).json({ error: 'Failed to get installed packages: ' + error.message });
+    }
+});
+
+// Log reading endpoint
+app.get('/api/logs/:siteUrl', (req, res) => {
+    try {
+        const siteUrl = decodeURIComponent(req.params.siteUrl);
+        const hostname = extractSiteName(siteUrl);
+        const logFile = path.join(__dirname, 'data', `${hostname}.log`);
+        
+        // Check if log file exists
+        if (!fs.existsSync(logFile)) {
+            return res.json({ logs: [], message: 'No logs found for this site' });
+        }
+        
+        // Read log file and parse JSON lines
+        const logContent = fs.readFileSync(logFile, 'utf8');
+        const logLines = logContent.trim().split('\n').filter(line => line.trim());
+        
+        const logs = [];
+        for (const line of logLines) {
+            try {
+                const logEntry = JSON.parse(line);
+                logs.push(logEntry);
+            } catch (parseError) {
+                console.error('Failed to parse log line:', parseError.message);
+                // Include unparseable lines as raw text
+                logs.push({
+                    timestamp: new Date().toISOString(),
+                    method: 'UNKNOWN',
+                    endpoint: 'PARSE_ERROR',
+                    statusCode: null,
+                    error: `Failed to parse: ${line}`,
+                    requestData: null,
+                    responseData: null
+                });
+            }
+        }
+        
+        // Sort logs by timestamp (newest first)
+        logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        
+        res.json({ 
+            logs,
+            total: logs.length,
+            siteUrl,
+            hostname
+        });
+    } catch (error) {
+        console.error('[LOGS] Error:', error.message);
+        res.status(500).json({ error: 'Failed to read log file: ' + error.message });
     }
 });
 

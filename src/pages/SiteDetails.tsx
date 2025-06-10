@@ -83,6 +83,9 @@ const SiteDetails: React.FC = () => {
   const [loadingButton, setLoadingButton] = useState<string | null>(null);
   const [modalTitle, setModalTitle] = useState('');
   const [modalContent, setModalContent] = useState<React.ReactNode>(null);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsTotal, setLogsTotal] = useState(0);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
   const cardBg = useColorModeValue('white', 'gray.800');
@@ -99,6 +102,27 @@ const SiteDetails: React.FC = () => {
       setConfig(configData);
     } catch (error) {
       console.error('Error loading config:', error);
+    }
+  };
+
+  const loadLogs = async () => {
+    if (!site) return;
+    setLogsLoading(true);
+    try {
+      const logsData = await api.getLogs(site.url);
+      setLogs(logsData.logs);
+      setLogsTotal(logsData.total);
+    } catch (error) {
+      console.error('Error loading logs:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to load logs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLogsLoading(false);
     }
   };
 
@@ -781,6 +805,7 @@ const SiteDetails: React.FC = () => {
             <Tab>Site Info</Tab>
             <Tab>Update</Tab>
             <Tab>Expert</Tab>
+            <Tab>Logs</Tab>
           </TabList>
 
           <TabPanels>
@@ -1135,6 +1160,151 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                   </Grid>
                 </Box>
+              </VStack>
+            </TabPanel>
+
+            {/* Tab 4: Logs */}
+            <TabPanel>
+              <VStack spacing={6} align="stretch">
+                <Flex justify="space-between" align="center">
+                  <Heading size="lg">API Call Logs</Heading>
+                  <Button
+                    colorScheme="blue"
+                    onClick={loadLogs}
+                    isLoading={logsLoading}
+                    size="sm"
+                  >
+                    Refresh Logs
+                  </Button>
+                </Flex>
+                
+                {logsLoading ? (
+                  <Center py={8}>
+                    <Spinner size="lg" />
+                  </Center>
+                ) : logs.length === 0 ? (
+                  <Alert status="info">
+                    <AlertIcon />
+                    <AlertTitle>No logs found</AlertTitle>
+                    <AlertDescription>
+                      No API call logs are available for this site yet. Make some API calls from the Expert tab to see logs here.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Box>
+                    <Text fontSize="sm" color="gray.500" mb={4}>
+                      Showing {logs.length} log entries for {site?.name}
+                    </Text>
+                    <TableContainer maxH="600px" overflowY="auto">
+                      <Table variant="simple" size="sm">
+                        <Thead position="sticky" top={0} bg={cardBg} zIndex={1}>
+                          <Tr>
+                            <Th>Timestamp</Th>
+                            <Th>Method</Th>
+                            <Th>Endpoint</Th>
+                            <Th>Status</Th>
+                            <Th>Error</Th>
+                            <Th>Details</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {logs.map((log, index) => (
+                            <Tr key={index}>
+                              <Td>
+                                <Text fontSize="xs">
+                                  {new Date(log.timestamp).toLocaleString()}
+                                </Text>
+                              </Td>
+                              <Td>
+                                <Badge 
+                                  colorScheme={
+                                    log.method === 'GET' ? 'blue' : 
+                                    log.method === 'POST' ? 'green' : 
+                                    log.method === 'PUT' ? 'orange' : 
+                                    log.method === 'DELETE' ? 'red' : 'gray'
+                                  }
+                                  size="sm"
+                                >
+                                  {log.method}
+                                </Badge>
+                              </Td>
+                              <Td>
+                                <Code fontSize="xs">{log.endpoint}</Code>
+                              </Td>
+                              <Td>
+                                <Badge 
+                                  colorScheme={
+                                    log.statusCode >= 200 && log.statusCode < 300 ? 'green' :
+                                    log.statusCode >= 300 && log.statusCode < 400 ? 'blue' :
+                                    log.statusCode >= 400 && log.statusCode < 500 ? 'orange' :
+                                    log.statusCode >= 500 ? 'red' : 'gray'
+                                  }
+                                  size="sm"
+                                >
+                                  {log.statusCode || 'N/A'}
+                                </Badge>
+                              </Td>
+                              <Td>
+                                {log.error ? (
+                                  <Text fontSize="xs" color="red.500" noOfLines={1} maxW="150px">
+                                    {log.error}
+                                  </Text>
+                                ) : (
+                                  <Text fontSize="xs" color="gray.400">None</Text>
+                                )}
+                              </Td>
+                              <Td>
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  onClick={() => {
+                                    const logDetails = (
+                                      <VStack spacing={4} align="stretch">
+                                        <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+                                          <Heading size="sm" mb={3}>Request Details</Heading>
+                                          <VStack spacing={2} align="start">
+                                            <Text><strong>Method:</strong> {log.method}</Text>
+                                            <Text><strong>Endpoint:</strong> {log.endpoint}</Text>
+                                            <Text><strong>Timestamp:</strong> {new Date(log.timestamp).toLocaleString()}</Text>
+                                            <Text><strong>Status Code:</strong> {log.statusCode || 'N/A'}</Text>
+                                            {log.error && (
+                                              <Text><strong>Error:</strong> <Text as="span" color="red.500">{log.error}</Text></Text>
+                                            )}
+                                          </VStack>
+                                        </Box>
+                                        
+                                        {log.requestData && (
+                                          <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+                                            <Heading size="sm" mb={3}>Request Data</Heading>
+                                            <Code display="block" whiteSpace="pre" p={3} borderRadius="md" maxH="200px" overflowY="auto">
+                                              {JSON.stringify(log.requestData, null, 2)}
+                                            </Code>
+                                          </Box>
+                                        )}
+                                        
+                                        {log.responseData && (
+                                          <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+                                            <Heading size="sm" mb={3}>Response Data</Heading>
+                                            <Code display="block" whiteSpace="pre" p={3} borderRadius="md" maxH="300px" overflowY="auto">
+                                              {JSON.stringify(log.responseData, null, 2)}
+                                            </Code>
+                                          </Box>
+                                        )}
+                                      </VStack>
+                                    );
+                                    showModal(`Log Details - ${log.method} ${log.endpoint}`, logDetails);
+                                  }}
+                                >
+                                  View
+                                </Button>
+                              </Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                )}
               </VStack>
             </TabPanel>
           </TabPanels>

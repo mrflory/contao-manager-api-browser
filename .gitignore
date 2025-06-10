@@ -17,6 +17,9 @@ dist/
 # Configuration with sensitive data
 data/config.json
 
+# Site-specific API call logs
+data/*.log
+
 # Logs
 logs/
 *.log

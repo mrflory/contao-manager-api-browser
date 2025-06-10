@@ -198,5 +198,10 @@ export const api = {
 
   async getInstalledPackages(): Promise<any> {
     return makeApiCall('/packages/local/');
+  },
+
+  // Logs endpoint
+  async getLogs(siteUrl: string): Promise<{ logs: any[]; total: number; siteUrl: string; hostname: string; message?: string }> {
+    return makeApiCall(`/logs/${encodeURIComponent(siteUrl)}`);
   }
 };
