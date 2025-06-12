@@ -39,6 +39,8 @@ export const UpdateWorkflow: React.FC = () => {
   
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const configSummaryBg = useColorModeValue('blue.50', 'blue.900');
+  const configBg = useColorModeValue('gray.50', 'gray.700');
   const toast = useToast();
   
   const {
@@ -208,7 +210,7 @@ export const UpdateWorkflow: React.FC = () => {
 
           {/* Configuration */}
           {!state.isRunning && !isComplete && (
-            <Box p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
+            <Box p={4} bg={configBg} borderRadius="md">
               <Text fontWeight="semibold" mb={3}>Configuration</Text>
               <VStack align="start" spacing={3}>
                 <Checkbox
@@ -344,7 +346,7 @@ export const UpdateWorkflow: React.FC = () => {
               </VStack>
 
               {/* Configuration Summary */}
-              <Box p={3} bg={useColorModeValue('blue.50', 'blue.900')} borderRadius="md">
+              <Box p={3} bg={configSummaryBg} borderRadius="md">
                 <Text fontSize="sm" fontWeight="semibold" mb={2}>Configuration Summary:</Text>
                 <VStack align="start" spacing={1} fontSize="sm">
                   <Text>• Composer dry-run: {config.performDryRun ? 'Enabled' : 'Disabled'}</Text>
@@ -392,7 +394,7 @@ export const UpdateWorkflow: React.FC = () => {
               </Alert>
               
               {currentStep?.data && (
-                <Box p={3} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
+                <Box p={3} bg={configBg} borderRadius="md">
                   <Text fontSize="sm" fontWeight="semibold" mb={2}>Current task details:</Text>
                   <Text fontSize="xs" fontFamily="mono">
                     {JSON.stringify(currentStep.data, null, 2)}
@@ -437,7 +439,7 @@ export const UpdateWorkflow: React.FC = () => {
               </Alert>
               
               {state.steps.find(step => step.id === 'check-migrations-loop')?.data && (
-                <Box p={3} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
+                <Box p={3} bg={configBg} borderRadius="md">
                   <Text fontSize="sm" fontWeight="semibold" mb={2}>Migration details:</Text>
                   <Text fontSize="xs" fontFamily="mono">
                     {JSON.stringify(state.steps.find(step => step.id === 'check-migrations-loop')?.data, null, 2)}
