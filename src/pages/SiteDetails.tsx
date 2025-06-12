@@ -88,6 +88,7 @@ const SiteDetails: React.FC = () => {
   const { isOpen: isMigrationModalOpen, onOpen: onMigrationModalOpen, onClose: onMigrationModalClose } = useDisclosure();
   const { isOpen: isRemoveDialogOpen, onOpen: onRemoveDialogOpen, onClose: onRemoveDialogClose } = useDisclosure();
   const [config, setConfig] = useState<Config | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [loadingButton, setLoadingButton] = useState<string | null>(null);
   const [modalTitle, setModalTitle] = useState('');
@@ -130,6 +131,8 @@ const SiteDetails: React.FC = () => {
       setConfig(configData);
     } catch (error) {
       console.error('Error loading config:', error);
+    } finally {
+      setConfigLoading(false);
     }
   };
 
@@ -943,14 +946,39 @@ const SiteDetails: React.FC = () => {
     }
   };
 
-  if (!site) {
+  if (configLoading) {
     return (
       <Container maxW="4xl">
         <Center h="300px">
           <VStack>
-            <Text>Site not found</Text>
+            <Spinner size="xl" />
+            <Text>Loading site details...</Text>
+          </VStack>
+        </Center>
+      </Container>
+    );
+  }
+
+  if (!site) {
+    return (
+      <Container maxW="4xl">
+        <Center h="400px">
+          <VStack spacing={6}>
+            <Alert status="error" borderRadius="lg" p={6} maxW="md">
+              <AlertIcon boxSize="40px" mr={4} />
+              <Box>
+                <AlertTitle fontSize="xl" mb={2}>
+                  Site Not Found
+                </AlertTitle>
+                <AlertDescription fontSize="md">
+                  The requested site could not be found. It may have been removed or the URL is incorrect.
+                </AlertDescription>
+              </Box>
+            </Alert>
             <Button 
               leftIcon={<ArrowBackIcon />}
+              colorScheme="blue"
+              size="lg"
               onClick={() => navigate('/')}
             >
               Back to Sites
