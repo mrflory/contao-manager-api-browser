@@ -415,6 +415,30 @@ export const useWorkflow = () => {
     }));
   }, [markCurrentStepComplete, updateState]);
 
+  // Create a stable reference for step execution functions
+  const stepExecutorsRef = useRef({
+    'check-tasks': executeCheckTasks,
+    'check-manager': executeCheckManager,
+    'update-manager': executeUpdateManager,
+    'composer-dry-run': executeComposerDryRun,
+    'composer-update': executeComposerUpdate,
+    'check-migrations-loop': executeCheckMigrationsLoop,
+    'execute-migrations': executeExecuteMigrations,
+    'update-versions': executeUpdateVersions
+  });
+
+  // Update refs when functions change
+  stepExecutorsRef.current = {
+    'check-tasks': executeCheckTasks,
+    'check-manager': executeCheckManager,
+    'update-manager': executeUpdateManager,
+    'composer-dry-run': executeComposerDryRun,
+    'composer-update': executeComposerUpdate,
+    'check-migrations-loop': executeCheckMigrationsLoop,
+    'execute-migrations': executeExecuteMigrations,
+    'update-versions': executeUpdateVersions
+  };
+
   const executeCurrentStep = useCallback(async () => {
     const currentStep = state.steps[state.currentStep];
     if (!currentStep || !state.isRunning) return;
@@ -425,52 +449,16 @@ export const useWorkflow = () => {
     });
 
     try {
-      switch (currentStep.id) {
-        case 'check-tasks':
-          await executeCheckTasks();
-          break;
-        case 'check-manager':
-          await executeCheckManager();
-          break;
-        case 'update-manager':
-          await executeUpdateManager();
-          break;
-        case 'composer-dry-run':
-          await executeComposerDryRun();
-          break;
-        case 'composer-update':
-          await executeComposerUpdate();
-          break;
-        case 'check-migrations-loop':
-          await executeCheckMigrationsLoop();
-          break;
-        case 'execute-migrations':
-          await executeExecuteMigrations();
-          break;
-        case 'update-versions':
-          await executeUpdateVersions();
-          break;
-        default:
-          throw new Error(`Unknown step: ${currentStep.id}`);
+      const executor = stepExecutorsRef.current[currentStep.id as keyof typeof stepExecutorsRef.current];
+      if (executor) {
+        await executor();
+      } else {
+        throw new Error(`Unknown step: ${currentStep.id}`);
       }
     } catch (error) {
       markCurrentStepError(error instanceof Error ? error.message : 'Unknown error');
     }
-  }, [
-    state.steps, 
-    state.currentStep, 
-    state.isRunning, 
-    updateCurrentStep,
-    executeCheckTasks,
-    executeCheckManager,
-    executeUpdateManager,
-    executeComposerDryRun,
-    executeComposerUpdate,
-    executeCheckMigrationsLoop,
-    executeExecuteMigrations,
-    executeUpdateVersions,
-    markCurrentStepError
-  ]);
+  }, [state.steps, state.currentStep, state.isRunning, updateCurrentStep, markCurrentStepError]);
 
   // Update ref for recursive calls
   executeCurrentStepRef.current = executeCurrentStep;

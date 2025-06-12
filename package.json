@@ -17,7 +17,9 @@
     "dev:react": "vite",
     "dev:full": "concurrently \"npm run dev\" \"npm run dev:react\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:react19-compat": "node scripts/test-react19-compat.js",
+    "test:build": "npm run build && npm run preview"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.8.2",

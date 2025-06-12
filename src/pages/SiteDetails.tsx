@@ -99,6 +99,11 @@ const SiteDetails: React.FC = () => {
   const [logsTotal, setLogsTotal] = useState(0);
   const [reauthScope, setReauthScope] = useState('admin');
   const [showReauthForm, setShowReauthForm] = useState(false);
+  const [migrationFormData, setMigrationFormData] = useState({
+    hash: '',
+    type: '',
+    withDeletes: false
+  });
   const cancelRef = useRef<HTMLButtonElement>(null);
 
   const cardBg = useColorModeValue('white', 'gray.800');
@@ -421,6 +426,13 @@ const SiteDetails: React.FC = () => {
   };
 
   const handleStartDatabaseMigration = () => {
+    // Reset form data when opening
+    setMigrationFormData({
+      hash: '',
+      type: '',
+      withDeletes: false
+    });
+
     const migrationForm = (
       <VStack spacing={4} align="stretch">
         <Text fontSize="md" color="gray.600" mb={2}>
@@ -429,14 +441,18 @@ const SiteDetails: React.FC = () => {
         <FormControl>
           <FormLabel>Migration Hash (optional)</FormLabel>
           <Input
-            id="migration-hash"
+            value={migrationFormData.hash}
+            onChange={(e) => setMigrationFormData(prev => ({ ...prev, hash: e.target.value }))}
             placeholder="Leave empty for dry-run to get pending migrations"
           />
         </FormControl>
         
         <FormControl>
           <FormLabel>Migration Type</FormLabel>
-          <Select id="migration-type" defaultValue="">
+          <Select 
+            value={migrationFormData.type}
+            onChange={(e) => setMigrationFormData(prev => ({ ...prev, type: e.target.value }))}
+          >
             <option value="">All migrations and schema updates</option>
             <option value="migrations-only">Migrations only</option>
             <option value="schema-only">Schema updates only</option>
@@ -444,7 +460,10 @@ const SiteDetails: React.FC = () => {
         </FormControl>
 
         <FormControl>
-          <Checkbox id="with-deletes">
+          <Checkbox 
+            isChecked={migrationFormData.withDeletes}
+            onChange={(e) => setMigrationFormData(prev => ({ ...prev, withDeletes: e.target.checked }))}
+          >
             Execute migrations including DROP queries
           </Checkbox>
         </FormControl>
@@ -452,14 +471,10 @@ const SiteDetails: React.FC = () => {
         <Button
           colorScheme="orange"
           onClick={async () => {
-            const hash = (document.getElementById('migration-hash') as HTMLInputElement)?.value || undefined;
-            const type = (document.getElementById('migration-type') as HTMLSelectElement)?.value || undefined;
-            const withDeletes = (document.getElementById('with-deletes') as HTMLInputElement)?.checked || false;
-            
             const payload: any = {};
-            if (hash) payload.hash = hash;
-            if (type) payload.type = type;
-            if (withDeletes) payload.withDeletes = withDeletes;
+            if (migrationFormData.hash) payload.hash = migrationFormData.hash;
+            if (migrationFormData.type) payload.type = migrationFormData.type;
+            if (migrationFormData.withDeletes) payload.withDeletes = migrationFormData.withDeletes;
             
             onMigrationModalClose();
             await handleApiCallWithButton('start-migration', () => api.startDatabaseMigration(payload), 'Start Database Migration');

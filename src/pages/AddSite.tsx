@@ -52,7 +52,7 @@ const AddSite: React.FC = () => {
     }
   }, [toast]);
 
-  const handleAuthSubmit = async (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!url) {
