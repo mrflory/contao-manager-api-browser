@@ -20,7 +20,7 @@ export const usePolling = (
     onTimeout
   } = options;
 
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<number>();
   const startTimeRef = useRef<number>();
   const isActiveRef = useRef(false);
 

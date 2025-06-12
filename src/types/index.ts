@@ -62,6 +62,7 @@ export interface WorkflowStep {
 
 export interface WorkflowConfig {
   performDryRun: boolean;
+  withDeletes?: boolean; // Execute migrations including DROP queries
 }
 
 export interface WorkflowState {

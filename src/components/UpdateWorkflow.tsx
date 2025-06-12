@@ -20,18 +20,19 @@ import {
   ModalBody,
   ModalFooter,
   ModalCloseButton,
-  useDisclosure,
   Progress,
-  Badge,
-  Divider
+  Badge
 } from '@chakra-ui/react';
-import { TriangleUpIcon, TriangleDownIcon, RepeatIcon, WarningIcon } from '@chakra-ui/icons';
+import { TriangleUpIcon, TriangleDownIcon, RepeatIcon } from '@chakra-ui/icons';
 import { WorkflowTimeline } from './WorkflowTimeline';
 import { useWorkflow } from '../hooks/useWorkflow';
 import { WorkflowConfig } from '../types';
 
 export const UpdateWorkflow: React.FC = () => {
-  const [config, setConfig] = useState<WorkflowConfig>({ performDryRun: false });
+  const [config, setConfig] = useState<WorkflowConfig>({ 
+    performDryRun: false,
+    withDeletes: false 
+  });
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [pendingTasksModalOpen, setPendingTasksModalOpen] = useState(false);
   const [migrationsModalOpen, setMigrationsModalOpen] = useState(false);
@@ -216,6 +217,12 @@ export const UpdateWorkflow: React.FC = () => {
                 >
                   Perform composer dry-run before actual update
                 </Checkbox>
+                <Checkbox
+                  isChecked={config.withDeletes}
+                  onChange={(e) => setConfig(prev => ({ ...prev, withDeletes: e.target.checked }))}
+                >
+                  Execute migrations including DROP queries
+                </Checkbox>
                 <Text fontSize="sm" color="gray.600">
                   <strong>Estimated time:</strong> {getEstimatedTime()}
                 </Text>
@@ -331,10 +338,24 @@ export const UpdateWorkflow: React.FC = () => {
                   <Text fontSize="sm">• Run composer dry-run test</Text>
                 )}
                 <Text fontSize="sm">• Update composer packages</Text>
-                <Text fontSize="sm">• Check for database migrations</Text>
-                <Text fontSize="sm">• Execute database migrations (with confirmation)</Text>
+                <Text fontSize="sm">• Check for database migrations (cyclically until complete)</Text>
+                <Text fontSize="sm">• Execute database migrations (with confirmation){config.withDeletes ? ' including DROP queries' : ''}</Text>
                 <Text fontSize="sm">• Update version information</Text>
               </VStack>
+
+              {/* Configuration Summary */}
+              <Box p={3} bg={useColorModeValue('blue.50', 'blue.900')} borderRadius="md">
+                <Text fontSize="sm" fontWeight="semibold" mb={2}>Configuration Summary:</Text>
+                <VStack align="start" spacing={1} fontSize="sm">
+                  <Text>• Composer dry-run: {config.performDryRun ? 'Enabled' : 'Disabled'}</Text>
+                  <Text>• Include DROP queries in migrations: {config.withDeletes ? 'Enabled' : 'Disabled'}</Text>
+                </VStack>
+                {config.withDeletes && (
+                  <Text fontSize="xs" color="orange.600" mt={2}>
+                    ⚠️ DROP queries may remove data or database structures
+                  </Text>
+                )}
+              </Box>
               
               <Text fontSize="sm" color="gray.600">
                 Estimated time: {getEstimatedTime()}
@@ -415,14 +436,32 @@ export const UpdateWorkflow: React.FC = () => {
                 </Box>
               </Alert>
               
-              {state.steps.find(step => step.id === 'check-migrations')?.data && (
+              {state.steps.find(step => step.id === 'check-migrations-loop')?.data && (
                 <Box p={3} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
                   <Text fontSize="sm" fontWeight="semibold" mb={2}>Migration details:</Text>
                   <Text fontSize="xs" fontFamily="mono">
-                    {JSON.stringify(state.steps.find(step => step.id === 'check-migrations')?.data, null, 2)}
+                    {JSON.stringify(state.steps.find(step => step.id === 'check-migrations-loop')?.data, null, 2)}
                   </Text>
                 </Box>
               )}
+              
+              {/* Migration Configuration Display */}
+              <Box p={3} border="1px" borderColor={borderColor} borderRadius="md">
+                <Text fontSize="sm" fontWeight="semibold" mb={2}>Migration Settings:</Text>
+                <HStack spacing={4}>
+                  <Text fontSize="sm">
+                    <strong>Include DROP queries:</strong> {config.withDeletes ? 'Yes' : 'No'}
+                  </Text>
+                </HStack>
+                {config.withDeletes && (
+                  <Alert status="warning" size="sm" mt={2}>
+                    <AlertIcon />
+                    <AlertDescription fontSize="xs">
+                      DROP queries will be executed, which may remove data or database structures.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </Box>
               
               <Text fontSize="sm">
                 <strong>Important:</strong> Database migrations will modify your database structure. 

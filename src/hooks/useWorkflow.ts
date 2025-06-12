@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { WorkflowState, WorkflowStep, WorkflowConfig, TaskStatus, DatabaseMigrationStatus } from '../types';
+import { WorkflowState, WorkflowStep, WorkflowConfig, DatabaseMigrationStatus } from '../types';
 import { api } from '../utils/api';
 import { usePolling } from './usePolling';
 
@@ -43,14 +43,14 @@ const createInitialSteps = (config: WorkflowConfig): WorkflowStep[] => {
       status: 'pending'
     },
     {
-      id: 'check-migrations',
+      id: 'check-migrations-loop',
       title: 'Check Database Migrations',
       description: 'Check if database migrations are pending',
       status: 'pending'
     },
     {
-      id: 'run-migrations',
-      title: 'Run Database Migrations',
+      id: 'execute-migrations',
+      title: 'Execute Database Migrations',
       description: 'Execute pending database migrations',
       status: 'pending',
       conditional: true
@@ -160,19 +160,19 @@ export const useWorkflow = () => {
       const currentStepId = currentStepRef.current?.id;
       
       if (result.status === 'pending') {
-        if (currentStepId === 'check-migrations') {
+        if (currentStepId === 'check-migrations-loop') {
           // Checking migrations step
           if (!result.hash || result.hash === '') {
-            // No migrations needed - skip the run-migrations step
+            // No migrations needed - skip the execute-migrations step and continue to next workflow step
             markCurrentStepComplete(result);
             api.deleteDatabaseMigrationTask().then(() => {
               moveToNextStep();
-              // Skip the run-migrations step
+              // Skip the execute-migrations step
               updateState(prev => ({
                 ...prev,
                 currentStep: prev.currentStep + 1,
-                steps: prev.steps.map((step, index) => 
-                  step.id === 'run-migrations' ? { ...step, status: 'skipped' } : step
+                steps: prev.steps.map(step => 
+                  step.id === 'execute-migrations' ? { ...step, status: 'skipped' } : step
                 )
               }));
               setTimeout(() => executeCurrentStepRef.current?.(), 100);
@@ -193,15 +193,42 @@ export const useWorkflow = () => {
               markCurrentStepError(`Failed to clean up migration task: ${error.message}`);
             });
           }
-        } else if (currentStepId === 'run-migrations') {
-          // This shouldn't happen during run-migrations, but handle gracefully
+        } else if (currentStepId === 'execute-migrations') {
+          // This shouldn't happen during execute-migrations, but handle gracefully
           markCurrentStepError('Unexpected pending status during migration execution');
         }
       } else if (result.status === 'complete') {
         markCurrentStepComplete(result);
         api.deleteDatabaseMigrationTask().then(() => {
-          moveToNextStep();
-          setTimeout(() => executeCurrentStepRef.current?.(), 100);
+          if (currentStepId === 'execute-migrations') {
+            // After executing migrations, loop back to check for more migrations
+            // Find the check-migrations-loop step and reset it to pending
+            updateState(prev => {
+              const checkMigrationIndex = prev.steps.findIndex(step => step.id === 'check-migrations-loop');
+              if (checkMigrationIndex !== -1) {
+                const newSteps = [...prev.steps];
+                newSteps[checkMigrationIndex] = {
+                  ...newSteps[checkMigrationIndex],
+                  status: 'pending',
+                  startTime: undefined,
+                  endTime: undefined,
+                  error: undefined,
+                  data: undefined
+                };
+                return {
+                  ...prev,
+                  currentStep: checkMigrationIndex,
+                  steps: newSteps
+                };
+              }
+              return prev;
+            });
+            setTimeout(() => executeCurrentStepRef.current?.(), 100);
+          } else {
+            // Regular step completion - move to next step
+            moveToNextStep();
+            setTimeout(() => executeCurrentStepRef.current?.(), 100);
+          }
         }).catch(error => {
           markCurrentStepError(`Failed to clean up migration task: ${error.message}`);
         });
@@ -248,13 +275,6 @@ export const useWorkflow = () => {
     }
   );
 
-  const markCurrentStepSkipped = useCallback((reason?: string) => {
-    updateCurrentStep({ 
-      status: 'skipped', 
-      endTime: new Date(),
-      error: reason 
-    });
-  }, [updateCurrentStep]);
 
   const initializeWorkflow = useCallback((config: WorkflowConfig) => {
     const steps = createInitialSteps(config);
@@ -325,7 +345,7 @@ export const useWorkflow = () => {
       moveToNextStep();
       updateState(prev => ({
         ...prev,
-        steps: prev.steps.map((step, index) => 
+        steps: prev.steps.map(step => 
           step.id === 'update-manager' ? { ...step, status: 'skipped' } : step
         )
       }));
@@ -356,15 +376,15 @@ export const useWorkflow = () => {
     taskPolling.startPolling();
   }, [taskPolling]);
 
-  const executeCheckMigrations = useCallback(async () => {
+  const executeCheckMigrationsLoop = useCallback(async () => {
     // Start with dry-run to check for pending migrations
     await api.startDatabaseMigration({});
     migrationPolling.startPolling();
   }, [migrationPolling]);
 
-  const executeRunMigrations = useCallback(async () => {
+  const executeExecuteMigrations = useCallback(async () => {
     // Get the stored migration hash from the previous step
-    const checkMigrationsStep = state.steps.find(step => step.id === 'check-migrations');
+    const checkMigrationsStep = state.steps.find(step => step.id === 'check-migrations-loop');
     const migrationHash = checkMigrationsStep?.data?.hash;
     
     if (!migrationHash) {
@@ -372,10 +392,16 @@ export const useWorkflow = () => {
       return;
     }
     
-    // Run the actual migration with the hash
-    await api.startDatabaseMigration({ hash: migrationHash });
+    // Get withDeletes setting from workflow config
+    const withDeletes = state.config.withDeletes || false;
+    
+    // Run the actual migration with the hash and withDeletes option
+    await api.startDatabaseMigration({ 
+      hash: migrationHash,
+      withDeletes: withDeletes
+    });
     migrationPolling.startPolling();
-  }, [migrationPolling, state.steps, markCurrentStepError]);
+  }, [migrationPolling, state.steps, state.config.withDeletes, markCurrentStepError]);
 
   const executeUpdateVersions = useCallback(async () => {
     const result = await api.updateVersionInfo();
@@ -415,11 +441,11 @@ export const useWorkflow = () => {
         case 'composer-update':
           await executeComposerUpdate();
           break;
-        case 'check-migrations':
-          await executeCheckMigrations();
+        case 'check-migrations-loop':
+          await executeCheckMigrationsLoop();
           break;
-        case 'run-migrations':
-          await executeRunMigrations();
+        case 'execute-migrations':
+          await executeExecuteMigrations();
           break;
         case 'update-versions':
           await executeUpdateVersions();
@@ -440,8 +466,8 @@ export const useWorkflow = () => {
     executeUpdateManager,
     executeComposerDryRun,
     executeComposerUpdate,
-    executeCheckMigrations,
-    executeRunMigrations,
+    executeCheckMigrationsLoop,
+    executeExecuteMigrations,
     executeUpdateVersions,
     markCurrentStepError
   ]);
@@ -492,12 +518,12 @@ export const useWorkflow = () => {
   }, [moveToNextStep, updateState]);
 
   const skipMigrations = useCallback(() => {
-    // Skip the run-migrations step and continue
+    // Skip the execute-migrations step and continue to next workflow step
     moveToNextStep();
     updateState(prev => ({
       ...prev,
-      steps: prev.steps.map((step, index) => 
-        step.id === 'run-migrations' ? { ...step, status: 'skipped' } : step
+      steps: prev.steps.map(step => 
+        step.id === 'execute-migrations' ? { ...step, status: 'skipped' } : step
       ),
       isRunning: true,
       isPaused: false
@@ -515,8 +541,8 @@ export const useWorkflow = () => {
     confirmMigrations,
     skipMigrations,
     isComplete: state.currentStep >= state.steps.length && !state.isRunning,
-    hasPendingMigrations: state.steps.find(step => step.id === 'check-migrations')?.status === 'complete' && 
-                         state.steps.find(step => step.id === 'check-migrations')?.data?.hash &&
+    hasPendingMigrations: state.steps.find(step => step.id === 'check-migrations-loop')?.status === 'complete' && 
+                         state.steps.find(step => step.id === 'check-migrations-loop')?.data?.hash &&
                          state.isPaused
   };
 };
