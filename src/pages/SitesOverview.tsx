@@ -33,6 +33,7 @@ const SitesOverview: React.FC = () => {
 
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const hoverBg = useColorModeValue('gray.50', 'gray.700');
 
   const extractDomain = (url: string): string => {
     try {
@@ -138,7 +139,7 @@ const SitesOverview: React.FC = () => {
                     onClick={() => handleSiteClick(site.url)}
                     cursor="pointer"
                     _hover={{
-                      bg: useColorModeValue('gray.50', 'gray.700')
+                      bg: hoverBg
                     }}
                   >
                     <Td>
