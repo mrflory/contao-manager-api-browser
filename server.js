@@ -205,6 +205,34 @@ app.delete('/api/sites/:url', (req, res) => {
     }
 });
 
+app.post('/api/update-site-name', (req, res) => {
+    try {
+        const { url, name } = req.body;
+        
+        if (!url || !name) {
+            return res.status(400).json({ error: 'URL and name are required' });
+        }
+        
+        const config = loadConfig();
+        
+        if (!config.sites[url]) {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+        
+        // Update the site name
+        config.sites[url].name = name;
+        
+        if (saveConfig(config)) {
+            res.json({ success: true });
+        } else {
+            res.status(500).json({ error: 'Failed to save configuration' });
+        }
+    } catch (error) {
+        console.error('Update site name error:', error.message);
+        res.status(500).json({ error: 'Failed to update site name: ' + error.message });
+    }
+});
+
 app.get('/api/token-info', async (req, res) => {
     try {
         const activeSite = getActiveSite();

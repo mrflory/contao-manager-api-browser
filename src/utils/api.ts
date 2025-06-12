@@ -86,6 +86,15 @@ export const api = {
     });
   },
 
+  async updateSiteName(url: string, newName: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE}/update-site-name`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, name: newName })
+    });
+    return response.json();
+  },
+
   async getUpdateStatus(): Promise<UpdateStatus> {
     const response = await fetch(`${API_BASE}/update-status`, {
       method: 'POST',

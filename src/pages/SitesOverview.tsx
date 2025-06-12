@@ -20,6 +20,7 @@ import {
   Badge,
   useColorModeValue,
   TableContainer,
+  Tooltip,
 } from '@chakra-ui/react';
 import { AddIcon } from '@chakra-ui/icons';
 import { Config, Site } from '../types';
@@ -32,6 +33,17 @@ const SitesOverview: React.FC = () => {
 
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+
+  const extractDomain = (url: string): string => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch {
+      // Fallback if URL parsing fails
+      const match = url.match(/(?:https?:\/\/)?([^\/]+)/);
+      return match ? match[1] : url;
+    }
+  };
 
   useEffect(() => {
     loadConfig();
@@ -133,9 +145,11 @@ const SitesOverview: React.FC = () => {
                       <Text fontWeight="bold">{site.name}</Text>
                     </Td>
                     <Td>
-                      <Text fontFamily="mono" fontSize="sm" color="gray.600">
-                        {site.url}
-                      </Text>
+                      <Tooltip label={site.url} placement="top">
+                        <Text fontFamily="mono" fontSize="sm" color="gray.600" cursor="help">
+                          {extractDomain(site.url)}
+                        </Text>
+                      </Tooltip>
                     </Td>
                     <Td>
                       {site.versionInfo ? (

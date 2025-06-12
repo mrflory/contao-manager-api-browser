@@ -59,6 +59,14 @@ import {
   TabPanels,
   Tab,
   TabPanel,
+  Editable,
+  EditableInput,
+  EditableTextarea,
+  EditablePreview,
+  useEditableControls,
+  ButtonGroup,
+  IconButton,
+  Link,
 } from '@chakra-ui/react';
 import {
   ArrowBackIcon,
@@ -847,6 +855,69 @@ const SiteDetails: React.FC = () => {
     await handleApiCallWithButton('set-task', () => api.setTaskData(taskData), 'Set Task Data');
   };
 
+  const handleUpdateSiteName = async (newName: string) => {
+    if (!site || newName === site.name) return;
+
+    try {
+      const response = await api.updateSiteName(site.url, newName);
+      if (response.success) {
+        toast({
+          title: 'Success',
+          description: 'Site name updated successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+        await loadConfig();
+      } else {
+        throw new Error(response.error || 'Failed to update site name');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to update site name: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const EditableControls = () => {
+    const {
+      isEditing,
+      getSubmitButtonProps,
+      getCancelButtonProps,
+      getEditButtonProps,
+    } = useEditableControls();
+
+    return isEditing ? (
+      <ButtonGroup justifyContent="center" size="sm">
+        <IconButton
+          icon={<CheckIcon />}
+          {...getSubmitButtonProps()}
+          colorScheme="green"
+          aria-label="Save"
+        />
+        <IconButton
+          icon={<CloseIcon />}
+          {...getCancelButtonProps()}
+          aria-label="Cancel"
+        />
+      </ButtonGroup>
+    ) : (
+      <Flex justifyContent="center">
+        <IconButton
+          size="sm"
+          icon={<EditIcon />}
+          {...getEditButtonProps()}
+          aria-label="Edit site name"
+          variant="ghost"
+        />
+      </Flex>
+    );
+  };
+
   const handleRemoveSite = async () => {
     if (!site) return;
     onRemoveDialogClose();
@@ -894,18 +965,28 @@ const SiteDetails: React.FC = () => {
     <Container maxW="4xl">
       <Flex justify="space-between" align="center" mb={8}>
         <VStack align="start" spacing={2}>
-          <Heading size="xl">{site.name}</Heading>
-          <Code 
-            fontSize="sm" 
-            as="a" 
+          <Editable
+            defaultValue={site.name}
+            onSubmit={handleUpdateSiteName}
+            fontSize="3xl"
+            fontWeight="bold"
+          >
+            <Flex align="center" gap={2}>
+              <EditablePreview />
+              <EditableInput />
+              <EditableControls />
+            </Flex>
+          </Editable>
+          <Link 
             href={site.url} 
             target="_blank" 
             rel="noopener noreferrer"
-            _hover={{ textDecoration: 'underline' }}
-            cursor="pointer"
+            fontSize="sm"
+            fontFamily="mono"
+            color="gray.600"
           >
             {site.url}
-          </Code>
+          </Link>
         </VStack>
         <Button
           leftIcon={<ArrowBackIcon />}
