@@ -19,6 +19,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:react19-compat": "node scripts/test-react19-compat.js",
+    "test:chakra-v3-compat": "node scripts/test-chakra-v3-compat.js",
     "test:build": "npm run build && npm run preview"
   },
   "dependencies": {
