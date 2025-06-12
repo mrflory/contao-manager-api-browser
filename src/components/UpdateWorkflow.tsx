@@ -1,0 +1,450 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  VStack,
+  HStack,
+  Button,
+  Text,
+  Heading,
+  Checkbox,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  useColorModeValue,
+  useToast,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+  useDisclosure,
+  Progress,
+  Badge,
+  Divider
+} from '@chakra-ui/react';
+import { TriangleUpIcon, TriangleDownIcon, RepeatIcon, WarningIcon } from '@chakra-ui/icons';
+import { WorkflowTimeline } from './WorkflowTimeline';
+import { useWorkflow } from '../hooks/useWorkflow';
+import { WorkflowConfig } from '../types';
+
+export const UpdateWorkflow: React.FC = () => {
+  const [config, setConfig] = useState<WorkflowConfig>({ performDryRun: false });
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [pendingTasksModalOpen, setPendingTasksModalOpen] = useState(false);
+  const [migrationsModalOpen, setMigrationsModalOpen] = useState(false);
+  
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const toast = useToast();
+  
+  const {
+    state,
+    initializeWorkflow,
+    startWorkflow,
+    stopWorkflow,
+    resumeWorkflow,
+    clearPendingTasks,
+    confirmMigrations,
+    skipMigrations,
+    isComplete,
+    hasPendingMigrations
+  } = useWorkflow();
+
+  useEffect(() => {
+    initializeWorkflow(config);
+  }, [config, initializeWorkflow]);
+
+  // Check if current step has pending tasks error
+  const currentStep = state.steps[state.currentStep];
+  const hasPendingTasksError = currentStep?.id === 'check-tasks' && 
+                              currentStep?.status === 'error' && 
+                              currentStep?.error?.includes('Pending tasks');
+
+  useEffect(() => {
+    if (hasPendingTasksError && !pendingTasksModalOpen) {
+      setPendingTasksModalOpen(true);
+    }
+  }, [hasPendingTasksError, pendingTasksModalOpen]);
+
+  useEffect(() => {
+    if (hasPendingMigrations && !migrationsModalOpen) {
+      setMigrationsModalOpen(true);
+    }
+  }, [hasPendingMigrations, migrationsModalOpen]);
+
+  const handleStartWorkflow = () => {
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmStart = () => {
+    setIsConfirmModalOpen(false);
+    startWorkflow();
+    toast({
+      title: 'Workflow Started',
+      description: 'Contao update workflow has begun',
+      status: 'info',
+      duration: 3000,
+      isClosable: true,
+    });
+  };
+
+  const handleStop = () => {
+    stopWorkflow();
+    toast({
+      title: 'Workflow Stopped',
+      description: 'Update workflow has been paused',
+      status: 'warning',
+      duration: 3000,
+      isClosable: true,
+    });
+  };
+
+  const handleResume = () => {
+    resumeWorkflow();
+    toast({
+      title: 'Workflow Resumed',
+      description: 'Update workflow is continuing',
+      status: 'info',
+      duration: 3000,
+      isClosable: true,
+    });
+  };
+
+  const handleClearTasks = async () => {
+    setPendingTasksModalOpen(false);
+    await clearPendingTasks();
+  };
+
+  const handleConfirmMigrations = () => {
+    setMigrationsModalOpen(false);
+    confirmMigrations();
+    toast({
+      title: 'Migrations Confirmed',
+      description: 'Database migrations will now be executed',
+      status: 'info',
+      duration: 3000,
+      isClosable: true,
+    });
+  };
+
+  const handleSkipMigrations = () => {
+    setMigrationsModalOpen(false);
+    skipMigrations();
+    toast({
+      title: 'Migrations Skipped',
+      description: 'Database migrations were skipped. You can run them manually later.',
+      status: 'warning',
+      duration: 5000,
+      isClosable: true,
+    });
+  };
+
+  const getWorkflowProgress = () => {
+    const completedSteps = state.steps.filter(step => 
+      step.status === 'complete' || step.status === 'skipped'
+    ).length;
+    return (completedSteps / state.steps.length) * 100;
+  };
+
+  const getEstimatedTime = () => {
+    const baseTime = 5; // Base 5 minutes
+    const dryRunTime = config.performDryRun ? 3 : 0;
+    return `${baseTime + dryRunTime}-${baseTime + dryRunTime + 5} minutes`;
+  };
+
+  const getWorkflowStatus = () => {
+    if (isComplete) return 'complete';
+    if (state.error) return 'error';
+    if (state.isRunning) return 'running';
+    if (state.isPaused) return 'paused';
+    return 'ready';
+  };
+
+  const getStatusBadge = () => {
+    const status = getWorkflowStatus();
+    switch (status) {
+      case 'complete':
+        return <Badge colorScheme="green" size="lg">Complete</Badge>;
+      case 'error':
+        return <Badge colorScheme="red" size="lg">Error</Badge>;
+      case 'running':
+        return <Badge colorScheme="blue" size="lg">Running</Badge>;
+      case 'paused':
+        return <Badge colorScheme="orange" size="lg">Paused</Badge>;
+      default:
+        return <Badge colorScheme="gray" size="lg">Ready</Badge>;
+    }
+  };
+
+  const canStart = !state.isRunning && !isComplete && state.steps.length > 0;
+  const canStop = state.isRunning;
+  const canResume = state.isPaused;
+
+  return (
+    <VStack spacing={6} align="stretch">
+      {/* Workflow Header */}
+      <Box p={6} bg={cardBg} border="1px" borderColor={borderColor} borderRadius="lg">
+        <VStack spacing={4} align="stretch">
+          <HStack justify="space-between" align="center">
+            <Heading size="lg">Automated Contao Update</Heading>
+            {getStatusBadge()}
+          </HStack>
+          
+          <Text color="gray.600">
+            This workflow will automatically update your Contao installation including the manager, 
+            composer packages, and database migrations.
+          </Text>
+
+          {state.isRunning && (
+            <Box>
+              <Text fontSize="sm" mb={2}>Progress</Text>
+              <Progress value={getWorkflowProgress()} colorScheme="blue" />
+            </Box>
+          )}
+
+          {/* Configuration */}
+          {!state.isRunning && !isComplete && (
+            <Box p={4} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
+              <Text fontWeight="semibold" mb={3}>Configuration</Text>
+              <VStack align="start" spacing={3}>
+                <Checkbox
+                  isChecked={config.performDryRun}
+                  onChange={(e) => setConfig(prev => ({ ...prev, performDryRun: e.target.checked }))}
+                >
+                  Perform composer dry-run before actual update
+                </Checkbox>
+                <Text fontSize="sm" color="gray.600">
+                  <strong>Estimated time:</strong> {getEstimatedTime()}
+                </Text>
+              </VStack>
+            </Box>
+          )}
+
+          {/* Action Buttons */}
+          <HStack spacing={3}>
+            {canStart && (
+              <Button
+                colorScheme="blue"
+                leftIcon={<TriangleUpIcon />}
+                onClick={handleStartWorkflow}
+                size="lg"
+              >
+                Start Update Workflow
+              </Button>
+            )}
+            
+            {canStop && (
+              <Button
+                colorScheme="orange"
+                leftIcon={<TriangleDownIcon />}
+                onClick={handleStop}
+                size="lg"
+              >
+                Pause Workflow
+              </Button>
+            )}
+            
+            {canResume && (
+              <Button
+                colorScheme="blue"
+                leftIcon={<TriangleUpIcon />}
+                onClick={handleResume}
+                size="lg"
+              >
+                Resume Workflow
+              </Button>
+            )}
+
+            {isComplete && (
+              <Button
+                colorScheme="green"
+                leftIcon={<RepeatIcon />}
+                onClick={() => initializeWorkflow(config)}
+                size="lg"
+              >
+                Run Again
+              </Button>
+            )}
+          </HStack>
+
+          {/* Error Alert */}
+          {state.error && (
+            <Alert status="error">
+              <AlertIcon />
+              <Box>
+                <AlertTitle>Workflow Error!</AlertTitle>
+                <AlertDescription>{state.error}</AlertDescription>
+              </Box>
+            </Alert>
+          )}
+
+          {/* Success Alert */}
+          {isComplete && !state.error && (
+            <Alert status="success">
+              <AlertIcon />
+              <Box>
+                <AlertTitle>Update Complete!</AlertTitle>
+                <AlertDescription>
+                  Your Contao installation has been successfully updated. All components are now up to date.
+                </AlertDescription>
+              </Box>
+            </Alert>
+          )}
+        </VStack>
+      </Box>
+
+      {/* Timeline */}
+      {state.steps.length > 0 && (
+        <Box p={6} bg={cardBg} border="1px" borderColor={borderColor} borderRadius="lg">
+          <Heading size="md" mb={4}>Workflow Progress</Heading>
+          <WorkflowTimeline steps={state.steps} currentStep={state.currentStep} />
+        </Box>
+      )}
+
+      {/* Confirm Start Modal */}
+      <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Confirm Update Workflow</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              <Alert status="warning">
+                <AlertIcon />
+                <Box>
+                  <AlertTitle>Important!</AlertTitle>
+                  <AlertDescription>
+                    This process will update your Contao installation and may cause temporary downtime. 
+                    Make sure you have a backup before proceeding.
+                  </AlertDescription>
+                </Box>
+              </Alert>
+              
+              <Text>The workflow will perform the following steps:</Text>
+              <VStack align="start" spacing={1} pl={4}>
+                <Text fontSize="sm">• Check for pending tasks</Text>
+                <Text fontSize="sm">• Update Contao Manager (if needed)</Text>
+                {config.performDryRun && (
+                  <Text fontSize="sm">• Run composer dry-run test</Text>
+                )}
+                <Text fontSize="sm">• Update composer packages</Text>
+                <Text fontSize="sm">• Check for database migrations</Text>
+                <Text fontSize="sm">• Execute database migrations (with confirmation)</Text>
+                <Text fontSize="sm">• Update version information</Text>
+              </VStack>
+              
+              <Text fontSize="sm" color="gray.600">
+                Estimated time: {getEstimatedTime()}
+              </Text>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={() => setIsConfirmModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button colorScheme="blue" onClick={handleConfirmStart}>
+              Start Update
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Pending Tasks Modal */}
+      <Modal isOpen={pendingTasksModalOpen} onClose={() => setPendingTasksModalOpen(false)}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Pending Tasks Found</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              <Alert status="warning">
+                <AlertIcon />
+                <Box>
+                  <AlertTitle>Tasks are currently running</AlertTitle>
+                  <AlertDescription>
+                    There are pending tasks that must be cleared before the update workflow can proceed.
+                  </AlertDescription>
+                </Box>
+              </Alert>
+              
+              {currentStep?.data && (
+                <Box p={3} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
+                  <Text fontSize="sm" fontWeight="semibold" mb={2}>Current task details:</Text>
+                  <Text fontSize="xs" fontFamily="mono">
+                    {JSON.stringify(currentStep.data, null, 2)}
+                  </Text>
+                </Box>
+              )}
+              
+              <Text fontSize="sm">
+                You can either wait for the current tasks to complete, or force clear them to continue 
+                with the update workflow.
+              </Text>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={() => setPendingTasksModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button colorScheme="orange" onClick={handleClearTasks}>
+              Clear Tasks & Continue
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Database Migrations Confirmation Modal */}
+      <Modal isOpen={migrationsModalOpen} onClose={() => setMigrationsModalOpen(false)}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Database Migrations Required</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              <Alert status="info">
+                <AlertIcon />
+                <Box>
+                  <AlertTitle>Pending database migrations detected</AlertTitle>
+                  <AlertDescription>
+                    The system has detected pending database migrations that need to be executed 
+                    to complete the update process.
+                  </AlertDescription>
+                </Box>
+              </Alert>
+              
+              {state.steps.find(step => step.id === 'check-migrations')?.data && (
+                <Box p={3} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
+                  <Text fontSize="sm" fontWeight="semibold" mb={2}>Migration details:</Text>
+                  <Text fontSize="xs" fontFamily="mono">
+                    {JSON.stringify(state.steps.find(step => step.id === 'check-migrations')?.data, null, 2)}
+                  </Text>
+                </Box>
+              )}
+              
+              <Text fontSize="sm">
+                <strong>Important:</strong> Database migrations will modify your database structure. 
+                It's recommended to have a backup before proceeding.
+              </Text>
+              
+              <Text fontSize="sm">
+                You can either proceed with the migrations now, or skip them and run them manually later 
+                through the Expert functions.
+              </Text>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={handleSkipMigrations}>
+              Skip Migrations
+            </Button>
+            <Button colorScheme="blue" onClick={handleConfirmMigrations}>
+              Run Migrations
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </VStack>
+  );
+};

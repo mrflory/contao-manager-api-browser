@@ -212,5 +212,20 @@ export const api = {
   // Logs endpoint
   async getLogs(siteUrl: string): Promise<{ logs: any[]; total: number; siteUrl: string; hostname: string; message?: string }> {
     return makeApiCall(`/logs/${encodeURIComponent(siteUrl)}`);
+  },
+
+  // Task status management
+  async patchTaskStatus(status: 'active' | 'aborting'): Promise<any> {
+    return makeApiCall('/task', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+  },
+
+  // Server self-update status (using existing getUpdateStatus for consistency)
+  async getServerSelfUpdateStatus(): Promise<any> {
+    const updateStatus = await this.getUpdateStatus();
+    return updateStatus.selfUpdate;
   }
 };

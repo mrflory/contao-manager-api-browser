@@ -44,3 +44,61 @@ export interface TokenInfo {
   username?: string;
   totp_enabled?: boolean;
 }
+
+// Workflow Types
+export type WorkflowStepStatus = 'pending' | 'active' | 'complete' | 'error' | 'skipped';
+
+export interface WorkflowStep {
+  id: string;
+  title: string;
+  description: string;
+  status: WorkflowStepStatus;
+  startTime?: Date;
+  endTime?: Date;
+  error?: string;
+  data?: any;
+  conditional?: boolean; // Whether this step can be skipped
+}
+
+export interface WorkflowConfig {
+  performDryRun: boolean;
+}
+
+export interface WorkflowState {
+  currentStep: number;
+  steps: WorkflowStep[];
+  isRunning: boolean;
+  isPaused: boolean;
+  error?: string;
+  startTime?: Date;
+  endTime?: Date;
+  config: WorkflowConfig;
+}
+
+// Task API Types
+export interface TaskStatus {
+  id?: string;
+  title?: string;
+  console?: string;
+  cancellable?: boolean;
+  autoclose?: boolean;
+  audit?: boolean;
+  status: 'active' | 'complete' | 'paused' | 'error' | 'aborting' | 'stopped';
+  operations?: Array<{
+    summary?: string;
+    details?: string;
+    console?: string;
+    status?: 'active' | 'complete' | 'error' | 'stopped';
+  }>;
+}
+
+export interface DatabaseMigrationStatus {
+  type?: 'schema' | 'schema-only' | 'migrations' | 'migrations-only';
+  status: 'pending' | 'active' | 'complete' | 'error';
+  operations?: Array<{
+    name?: string;
+    status?: 'pending' | 'active' | 'complete' | 'error';
+    message?: string;
+  }>;
+  hash?: string;
+}

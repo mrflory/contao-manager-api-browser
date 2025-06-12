@@ -79,6 +79,7 @@ import {
 } from '@chakra-ui/icons';
 import { Config, UpdateStatus, TokenInfo } from '../types';
 import { api } from '../utils/api';
+import { UpdateWorkflow } from '../components/UpdateWorkflow';
 
 const SiteDetails: React.FC = () => {
   const { siteUrl } = useParams<{ siteUrl: string }>();
@@ -1169,17 +1170,7 @@ const SiteDetails: React.FC = () => {
             {/* Tab 2: Update */}
             <TabPanel>
               <VStack spacing={6} align="stretch">
-                <Heading size="lg" mb={4}>Update Management</Heading>
-                
-                <Box p={6} bg={useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
-                  <VStack spacing={4} align="center">
-                    <Heading size="md" color="gray.500">Coming Soon</Heading>
-                    <Text color="gray.500" textAlign="center">
-                      Update management features will be available here soon. This will include package updates, 
-                      system updates, and automated maintenance tools.
-                    </Text>
-                  </VStack>
-                </Box>
+                <UpdateWorkflow />
               </VStack>
             </TabPanel>
 
