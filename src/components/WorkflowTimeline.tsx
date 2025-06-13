@@ -5,7 +5,8 @@ import {
   Badge,
   Spinner,
   useColorModeValue,
-  Collapse,
+  CollapsibleRoot,
+  CollapsibleContent,
   Code,
   HStack,
   VStack,
@@ -152,31 +153,33 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ step, isActive, isLast }) =
               </HStack>
             )}
 
-            <Collapse in={!!step.error || !!step.data}>
-              <VStack align="stretch" spacing={2} mt={2}>
-                {step.error && (
-                  <Box p={2} bg="red.50" borderRadius="md" border="1px" borderColor="red.200">
-                    <HStack>
-                      <AlertTriangle color="#E53E3E" size={16} />
-                      <Text fontSize="sm" color="red.700">
-                        {step.error}
+            <CollapsibleRoot open={!!step.error || !!step.data}>
+              <CollapsibleContent>
+                <VStack align="stretch" spacing={2} mt={2}>
+                  {step.error && (
+                    <Box p={2} bg="red.50" borderRadius="md" border="1px" borderColor="red.200">
+                      <HStack>
+                        <AlertTriangle color="#E53E3E" size={16} />
+                        <Text fontSize="sm" color="red.700">
+                          {step.error}
+                        </Text>
+                      </HStack>
+                    </Box>
+                  )}
+                  
+                  {step.data && step.status === 'active' && (
+                    <Box>
+                      <Text fontSize="xs" fontWeight="semibold" mb={1}>
+                        Progress:
                       </Text>
-                    </HStack>
-                  </Box>
-                )}
-                
-                {step.data && step.status === 'active' && (
-                  <Box>
-                    <Text fontSize="xs" fontWeight="semibold" mb={1}>
-                      Progress:
-                    </Text>
-                    <Code fontSize="xs" p={2} display="block" whiteSpace="pre-wrap">
-                      {typeof step.data === 'string' ? step.data : JSON.stringify(step.data, null, 2)}
-                    </Code>
-                  </Box>
-                )}
-              </VStack>
-            </Collapse>
+                      <Code fontSize="xs" p={2} display="block" whiteSpace="pre-wrap">
+                        {typeof step.data === 'string' ? step.data : JSON.stringify(step.data, null, 2)}
+                      </Code>
+                    </Box>
+                  )}
+                </VStack>
+              </CollapsibleContent>
+            </CollapsibleRoot>
           </Box>
         </Box>
       </HStack>
