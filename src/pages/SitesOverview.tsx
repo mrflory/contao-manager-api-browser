@@ -18,7 +18,6 @@ import {
   VStack,
   HStack,
   Badge,
-  TableContainer,
   Tooltip,
 } from '@chakra-ui/react';
 import { Plus } from 'lucide-react';
@@ -122,7 +121,7 @@ const SitesOverview: React.FC = () => {
           borderRadius="lg"
           overflow="hidden"
         >
-          <TableContainer>
+          <Box overflowX="auto">
             <Table variant="simple">
               <Thead>
                 <Tr>
@@ -193,7 +192,7 @@ const SitesOverview: React.FC = () => {
                 ))}
               </Tbody>
             </Table>
-          </TableContainer>
+          </Box>
         </Box>
       )}
     </Container>

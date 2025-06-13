@@ -52,7 +52,6 @@ import {
   Tr,
   Th,
   Td,
-  TableContainer,
   Tabs,
   TabList,
   TabPanels,
@@ -669,7 +668,7 @@ const SiteDetails: React.FC = () => {
         <Text fontSize="md" color="gray.600">
           Found {data.length} database backup{data.length !== 1 ? 's' : ''}:
         </Text>
-        <TableContainer>
+        <Box overflowX="auto">
           <Table variant="simple" size="sm">
             <Thead>
               <Tr>
@@ -690,7 +689,7 @@ const SiteDetails: React.FC = () => {
               ))}
             </Tbody>
           </Table>
-        </TableContainer>
+        </Box>
         <Box mt={4}>
           <Accordion allowToggle>
             <AccordionItem>
@@ -732,7 +731,7 @@ const SiteDetails: React.FC = () => {
         <Text fontSize="md" color="gray.600">
           Found {packages.length} installed package{packages.length !== 1 ? 's' : ''}:
         </Text>
-        <TableContainer maxH="400px" overflowY="auto">
+        <Box maxH="400px" overflowY="auto">
           <Table variant="simple" size="sm">
             <Thead position="sticky" top={0} bg={cardBg}>
               <Tr>
@@ -763,7 +762,7 @@ const SiteDetails: React.FC = () => {
               ))}
             </Tbody>
           </Table>
-        </TableContainer>
+        </Box>
         <Box mt={4}>
           <Accordion allowToggle>
             <AccordionItem>
@@ -1481,7 +1480,7 @@ const SiteDetails: React.FC = () => {
                     <Text fontSize="sm" color="gray.500" mb={4}>
                       Showing {logs.length} log entries for {site?.name}
                     </Text>
-                    <TableContainer maxH="600px" overflowY="auto">
+                    <Box maxH="600px" overflowY="auto">
                       <Table variant="simple" size="sm">
                         <Thead position="sticky" top={0} bg={cardBg} zIndex={1}>
                           <Tr>
@@ -1588,7 +1587,7 @@ const SiteDetails: React.FC = () => {
                           ))}
                         </Tbody>
                       </Table>
-                    </TableContainer>
+                    </Box>
                   </Box>
                 )}
               </VStack>
