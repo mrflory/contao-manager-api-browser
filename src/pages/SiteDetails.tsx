@@ -683,7 +683,7 @@ const SiteDetails: React.FC = () => {
                 </Table.Row>
               ))}
             </Table.Body>
-          </Table>
+          </Table.Root>
         </Box>
         <Box mt={4}>
           <Accordion allowToggle>
@@ -756,7 +756,7 @@ const SiteDetails: React.FC = () => {
                 </Table.Row>
               ))}
             </Table.Body>
-          </Table>
+          </Table.Root>
         </Box>
         <Box mt={4}>
           <Accordion allowToggle>
@@ -1581,7 +1581,7 @@ const SiteDetails: React.FC = () => {
                             </Table.Row>
                           ))}
                         </Table.Body>
-                      </Table>
+                      </Table.Root>
                     </Box>
                   </Box>
                 )}
