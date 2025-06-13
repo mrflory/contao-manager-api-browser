@@ -18,11 +18,11 @@ import {
   VStack,
   HStack,
   Badge,
-  useColorModeValue,
   TableContainer,
   Tooltip,
 } from '@chakra-ui/react';
-import { AddIcon } from '@chakra-ui/icons';
+import { Plus } from 'lucide-react';
+import { useColorModeValue } from '../hooks/useColorModeValue';
 import { Config, Site } from '../types';
 import { api } from '../utils/api';
 
@@ -89,7 +89,7 @@ const SitesOverview: React.FC = () => {
       <Flex justify="space-between" align="center" mb={8}>
         <Heading size="xl">Your Sites</Heading>
         <Button
-          leftIcon={<AddIcon />}
+          leftIcon={<Plus size={16} />}
           colorScheme="green"
           onClick={handleAddSite}
         >

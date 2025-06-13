@@ -13,10 +13,10 @@ import {
   VStack,
   Alert,
   AlertIcon,
-  useColorModeValue,
   useToast,
 } from '@chakra-ui/react';
-import { ArrowBackIcon } from '@chakra-ui/icons';
+import { ArrowLeft } from 'lucide-react';
+import { useColorModeValue } from '../hooks/useColorModeValue';
 import { api } from '../utils/api';
 
 const AddSite: React.FC = () => {
@@ -160,7 +160,7 @@ const AddSite: React.FC = () => {
       <Flex justify="space-between" align="center" mb={8}>
         <Heading size="xl">Add New Site</Heading>
         <Button
-          leftIcon={<ArrowBackIcon />}
+          leftIcon={<ArrowLeft size={16} />}
           variant="ghost"
           onClick={() => navigate('/')}
         >
