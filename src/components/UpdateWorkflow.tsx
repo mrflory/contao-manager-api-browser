@@ -7,9 +7,6 @@ import {
   Text,
   Heading,
   Checkbox,
-  Alert,
-  AlertTitle,
-  AlertDescription,
   createToaster,
   DialogRoot,
   DialogBackdrop,
@@ -21,6 +18,7 @@ import {
   Progress,
   Badge
 } from '@chakra-ui/react';
+import { Alert } from '@chakra-ui/react';
 import { Play, Pause, RefreshCw, AlertTriangle, CheckCircle, Info, XCircle } from 'lucide-react';
 import { useColorModeValue } from '../hooks/useColorModeValue';
 import { WorkflowTimeline } from './WorkflowTimeline';
@@ -214,18 +212,24 @@ export const UpdateWorkflow: React.FC = () => {
             <Box p={4} bg={configBg} borderRadius="md">
               <Text fontWeight="semibold" mb={3}>Configuration</Text>
               <VStack align="start" spacing={3}>
-                <Checkbox
-                  isChecked={config.performDryRun}
-                  onChange={(e) => setConfig(prev => ({ ...prev, performDryRun: e.target.checked }))}
+                <Checkbox.Root
+                  checked={config.performDryRun}
+                  onCheckedChange={(checked) => setConfig(prev => ({ ...prev, performDryRun: !!checked.checked }))}
                 >
-                  Perform composer dry-run before actual update
-                </Checkbox>
-                <Checkbox
-                  isChecked={config.withDeletes}
-                  onChange={(e) => setConfig(prev => ({ ...prev, withDeletes: e.target.checked }))}
+                  <Checkbox.Control />
+                  <Checkbox.Label>
+                    Perform composer dry-run before actual update
+                  </Checkbox.Label>
+                </Checkbox.Root>
+                <Checkbox.Root
+                  checked={config.withDeletes}
+                  onCheckedChange={(checked) => setConfig(prev => ({ ...prev, withDeletes: !!checked.checked }))}
                 >
-                  Execute migrations including DROP queries
-                </Checkbox>
+                  <Checkbox.Control />
+                  <Checkbox.Label>
+                    Execute migrations including DROP queries
+                  </Checkbox.Label>
+                </Checkbox.Root>
                 <Text fontSize="sm" color="gray.600">
                   <strong>Estimated time:</strong> {getEstimatedTime()}
                 </Text>
@@ -282,26 +286,30 @@ export const UpdateWorkflow: React.FC = () => {
 
           {/* Error Alert */}
           {state.error && (
-            <Alert status="error">
-              <XCircle size={20} />
+            <Alert.Root status="error">
+              <Alert.Indicator>
+                <XCircle size={20} />
+              </Alert.Indicator>
               <Box>
-                <AlertTitle>Workflow Error!</AlertTitle>
-                <AlertDescription>{state.error}</AlertDescription>
+                <Alert.Title>Workflow Error!</Alert.Title>
+                <Alert.Description>{state.error}</Alert.Description>
               </Box>
-            </Alert>
+            </Alert.Root>
           )}
 
           {/* Success Alert */}
           {isComplete && !state.error && (
-            <Alert status="success">
-              <CheckCircle size={20} />
+            <Alert.Root status="success">
+              <Alert.Indicator>
+                <CheckCircle size={20} />
+              </Alert.Indicator>
               <Box>
-                <AlertTitle>Update Complete!</AlertTitle>
-                <AlertDescription>
+                <Alert.Title>Update Complete!</Alert.Title>
+                <Alert.Description>
                   Your Contao installation has been successfully updated. All components are now up to date.
-                </AlertDescription>
+                </Alert.Description>
               </Box>
-            </Alert>
+            </Alert.Root>
           )}
         </VStack>
       </Box>
@@ -322,16 +330,18 @@ export const UpdateWorkflow: React.FC = () => {
           <DialogCloseTrigger />
           <DialogBody>
             <VStack spacing={4} align="stretch">
-              <Alert status="warning">
-                <AlertTriangle size={20} />
+              <Alert.Root status="warning">
+                <Alert.Indicator>
+                  <AlertTriangle size={20} />
+                </Alert.Indicator>
                 <Box>
-                  <AlertTitle>Important!</AlertTitle>
-                  <AlertDescription>
+                  <Alert.Title>Important!</Alert.Title>
+                  <Alert.Description>
                     This process will update your Contao installation and may cause temporary downtime. 
                     Make sure you have a backup before proceeding.
-                  </AlertDescription>
+                  </Alert.Description>
                 </Box>
-              </Alert>
+              </Alert.Root>
               
               <Text>The workflow will perform the following steps:</Text>
               <VStack align="start" spacing={1} pl={4}>
@@ -384,15 +394,17 @@ export const UpdateWorkflow: React.FC = () => {
           <DialogCloseTrigger />
           <DialogBody>
             <VStack spacing={4} align="stretch">
-              <Alert status="warning">
-                <AlertTriangle size={20} />
+              <Alert.Root status="warning">
+                <Alert.Indicator>
+                  <AlertTriangle size={20} />
+                </Alert.Indicator>
                 <Box>
-                  <AlertTitle>Tasks are currently running</AlertTitle>
-                  <AlertDescription>
+                  <Alert.Title>Tasks are currently running</Alert.Title>
+                  <Alert.Description>
                     There are pending tasks that must be cleared before the update workflow can proceed.
-                  </AlertDescription>
+                  </Alert.Description>
                 </Box>
-              </Alert>
+              </Alert.Root>
               
               {currentStep?.data && (
                 <Box p={3} bg={configBg} borderRadius="md">
@@ -428,16 +440,18 @@ export const UpdateWorkflow: React.FC = () => {
           <DialogCloseTrigger />
           <DialogBody>
             <VStack spacing={4} align="stretch">
-              <Alert status="info">
-                <Info size={20} />
+              <Alert.Root status="info">
+                <Alert.Indicator>
+                  <Info size={20} />
+                </Alert.Indicator>
                 <Box>
-                  <AlertTitle>Pending database migrations detected</AlertTitle>
-                  <AlertDescription>
+                  <Alert.Title>Pending database migrations detected</Alert.Title>
+                  <Alert.Description>
                     The system has detected pending database migrations that need to be executed 
                     to complete the update process.
-                  </AlertDescription>
+                  </Alert.Description>
                 </Box>
-              </Alert>
+              </Alert.Root>
               
               {state.steps.find(step => step.id === 'check-migrations-loop')?.data && (
                 <Box p={3} bg={configBg} borderRadius="md">
@@ -457,12 +471,14 @@ export const UpdateWorkflow: React.FC = () => {
                   </Text>
                 </HStack>
                 {config.withDeletes && (
-                  <Alert status="warning" size="sm" mt={2}>
-                    <AlertTriangle size={16} />
-                    <AlertDescription fontSize="xs">
+                  <Alert.Root status="warning" size="sm" mt={2}>
+                    <Alert.Indicator>
+                      <AlertTriangle size={16} />
+                    </Alert.Indicator>
+                    <Alert.Description fontSize="xs">
                       DROP queries will be executed, which may remove data or database structures.
-                    </AlertDescription>
-                  </Alert>
+                    </Alert.Description>
+                  </Alert.Root>
                 )}
               </Box>
               

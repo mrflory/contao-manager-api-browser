@@ -6,12 +6,10 @@ import {
   Button,
   Box,
   Flex,
-  FormControl,
-  FormLabel,
+  Field,
   Input,
   Select,
   VStack,
-  Alert,
   createToaster,
 } from '@chakra-ui/react';
 import { ArrowLeft } from 'lucide-react';
@@ -179,28 +177,38 @@ const AddSite: React.FC = () => {
         {!showTokenForm ? (
           <form onSubmit={handleAuthSubmit}>
             <VStack spacing={6}>
-              <FormControl isRequired>
-                <FormLabel>Contao Manager URL</FormLabel>
+              <Field.Root required>
+                <Field.Label>Contao Manager URL</Field.Label>
                 <Input
                   type="url"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.com/contao-manager.phar.php"
                 />
-              </FormControl>
+              </Field.Root>
               
-              <FormControl isRequired>
-                <FormLabel>Required Permissions</FormLabel>
-                <Select
-                  value={scope}
-                  onChange={(e) => setScope(e.target.value)}
-                >
-                  <option value="read">Read Only</option>
-                  <option value="update">Read + Update</option>
-                  <option value="install">Read + Update + Install</option>
-                  <option value="admin">Full Admin Access</option>
-                </Select>
-              </FormControl>
+              <Field.Root required>
+                <Field.Label>Required Permissions</Field.Label>
+                <Select.Root value={[scope]} onValueChange={(details) => setScope(details.value[0])}>
+                  <Select.Trigger>
+                    <Select.ValueText placeholder="Select permissions" />
+                  </Select.Trigger>
+                  <Select.Content>
+                    <Select.Item item="read">
+                      <Select.ItemText>Read Only</Select.ItemText>
+                    </Select.Item>
+                    <Select.Item item="update">
+                      <Select.ItemText>Read + Update</Select.ItemText>
+                    </Select.Item>
+                    <Select.Item item="install">
+                      <Select.ItemText>Read + Update + Install</Select.ItemText>
+                    </Select.Item>
+                    <Select.Item item="admin">
+                      <Select.ItemText>Full Admin Access</Select.ItemText>
+                    </Select.Item>
+                  </Select.Content>
+                </Select.Root>
+              </Field.Root>
               
               <Button
                 type="submit"
@@ -216,15 +224,15 @@ const AddSite: React.FC = () => {
           </form>
         ) : (
           <VStack spacing={6}>
-            <FormControl isRequired>
-              <FormLabel>API Token (paste from redirect URL)</FormLabel>
+            <Field.Root required>
+              <Field.Label>API Token (paste from redirect URL)</Field.Label>
               <Input
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 placeholder="Enter your API token here"
                 fontFamily="mono"
               />
-            </FormControl>
+            </Field.Root>
             
             <Button
               colorPalette="green"

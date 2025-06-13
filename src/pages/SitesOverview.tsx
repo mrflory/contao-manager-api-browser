@@ -12,7 +12,9 @@ import {
   VStack,
   HStack,
   Badge,
-  Tooltip,
+  TooltipRoot,
+  TooltipTrigger,
+  TooltipContent,
   Table,
 } from '@chakra-ui/react';
 import { Plus } from 'lucide-react';
@@ -140,11 +142,16 @@ const SitesOverview: React.FC = () => {
                       <Text fontWeight="bold">{site.name}</Text>
                     </Table.Cell>
                     <Table.Cell>
-                      <Tooltip label={site.url} placement="top">
-                        <Text fontFamily="mono" fontSize="sm" color="gray.600" cursor="help">
-                          {extractDomain(site.url)}
-                        </Text>
-                      </Tooltip>
+                      <TooltipRoot>
+                        <TooltipTrigger>
+                          <Text fontFamily="mono" fontSize="sm" color="gray.600" cursor="help">
+                            {extractDomain(site.url)}
+                          </Text>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {site.url}
+                        </TooltipContent>
+                      </TooltipRoot>
                     </Table.Cell>
                     <Table.Cell>
                       {site.versionInfo ? (

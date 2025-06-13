@@ -14,7 +14,7 @@ import {
   Center,
   Grid,
   GridItem,
-  Divider,
+  Separator,
   Code,
   createToaster,
   DialogRoot,
@@ -24,36 +24,26 @@ import {
   DialogFooter,
   DialogBody,
   DialogCloseTrigger,
-  AlertDialog,
-  AlertDialogBody,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogContent,
-  AlertDialogOverlay,
   Alert,
-  AlertTitle,
-  AlertDescription,
   AccordionRoot,
   AccordionItem,
   AccordionItemTrigger,
   AccordionItemContent,
   Input,
-  FormControl,
-  FormLabel,
+  Field,
   Checkbox,
   Select,
   Textarea,
   Table,
-  Tabs,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
-  Editable,
+  TabsRoot,
+  TabsList,
+  TabsContent,
+  TabsTrigger,
+  EditableRoot,
   EditableInput,
   EditableTextarea,
   EditablePreview,
-  useEditableControls,
+  EditableControl,
   ButtonGroup,
   IconButton,
   Link,
@@ -346,20 +336,22 @@ const SiteDetails: React.FC = () => {
             )}
 
             {data.errors && Object.keys(data.errors).length > 0 && (
-              <Alert status="error">
-                <XCircle size={20} />
+              <Alert.Root status="error">
+                <Alert.Indicator>
+                  <XCircle size={20} />
+                </Alert.Indicator>
                 <Box>
-                  <AlertTitle>Errors!</AlertTitle>
-                  <AlertDescription>
+                  <Alert.Title>Errors!</Alert.Title>
+                  <Alert.Description>
                     {data.errors.composer && (
                       <Text><strong>Composer:</strong> {data.errors.composer}</Text>
                     )}
                     {data.errors.selfUpdate && (
                       <Text><strong>Self-Update:</strong> {data.errors.selfUpdate}</Text>
                     )}
-                  </AlertDescription>
+                  </Alert.Description>
                 </Box>
-              </Alert>
+              </Alert.Root>
             )}
           </VStack>
         );
@@ -442,17 +434,15 @@ const SiteDetails: React.FC = () => {
         <Text fontSize="md" color="gray.600" mb={2}>
           Configure database migration parameters:
         </Text>
-        <FormControl>
-          <FormLabel>Migration Hash (optional)</FormLabel>
+        <Field label="Migration Hash (optional)">
           <Input
             value={migrationFormData.hash}
             onChange={(e) => setMigrationFormData(prev => ({ ...prev, hash: e.target.value }))}
             placeholder="Leave empty for dry-run to get pending migrations"
           />
-        </FormControl>
+        </Field>
         
-        <FormControl>
-          <FormLabel>Migration Type</FormLabel>
+        <Field label="Migration Type">
           <Select 
             value={migrationFormData.type}
             onChange={(e) => setMigrationFormData(prev => ({ ...prev, type: e.target.value }))}
@@ -461,16 +451,16 @@ const SiteDetails: React.FC = () => {
             <option value="migrations-only">Migrations only</option>
             <option value="schema-only">Schema updates only</option>
           </Select>
-        </FormControl>
+        </Field>
 
-        <FormControl>
+        <Field>
           <Checkbox 
-            isChecked={migrationFormData.withDeletes}
+            checked={migrationFormData.withDeletes}
             onChange={(e) => setMigrationFormData(prev => ({ ...prev, withDeletes: e.target.checked }))}
           >
             Execute migrations including DROP queries
           </Checkbox>
-        </FormControl>
+        </Field>
 
         <Button
           colorPalette="orange"
@@ -498,13 +488,15 @@ const SiteDetails: React.FC = () => {
     const formatTokenInfo = (data: { success: boolean; tokenInfo: TokenInfo; error?: string }) => {
       if (!data.success) {
         return (
-          <Alert status="error">
-            <Info size={20} />
-            <AlertTitle>Error!</AlertTitle>
-            <AlertDescription>
+          <Alert.Root status="error">
+            <Alert.Indicator>
+              <Info size={20} />
+            </Alert.Indicator>
+            <Alert.Title>Error!</Alert.Title>
+            <Alert.Description>
               {data.error || 'Failed to get token info'}
-            </AlertDescription>
-          </Alert>
+            </Alert.Description>
+          </Alert.Root>
         );
       }
 
@@ -555,10 +547,12 @@ const SiteDetails: React.FC = () => {
           </Box>
 
           {currentLevel >= 0 && (
-            <Alert status="info">
-              <Info size={20} />
+            <Alert.Root status="info">
+              <Alert.Indicator>
+                <Info size={20} />
+              </Alert.Indicator>
               <Box>
-                <AlertTitle>Analysis: Your "{tokenInfo.scope}" scope allows:</AlertTitle>
+                <Alert.Title>Analysis: Your "{tokenInfo.scope}" scope allows:</Alert.Title>
                 <VStack spacing={1} align="start" mt={2}>
                   <Text>{currentLevel >= 0 ? '✅' : '❌'} Read operations</Text>
                   <Text>{currentLevel >= 1 ? '✅' : '❌'} Update operations</Text>
@@ -566,7 +560,7 @@ const SiteDetails: React.FC = () => {
                   <Text>{currentLevel >= 3 ? '✅' : '❌'} Admin operations</Text>
                 </VStack>
               </Box>
-            </Alert>
+            </Alert.Root>
           )}
         </VStack>
       );
@@ -653,13 +647,15 @@ const SiteDetails: React.FC = () => {
   const formatDatabaseBackups = (data: any[]) => {
     if (!Array.isArray(data) || data.length === 0) {
       return (
-        <Alert status="info">
-          <Info size={20} />
-          <AlertTitle>No backups found</AlertTitle>
-          <AlertDescription>
+        <Alert.Root status="info">
+          <Alert.Indicator>
+            <Info size={20} />
+          </Alert.Indicator>
+          <Alert.Title>No backups found</Alert.Title>
+          <Alert.Description>
             No database backups are available on this server.
-          </AlertDescription>
-        </Alert>
+          </Alert.Description>
+        </Alert.Root>
       );
     }
 
@@ -714,13 +710,15 @@ const SiteDetails: React.FC = () => {
   const formatInstalledPackages = (data: any) => {
     if (!data || typeof data !== 'object') {
       return (
-        <Alert status="info">
-          <Info size={20} />
-          <AlertTitle>No packages found</AlertTitle>
-          <AlertDescription>
+        <Alert.Root status="info">
+          <Alert.Indicator>
+            <Info size={20} />
+          </Alert.Indicator>
+          <Alert.Title>No packages found</Alert.Title>
+          <Alert.Description>
             No installed packages data available.
-          </AlertDescription>
-        </Alert>
+          </Alert.Description>
+        </Alert.Root>
       );
     }
 
@@ -906,40 +904,6 @@ const SiteDetails: React.FC = () => {
     }
   };
 
-  const EditableControls = () => {
-    const {
-      isEditing,
-      getSubmitButtonProps,
-      getCancelButtonProps,
-      getEditButtonProps,
-    } = useEditableControls();
-
-    return isEditing ? (
-      <ButtonGroup justifyContent="center" size="sm">
-        <IconButton
-          icon={<Check size={16} />}
-          {...getSubmitButtonProps()}
-          colorPalette="green"
-          aria-label="Save"
-        />
-        <IconButton
-          icon={<X size={16} />}
-          {...getCancelButtonProps()}
-          aria-label="Cancel"
-        />
-      </ButtonGroup>
-    ) : (
-      <Flex justifyContent="center">
-        <IconButton
-          size="sm"
-          icon={<Edit size={16} />}
-          {...getEditButtonProps()}
-          aria-label="Edit site name"
-          variant="ghost"
-        />
-      </Flex>
-    );
-  };
 
   const handleRemoveSite = async () => {
     if (!site) return;
@@ -984,17 +948,19 @@ const SiteDetails: React.FC = () => {
       <Container maxW="4xl">
         <Center h="400px">
           <VStack spacing={6}>
-            <Alert status="error" borderRadius="lg" p={6} maxW="md">
-              <XCircle size={40} style={{ marginRight: '16px' }} />
+            <Alert.Root status="error" borderRadius="lg" p={6} maxW="md">
+              <Alert.Indicator>
+                <XCircle size={40} style={{ marginRight: '16px' }} />
+              </Alert.Indicator>
               <Box>
-                <AlertTitle fontSize="xl" mb={2}>
+                <Alert.Title fontSize="xl" mb={2}>
                   Site Not Found
-                </AlertTitle>
-                <AlertDescription fontSize="md">
+                </Alert.Title>
+                <Alert.Description fontSize="md">
                   The requested site could not be found. It may have been removed or the URL is incorrect.
-                </AlertDescription>
+                </Alert.Description>
               </Box>
-            </Alert>
+            </Alert.Root>
             <Button 
               leftIcon={<ArrowLeft size={16} />}
               colorPalette="blue"
@@ -1013,18 +979,30 @@ const SiteDetails: React.FC = () => {
     <Container maxW="4xl">
       <Flex justify="space-between" align="center" mb={8}>
         <VStack align="start" spacing={2}>
-          <Editable
+          <EditableRoot
             defaultValue={site.name}
-            onSubmit={handleUpdateSiteName}
+            onValueCommit={(details) => handleUpdateSiteName(details.value)}
             fontSize="3xl"
             fontWeight="bold"
           >
             <Flex align="center" gap={2}>
               <EditablePreview />
               <EditableInput />
-              <EditableControls />
+              <EditableControl>
+                <ButtonGroup justifyContent="center" size="sm">
+                  <IconButton
+                    icon={<Check size={16} />}
+                    colorPalette="green"
+                    aria-label="Save"
+                  />
+                  <IconButton
+                    icon={<X size={16} />}
+                    aria-label="Cancel"
+                  />
+                </ButtonGroup>
+              </EditableControl>
             </Flex>
-          </Editable>
+          </EditableRoot>
           <Link 
             href={site.url} 
             target="_blank" 
@@ -1046,17 +1024,16 @@ const SiteDetails: React.FC = () => {
       </Flex>
 
       <Box bg={cardBg} border="1px" borderColor={borderColor} borderRadius="lg" p={8}>
-        <Tabs colorPalette="blue" variant="line">
-          <TabList>
-            <Tab>Site Info</Tab>
-            <Tab>Update</Tab>
-            <Tab>Expert</Tab>
-            <Tab>Logs</Tab>
-          </TabList>
+        <TabsRoot colorPalette="blue" variant="line" defaultValue="site-info">
+          <TabsList>
+            <TabsTrigger value="site-info">Site Info</TabsTrigger>
+            <TabsTrigger value="update">Update</TabsTrigger>
+            <TabsTrigger value="expert">Expert</TabsTrigger>
+            <TabsTrigger value="logs">Logs</TabsTrigger>
+          </TabsList>
 
-          <TabPanels>
             {/* Tab 1: Site Info */}
-            <TabPanel>
+            <TabsContent value="site-info">
               <VStack spacing={6} align="stretch">
                 <Box>
                   <Heading size="lg" mb={4}>Site Information</Heading>
@@ -1069,7 +1046,7 @@ const SiteDetails: React.FC = () => {
                     
                     {site.versionInfo && (
                       <>
-                        <Divider />
+                        <Separator />
                         <VStack spacing={2} align="start" width="100%">
                           <Heading size="sm">Version Information</Heading>
                           <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={2} width="100%">
@@ -1100,7 +1077,7 @@ const SiteDetails: React.FC = () => {
                     
                     {!site.versionInfo && (
                       <>
-                        <Divider />
+                        <Separator />
                         <VStack spacing={2} align="start" width="100%">
                           <Heading size="sm">Version Information</Heading>
                           <Text fontSize="sm" color="gray.500">
@@ -1112,7 +1089,7 @@ const SiteDetails: React.FC = () => {
                   </VStack>
                 </Box>
 
-                <Divider />
+                <Separator />
                 
                 <VStack spacing={4} align="start">
                   <Heading size="md" color="gray.500">Site Management</Heading>
@@ -1134,7 +1111,7 @@ const SiteDetails: React.FC = () => {
                         Reauthenticate
                       </Button>
                       <Button
-                        leftIcon={<Table.Rowash2 size={16} />}
+                        leftIcon={<Trash2 size={16} />}
                         colorPalette="red"
                         onClick={onRemoveDialogOpen}
                       >
@@ -1150,8 +1127,7 @@ const SiteDetails: React.FC = () => {
                         <Text fontSize="sm" color="gray.600">
                           Select new permissions and generate a new API token. This will replace your current token.
                         </Text>
-                        <FormControl>
-                          <FormLabel>Required Permissions</FormLabel>
+                        <Field label="Required Permissions">
                           <Select
                             value={reauthScope}
                             onChange={(e) => setReauthScope(e.target.value)}
@@ -1162,7 +1138,7 @@ const SiteDetails: React.FC = () => {
                             <option value="install">Read + Update + Install</option>
                             <option value="admin">Full Admin Access</option>
                           </Select>
-                        </FormControl>
+                        </Field>
                         <HStack spacing={3}>
                           <Button
                             colorPalette="orange"
@@ -1184,17 +1160,17 @@ const SiteDetails: React.FC = () => {
                   )}
                 </VStack>
               </VStack>
-            </TabPanel>
+            </TabsContent>
 
             {/* Tab 2: Update */}
-            <TabPanel>
+            <TabsContent value="update">
               <VStack spacing={6} align="stretch">
                 <UpdateWorkflow />
               </VStack>
-            </TabPanel>
+            </TabsContent>
 
             {/* Tab 3: Expert */}
-            <TabPanel>
+            <TabsContent value="expert">
               <VStack spacing={8} align="stretch">
                 <Heading size="lg" mb={4}>Expert Functions</Heading>
                 
@@ -1329,7 +1305,7 @@ const SiteDetails: React.FC = () => {
                     <GridItem>
                       <Button
                         colorPalette="red"
-                        leftIcon={<Table.Rowash2 size={16} />}
+                        leftIcon={<Trash2 size={16} />}
                         onClick={() => handleApiCallWithButton('delete-migration', api.deleteDatabaseMigrationTask, 'Delete Migration Task')}
                         loading={loadingButton === 'delete-migration'}
                         width="full"
@@ -1446,10 +1422,10 @@ const SiteDetails: React.FC = () => {
                   </Grid>
                 </Box>
               </VStack>
-            </TabPanel>
+            </TabsContent>
 
             {/* Tab 4: Logs */}
-            <TabPanel>
+            <TabsContent value="logs">
               <VStack spacing={6} align="stretch">
                 <Flex justify="space-between" align="center">
                   <Heading size="lg">API Call Logs</Heading>
@@ -1468,13 +1444,15 @@ const SiteDetails: React.FC = () => {
                     <Spinner size="lg" />
                   </Center>
                 ) : logs.length === 0 ? (
-                  <Alert status="info">
-                    <XCircle size={20} />
-                    <AlertTitle>No logs found</AlertTitle>
-                    <AlertDescription>
+                  <Alert.Root status="info">
+                    <Alert.Indicator>
+                      <XCircle size={20} />
+                    </Alert.Indicator>
+                    <Alert.Title>No logs found</Alert.Title>
+                    <Alert.Description>
                       No API call logs are available for this site yet. Make some API calls from the Expert tab to see logs here.
-                    </AlertDescription>
-                  </Alert>
+                    </Alert.Description>
+                  </Alert.Root>
                 ) : (
                   <Box>
                     <Text fontSize="sm" color="gray.500" mb={4}>
@@ -1591,9 +1569,8 @@ const SiteDetails: React.FC = () => {
                   </Box>
                 )}
               </VStack>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
+            </TabsContent>
+        </TabsRoot>
       </Box>
 
       <DialogRoot open={isOpen} onOpenChange={(details) => !details.open && onClose()} size="4xl">
@@ -1624,32 +1601,26 @@ const SiteDetails: React.FC = () => {
         </DialogContent>
       </DialogRoot>
 
-      <AlertDialog
-        isOpen={isRemoveDialogOpen}
-        leastDestructiveRef={cancelRef}
-        onClose={onRemoveDialogClose}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Remove Site
-            </AlertDialogHeader>
-
-            <AlertDialogBody>
-              Are you sure you want to remove "{site?.name}"? This action cannot be undone.
-            </AlertDialogBody>
-
-            <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={onRemoveDialogClose}>
-                Cancel
-              </Button>
-              <Button colorPalette="red" onClick={handleRemoveSite} ml={3}>
-                Remove
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
+      <DialogRoot open={isRemoveDialogOpen} onOpenChange={(details) => !details.open && onRemoveDialogClose()} size="sm">
+        <DialogBackdrop />
+        <DialogContent>
+          <DialogHeader fontSize="lg" fontWeight="bold">
+            Remove Site
+          </DialogHeader>
+          <DialogCloseTrigger />
+          <DialogBody>
+            Are you sure you want to remove "{site?.name}"? This action cannot be undone.
+          </DialogBody>
+          <DialogFooter>
+            <Button ref={cancelRef} onClick={onRemoveDialogClose}>
+              Cancel
+            </Button>
+            <Button colorPalette="red" onClick={handleRemoveSite} ml={3}>
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
     </Container>
   );
 };
