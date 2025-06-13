@@ -13,13 +13,13 @@ import {
   AlertDescription,
   useColorModeValue,
   useToast,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalCloseButton,
+  DialogRoot,
+  DialogBackdrop,
+  DialogContent,
+  DialogHeader,
+  DialogBody,
+  DialogFooter,
+  DialogCloseTrigger,
   Progress,
   Badge
 } from '@chakra-ui/react';
@@ -314,12 +314,12 @@ export const UpdateWorkflow: React.FC = () => {
       )}
 
       {/* Confirm Start Modal */}
-      <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Confirm Update Workflow</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
+      <DialogRoot open={isConfirmModalOpen} onOpenChange={(details) => !details.open && setIsConfirmModalOpen(false)}>
+        <DialogBackdrop />
+        <DialogContent>
+          <DialogHeader>Confirm Update Workflow</DialogHeader>
+          <DialogCloseTrigger />
+          <DialogBody>
             <VStack spacing={4} align="stretch">
               <Alert status="warning">
                 <AlertIcon />
@@ -363,25 +363,25 @@ export const UpdateWorkflow: React.FC = () => {
                 Estimated time: {getEstimatedTime()}
               </Text>
             </VStack>
-          </ModalBody>
-          <ModalFooter>
+          </DialogBody>
+          <DialogFooter>
             <Button variant="ghost" mr={3} onClick={() => setIsConfirmModalOpen(false)}>
               Cancel
             </Button>
             <Button colorPalette="blue" onClick={handleConfirmStart}>
               Start Update
             </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
 
       {/* Pending Tasks Modal */}
-      <Modal isOpen={pendingTasksModalOpen} onClose={() => setPendingTasksModalOpen(false)}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Pending Tasks Found</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
+      <DialogRoot open={pendingTasksModalOpen} onOpenChange={(details) => !details.open && setPendingTasksModalOpen(false)}>
+        <DialogBackdrop />
+        <DialogContent>
+          <DialogHeader>Pending Tasks Found</DialogHeader>
+          <DialogCloseTrigger />
+          <DialogBody>
             <VStack spacing={4} align="stretch">
               <Alert status="warning">
                 <AlertIcon />
@@ -407,25 +407,25 @@ export const UpdateWorkflow: React.FC = () => {
                 with the update workflow.
               </Text>
             </VStack>
-          </ModalBody>
-          <ModalFooter>
+          </DialogBody>
+          <DialogFooter>
             <Button variant="ghost" mr={3} onClick={() => setPendingTasksModalOpen(false)}>
               Cancel
             </Button>
             <Button colorPalette="orange" onClick={handleClearTasks}>
               Clear Tasks & Continue
             </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
 
       {/* Database Migrations Confirmation Modal */}
-      <Modal isOpen={migrationsModalOpen} onClose={() => setMigrationsModalOpen(false)}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Database Migrations Required</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
+      <DialogRoot open={migrationsModalOpen} onOpenChange={(details) => !details.open && setMigrationsModalOpen(false)}>
+        <DialogBackdrop />
+        <DialogContent>
+          <DialogHeader>Database Migrations Required</DialogHeader>
+          <DialogCloseTrigger />
+          <DialogBody>
             <VStack spacing={4} align="stretch">
               <Alert status="info">
                 <AlertIcon />
@@ -475,17 +475,17 @@ export const UpdateWorkflow: React.FC = () => {
                 through the Expert functions.
               </Text>
             </VStack>
-          </ModalBody>
-          <ModalFooter>
+          </DialogBody>
+          <DialogFooter>
             <Button variant="ghost" mr={3} onClick={handleSkipMigrations}>
               Skip Migrations
             </Button>
             <Button colorPalette="blue" onClick={handleConfirmMigrations}>
               Run Migrations
             </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
     </VStack>
   );
 };

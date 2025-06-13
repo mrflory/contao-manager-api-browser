@@ -18,14 +18,13 @@ import {
   Code,
   useColorModeValue,
   useToast,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
-  useDisclosure,
+  DialogRoot,
+  DialogBackdrop,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogBody,
+  DialogCloseTrigger,
   AlertDialog,
   AlertDialogBody,
   AlertDialogFooter,
@@ -85,9 +84,9 @@ const SiteDetails: React.FC = () => {
   const { siteUrl } = useParams<{ siteUrl: string }>();
   const navigate = useNavigate();
   const toast = useToast();
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const { isOpen: isMigrationModalOpen, onOpen: onMigrationModalOpen, onClose: onMigrationModalClose } = useDisclosure();
-  const { isOpen: isRemoveDialogOpen, onOpen: onRemoveDialogOpen, onClose: onRemoveDialogClose } = useDisclosure();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMigrationModalOpen, setIsMigrationModalOpen] = useState(false);
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
   const [config, setConfig] = useState<Config | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -266,8 +265,14 @@ const SiteDetails: React.FC = () => {
   const showModal = (title: string, content: React.ReactNode) => {
     setModalTitle(title);
     setModalContent(content);
-    onOpen();
+    setIsOpen(true);
   };
+
+  const onClose = () => setIsOpen(false);
+  const onMigrationModalOpen = () => setIsMigrationModalOpen(true);
+  const onMigrationModalClose = () => setIsMigrationModalOpen(false);
+  const onRemoveDialogOpen = () => setIsRemoveDialogOpen(true);
+  const onRemoveDialogClose = () => setIsRemoveDialogOpen(false);
 
   const handleUpdateStatus = async () => {
     setLoadingButton('update-status');
@@ -1592,33 +1597,33 @@ const SiteDetails: React.FC = () => {
         </Tabs>
       </Box>
 
-      <Modal isOpen={isOpen} onClose={onClose} size="4xl">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>{modalTitle}</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody maxH="70vh" overflowY="auto">
+      <DialogRoot open={isOpen} onOpenChange={(details) => !details.open && onClose()} size="4xl">
+        <DialogBackdrop />
+        <DialogContent>
+          <DialogHeader>{modalTitle}</DialogHeader>
+          <DialogCloseTrigger />
+          <DialogBody maxH="70vh" overflowY="auto">
             {modalContent}
-          </ModalBody>
-          <ModalFooter>
+          </DialogBody>
+          <DialogFooter>
             <Button onClick={onClose}>Close</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
 
-      <Modal isOpen={isMigrationModalOpen} onClose={onMigrationModalClose} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>{modalTitle}</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
+      <DialogRoot open={isMigrationModalOpen} onOpenChange={(details) => !details.open && onMigrationModalClose()} size="lg">
+        <DialogBackdrop />
+        <DialogContent>
+          <DialogHeader>{modalTitle}</DialogHeader>
+          <DialogCloseTrigger />
+          <DialogBody>
             {modalContent}
-          </ModalBody>
-          <ModalFooter>
+          </DialogBody>
+          <DialogFooter>
             <Button onClick={onMigrationModalClose}>Cancel</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
 
       <AlertDialog
         isOpen={isRemoveDialogOpen}
