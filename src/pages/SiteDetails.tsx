@@ -33,11 +33,10 @@ import {
   Alert,
   AlertTitle,
   AlertDescription,
-  Accordion,
+  AccordionRoot,
   AccordionItem,
-  AccordionButton,
-  AccordionPanel,
-  AccordionIcon,
+  AccordionItemTrigger,
+  AccordionItemContent,
   Input,
   FormControl,
   FormLabel,
@@ -71,6 +70,7 @@ import {
   CheckCircle,
   Info,
   XCircle,
+  ChevronDown,
 } from 'lucide-react';
 import { useColorModeValue } from '../hooks/useColorModeValue';
 import { Config, UpdateStatus, TokenInfo } from '../types';
@@ -295,21 +295,21 @@ const SiteDetails: React.FC = () => {
                     )}
                   </VStack>
                 ) : null}
-                <Accordion allowToggle mt={4}>
+                <AccordionRoot allowToggle mt={4}>
                   <AccordionItem>
-                    <AccordionButton>
+                    <AccordionItemTrigger>
                       <Box flex="1" textAlign="left">
                         Show full response
                       </Box>
-                      <AccordionIcon />
-                    </AccordionButton>
-                    <AccordionPanel pb={4}>
+                      <ChevronDown size={16} />
+                    </AccordionItemTrigger>
+                    <AccordionItemContent pb={4}>
                       <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
                         {JSON.stringify(data.composer, null, 2)}
                       </Code>
-                    </AccordionPanel>
+                    </AccordionItemContent>
                   </AccordionItem>
-                </Accordion>
+                </AccordionRoot>
               </Box>
             )}
             
@@ -327,21 +327,21 @@ const SiteDetails: React.FC = () => {
                     )}
                   </VStack>
                 ) : null}
-                <Accordion allowToggle mt={4}>
+                <AccordionRoot allowToggle mt={4}>
                   <AccordionItem>
-                    <AccordionButton>
+                    <AccordionItemTrigger>
                       <Box flex="1" textAlign="left">
                         Show full response
                       </Box>
-                      <AccordionIcon />
-                    </AccordionButton>
-                    <AccordionPanel pb={4}>
+                      <ChevronDown size={16} />
+                    </AccordionItemTrigger>
+                    <AccordionItemContent pb={4}>
                       <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
                         {JSON.stringify(data.selfUpdate, null, 2)}
                       </Code>
-                    </AccordionPanel>
+                    </AccordionItemContent>
                   </AccordionItem>
-                </Accordion>
+                </AccordionRoot>
               </Box>
             )}
 
@@ -527,21 +527,21 @@ const SiteDetails: React.FC = () => {
                 <Text><strong>TOTP Enabled:</strong> {tokenInfo.totp_enabled ? 'Yes' : 'No'}</Text>
               )}
             </VStack>
-            <Accordion allowToggle mt={4}>
+            <AccordionRoot allowToggle mt={4}>
               <AccordionItem>
-                <AccordionButton>
+                <AccordionItemTrigger>
                   <Box flex="1" textAlign="left">
                     Show full token info
                   </Box>
-                  <AccordionIcon />
-                </AccordionButton>
-                <AccordionPanel pb={4}>
+                  <ChevronDown size={16} />
+                </AccordionItemTrigger>
+                <AccordionItemContent pb={4}>
                   <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
                     {JSON.stringify(tokenInfo, null, 2)}
                   </Code>
-                </AccordionPanel>
+                </AccordionItemContent>
               </AccordionItem>
-            </Accordion>
+            </AccordionRoot>
           </Box>
 
           <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
@@ -607,21 +607,21 @@ const SiteDetails: React.FC = () => {
                 </VStack>
               </Box>
               <Box mt={4}>
-                <Accordion allowToggle>
+                <AccordionRoot allowToggle>
                   <AccordionItem>
-                    <AccordionButton>
+                    <AccordionItemTrigger>
                       <Box flex="1" textAlign="left">
                         Show raw version data
                       </Box>
-                      <AccordionIcon />
-                    </AccordionButton>
-                    <AccordionPanel pb={4}>
+                      <ChevronDown size={16} />
+                    </AccordionItemTrigger>
+                    <AccordionItemContent pb={4}>
                       <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
                         {JSON.stringify(versionInfo, null, 2)}
                       </Code>
-                    </AccordionPanel>
+                    </AccordionItemContent>
                   </AccordionItem>
-                </Accordion>
+                </AccordionRoot>
               </Box>
             </VStack>
           );
@@ -691,21 +691,21 @@ const SiteDetails: React.FC = () => {
           </Table.Root>
         </Box>
         <Box mt={4}>
-          <Accordion allowToggle>
+          <AccordionRoot allowToggle>
             <AccordionItem>
-              <AccordionButton>
+              <AccordionItemTrigger>
                 <Box flex="1" textAlign="left">
                   Show raw backup data
                 </Box>
-                <AccordionIcon />
-              </AccordionButton>
-              <AccordionPanel pb={4}>
+                <ChevronDown size={16} />
+              </AccordionItemTrigger>
+              <AccordionItemContent pb={4}>
                 <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
                   {JSON.stringify(data, null, 2)}
                 </Code>
-              </AccordionPanel>
+              </AccordionItemContent>
             </AccordionItem>
-          </Accordion>
+          </AccordionRoot>
         </Box>
       </VStack>
     );
@@ -764,21 +764,21 @@ const SiteDetails: React.FC = () => {
           </Table.Root>
         </Box>
         <Box mt={4}>
-          <Accordion allowToggle>
+          <AccordionRoot allowToggle>
             <AccordionItem>
-              <AccordionButton>
+              <AccordionItemTrigger>
                 <Box flex="1" textAlign="left">
                   Show raw package data
                 </Box>
-                <AccordionIcon />
-              </AccordionButton>
-              <AccordionPanel pb={4}>
+                <ChevronDown size={16} />
+              </AccordionItemTrigger>
+              <AccordionItemContent pb={4}>
                 <Code display="block" whiteSpace="pre" p={3} borderRadius="md" maxH="300px" overflowY="auto">
                   {JSON.stringify(data, null, 2)}
                 </Code>
-              </AccordionPanel>
+              </AccordionItemContent>
             </AccordionItem>
-          </Accordion>
+          </AccordionRoot>
         </Box>
       </VStack>
     );
