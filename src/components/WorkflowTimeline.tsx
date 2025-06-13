@@ -4,7 +4,6 @@ import {
   Text,
   Badge,
   Spinner,
-  useColorModeValue,
   CollapsibleRoot,
   CollapsibleContent,
   Code,
@@ -13,6 +12,7 @@ import {
   Circle
 } from '@chakra-ui/react';
 import { Check, X, AlertTriangle, Minus } from 'lucide-react';
+import { useColorModeValue } from '../hooks/useColorModeValue';
 import { WorkflowStep } from '../types';
 
 interface WorkflowTimelineProps {

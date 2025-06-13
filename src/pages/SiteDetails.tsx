@@ -16,7 +16,6 @@ import {
   GridItem,
   Divider,
   Code,
-  useColorModeValue,
   useToast,
   DialogRoot,
   DialogBackdrop,
@@ -70,6 +69,7 @@ import {
   X,
   RefreshCw,
 } from 'lucide-react';
+import { useColorModeValue } from '../hooks/useColorModeValue';
 import { Config, UpdateStatus, TokenInfo } from '../types';
 import { api } from '../utils/api';
 import { UpdateWorkflow } from '../components/UpdateWorkflow';

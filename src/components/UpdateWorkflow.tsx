@@ -11,7 +11,6 @@ import {
   AlertIcon,
   AlertTitle,
   AlertDescription,
-  useColorModeValue,
   useToast,
   DialogRoot,
   DialogBackdrop,
@@ -24,6 +23,7 @@ import {
   Badge
 } from '@chakra-ui/react';
 import { Play, Pause, RefreshCw } from 'lucide-react';
+import { useColorModeValue } from '../hooks/useColorModeValue';
 import { WorkflowTimeline } from './WorkflowTimeline';
 import { useWorkflow } from '../hooks/useWorkflow';
 import { WorkflowConfig } from '../types';
