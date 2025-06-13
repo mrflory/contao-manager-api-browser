@@ -47,11 +47,6 @@ import {
   Select,
   Textarea,
   Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableCell,
   Tabs,
   TabList,
   TabPanels,
@@ -669,25 +664,25 @@ const SiteDetails: React.FC = () => {
           Found {data.length} database backup{data.length !== 1 ? 's' : ''}:
         </Text>
         <Box overflowX="auto">
-          <Table variant="simple" size="sm">
-            <TableHead>
-              <TableRow>
-                <TableHeader>Backup Name</TableHeader>
-                <TableHeader>Created At</TableHeader>
-                <TableHeader>Size</TableHeader>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+          <Table.Root variant="simple" size="sm">
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeader>Backup Name</Table.ColumnHeader>
+                <Table.ColumnHeader>Created At</Table.ColumnHeader>
+                <Table.ColumnHeader>Size</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
               {data.map((backup, index) => (
-                <TableRow key={index}>
-                  <TableCell>
+                <Table.Row key={index}>
+                  <Table.Cell>
                     <Code fontSize="sm">{backup.name}</Code>
-                  </TableCell>
-                  <TableCell>{new Date(backup.createdAt).toLocaleString()}</TableCell>
-                  <TableCell>{(backup.size / 1024 / 1024).toFixed(2)} MB</TableCell>
-                </TableRow>
+                  </Table.Cell>
+                  <Table.Cell>{new Date(backup.createdAt).toLocaleString()}</Table.Cell>
+                  <Table.Cell>{(backup.size / 1024 / 1024).toFixed(2)} MB</Table.Cell>
+                </Table.Row>
               ))}
-            </TableBody>
+            </Table.Body>
           </Table>
         </Box>
         <Box mt={4}>
@@ -732,35 +727,35 @@ const SiteDetails: React.FC = () => {
           Found {packages.length} installed package{packages.length !== 1 ? 's' : ''}:
         </Text>
         <Box maxH="400px" overflowY="auto">
-          <Table variant="simple" size="sm">
-            <TableHead position="sticky" top={0} bg={cardBg}>
-              <TableRow>
-                <TableHeader>Package Name</TableHeader>
-                <TableHeader>Version</TableHeader>
-                <TableHeader>Type</TableHeader>
-                <TableHeader>Description</TableHeader>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+          <Table.Root variant="simple" size="sm">
+            <Table.Header position="sticky" top={0} bg={cardBg}>
+              <Table.Row>
+                <Table.ColumnHeader>Package Name</Table.ColumnHeader>
+                <Table.ColumnHeader>Version</Table.ColumnHeader>
+                <Table.ColumnHeader>Type</Table.ColumnHeader>
+                <Table.ColumnHeader>Description</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
               {packages.map(([name, pkg]: [string, any]) => (
-                <TableRow key={name}>
-                  <TableCell>
+                <Table.Row key={name}>
+                  <Table.Cell>
                     <Code fontSize="sm">{name}</Code>
-                  </TableCell>
-                  <TableCell>
+                  </Table.Cell>
+                  <Table.Cell>
                     <Badge colorPalette="blue" fontSize="xs">{pkg.version || 'N/A'}</Badge>
-                  </TableCell>
-                  <TableCell>
+                  </Table.Cell>
+                  <Table.Cell>
                     <Badge colorPalette="green" fontSize="xs">{pkg.type || 'library'}</Badge>
-                  </TableCell>
-                  <TableCell>
+                  </Table.Cell>
+                  <Table.Cell>
                     <Text fontSize="xs" noOfLines={2}>
                       {pkg.description || 'No description available'}
                     </Text>
-                  </TableCell>
-                </TableRow>
+                  </Table.Cell>
+                </Table.Row>
               ))}
-            </TableBody>
+            </Table.Body>
           </Table>
         </Box>
         <Box mt={4}>
@@ -1134,7 +1129,7 @@ const SiteDetails: React.FC = () => {
                         Reauthenticate
                       </Button>
                       <Button
-                        leftIcon={<TableRowash2 size={16} />}
+                        leftIcon={<Table.Rowash2 size={16} />}
                         colorPalette="red"
                         onClick={onRemoveDialogOpen}
                       >
@@ -1329,7 +1324,7 @@ const SiteDetails: React.FC = () => {
                     <GridItem>
                       <Button
                         colorPalette="red"
-                        leftIcon={<TableRowash2 size={16} />}
+                        leftIcon={<Table.Rowash2 size={16} />}
                         onClick={() => handleApiCallWithButton('delete-migration', api.deleteDatabaseMigrationTask, 'Delete Migration Task')}
                         loading={loadingButton === 'delete-migration'}
                         width="full"
@@ -1481,26 +1476,26 @@ const SiteDetails: React.FC = () => {
                       Showing {logs.length} log entries for {site?.name}
                     </Text>
                     <Box maxH="600px" overflowY="auto">
-                      <Table variant="simple" size="sm">
-                        <TableHead position="sticky" top={0} bg={cardBg} zIndex={1}>
-                          <TableRow>
-                            <TableHeader>Timestamp</TableHeader>
-                            <TableHeader>Method</TableHeader>
-                            <TableHeader>Endpoint</TableHeader>
-                            <TableHeader>Status</TableHeader>
-                            <TableHeader>Error</TableHeader>
-                            <TableHeader>Details</TableHeader>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
+                      <Table.Root variant="simple" size="sm">
+                        <Table.Header position="sticky" top={0} bg={cardBg} zIndex={1}>
+                          <Table.Row>
+                            <Table.ColumnHeader>Timestamp</Table.ColumnHeader>
+                            <Table.ColumnHeader>Method</Table.ColumnHeader>
+                            <Table.ColumnHeader>Endpoint</Table.ColumnHeader>
+                            <Table.ColumnHeader>Status</Table.ColumnHeader>
+                            <Table.ColumnHeader>Error</Table.ColumnHeader>
+                            <Table.ColumnHeader>Details</Table.ColumnHeader>
+                          </Table.Row>
+                        </Table.Header>
+                        <Table.Body>
                           {logs.map((log, index) => (
-                            <TableRow key={index}>
-                              <TableCell>
+                            <Table.Row key={index}>
+                              <Table.Cell>
                                 <Text fontSize="xs">
                                   {new Date(log.timestamp).toLocaleString()}
                                 </Text>
-                              </TableCell>
-                              <TableCell>
+                              </Table.Cell>
+                              <Table.Cell>
                                 <Badge 
                                   colorPalette={
                                     log.method === 'GET' ? 'blue' : 
@@ -1512,11 +1507,11 @@ const SiteDetails: React.FC = () => {
                                 >
                                   {log.method}
                                 </Badge>
-                              </TableCell>
-                              <TableCell>
+                              </Table.Cell>
+                              <Table.Cell>
                                 <Code fontSize="xs">{log.endpoint}</Code>
-                              </TableCell>
-                              <TableCell>
+                              </Table.Cell>
+                              <Table.Cell>
                                 <Badge 
                                   colorPalette={
                                     log.statusCode >= 200 && log.statusCode < 300 ? 'green' :
@@ -1528,8 +1523,8 @@ const SiteDetails: React.FC = () => {
                                 >
                                   {log.statusCode || 'N/A'}
                                 </Badge>
-                              </TableCell>
-                              <TableCell>
+                              </Table.Cell>
+                              <Table.Cell>
                                 {log.error ? (
                                   <Text fontSize="xs" color="red.500" noOfLines={1} maxW="150px">
                                     {log.error}
@@ -1537,8 +1532,8 @@ const SiteDetails: React.FC = () => {
                                 ) : (
                                   <Text fontSize="xs" color="gray.400">None</Text>
                                 )}
-                              </TableCell>
-                              <TableCell>
+                              </Table.Cell>
+                              <Table.Cell>
                                 <Button
                                   size="xs"
                                   variant="outline"
@@ -1582,10 +1577,10 @@ const SiteDetails: React.FC = () => {
                                 >
                                   View
                                 </Button>
-                              </TableCell>
-                            </TableRow>
+                              </Table.Cell>
+                            </Table.Row>
                           ))}
-                        </TableBody>
+                        </Table.Body>
                       </Table>
                     </Box>
                   </Box>
