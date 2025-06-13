@@ -69,14 +69,14 @@ import {
   Link,
 } from '@chakra-ui/react';
 import {
-  ArrowBackIcon,
-  DeleteIcon,
-  SettingsIcon,
-  EditIcon,
-  CheckIcon,
-  CloseIcon,
-  RepeatIcon,
-} from '@chakra-ui/icons';
+  ArrowLeft,
+  Trash2,
+  Settings,
+  Edit,
+  Check,
+  X,
+  RefreshCw,
+} from 'lucide-react';
 import { Config, UpdateStatus, TokenInfo } from '../types';
 import { api } from '../utils/api';
 import { UpdateWorkflow } from '../components/UpdateWorkflow';
@@ -285,9 +285,9 @@ const SiteDetails: React.FC = () => {
                     <Text><strong>Current Version:</strong> {data.composer.current_version}</Text>
                     <Text><strong>Latest Version:</strong> {data.composer.latest_version}</Text>
                     {data.composer.current_version !== data.composer.latest_version ? (
-                      <Badge colorScheme="orange">Update Available!</Badge>
+                      <Badge colorPalette="orange">Update Available!</Badge>
                     ) : (
-                      <Badge colorScheme="green">Up to Date</Badge>
+                      <Badge colorPalette="green">Up to Date</Badge>
                     )}
                   </VStack>
                 ) : null}
@@ -317,9 +317,9 @@ const SiteDetails: React.FC = () => {
                     <Text><strong>Current Version:</strong> {data.selfUpdate.current_version}</Text>
                     <Text><strong>Latest Version:</strong> {data.selfUpdate.latest_version}</Text>
                     {data.selfUpdate.current_version !== data.selfUpdate.latest_version ? (
-                      <Badge colorScheme="orange">Update Available!</Badge>
+                      <Badge colorPalette="orange">Update Available!</Badge>
                     ) : (
-                      <Badge colorScheme="green">Up to Date</Badge>
+                      <Badge colorPalette="green">Up to Date</Badge>
                     )}
                   </VStack>
                 ) : null}
@@ -469,7 +469,7 @@ const SiteDetails: React.FC = () => {
         </FormControl>
 
         <Button
-          colorScheme="orange"
+          colorPalette="orange"
           onClick={async () => {
             const payload: any = {};
             if (migrationFormData.hash) payload.hash = migrationFormData.hash;
@@ -514,7 +514,7 @@ const SiteDetails: React.FC = () => {
             <Heading size="md" mb={3}>🔑 Token Information</Heading>
             <VStack spacing={2} align="start">
               {tokenInfo.scope && (
-                <Text><strong>Current Scope:</strong> <Badge colorScheme="blue">{tokenInfo.scope}</Badge></Text>
+                <Text><strong>Current Scope:</strong> <Badge colorPalette="blue">{tokenInfo.scope}</Badge></Text>
               )}
               {tokenInfo.username && (
                 <Text><strong>Username:</strong> {tokenInfo.username}</Text>
@@ -744,10 +744,10 @@ const SiteDetails: React.FC = () => {
                     <Code fontSize="sm">{name}</Code>
                   </Td>
                   <Td>
-                    <Badge colorScheme="blue" fontSize="xs">{pkg.version || 'N/A'}</Badge>
+                    <Badge colorPalette="blue" fontSize="xs">{pkg.version || 'N/A'}</Badge>
                   </Td>
                   <Td>
-                    <Badge colorScheme="green" fontSize="xs">{pkg.type || 'library'}</Badge>
+                    <Badge colorPalette="green" fontSize="xs">{pkg.type || 'library'}</Badge>
                   </Td>
                   <Td>
                     <Text fontSize="xs" noOfLines={2}>
@@ -913,13 +913,13 @@ const SiteDetails: React.FC = () => {
     return isEditing ? (
       <ButtonGroup justifyContent="center" size="sm">
         <IconButton
-          icon={<CheckIcon />}
+          icon={<Check size={16} />}
           {...getSubmitButtonProps()}
-          colorScheme="green"
+          colorPalette="green"
           aria-label="Save"
         />
         <IconButton
-          icon={<CloseIcon />}
+          icon={<X size={16} />}
           {...getCancelButtonProps()}
           aria-label="Cancel"
         />
@@ -928,7 +928,7 @@ const SiteDetails: React.FC = () => {
       <Flex justifyContent="center">
         <IconButton
           size="sm"
-          icon={<EditIcon />}
+          icon={<Edit size={16} />}
           {...getEditButtonProps()}
           aria-label="Edit site name"
           variant="ghost"
@@ -992,8 +992,8 @@ const SiteDetails: React.FC = () => {
               </Box>
             </Alert>
             <Button 
-              leftIcon={<ArrowBackIcon />}
-              colorScheme="blue"
+              leftIcon={<ArrowLeft size={16} />}
+              colorPalette="blue"
               size="lg"
               onClick={() => navigate('/')}
             >
@@ -1033,7 +1033,7 @@ const SiteDetails: React.FC = () => {
           </Link>
         </VStack>
         <Button
-          leftIcon={<ArrowBackIcon />}
+          leftIcon={<ArrowLeft size={16} />}
           variant="ghost"
           onClick={() => navigate('/')}
         >
@@ -1042,7 +1042,7 @@ const SiteDetails: React.FC = () => {
       </Flex>
 
       <Box bg={cardBg} border="1px" borderColor={borderColor} borderRadius="lg" p={8}>
-        <Tabs colorScheme="blue" variant="line">
+        <Tabs colorPalette="blue" variant="line">
           <TabList>
             <Tab>Site Info</Tab>
             <Tab>Update</Tab>
@@ -1115,23 +1115,23 @@ const SiteDetails: React.FC = () => {
                   {!showReauthForm ? (
                     <HStack spacing={4} wrap="wrap">
                       <Button
-                        leftIcon={<SettingsIcon />}
-                        colorScheme="blue"
+                        leftIcon={<Settings size={16} />}
+                        colorPalette="blue"
                         onClick={handleUpdateVersionInfo}
-                        isLoading={loadingButton === 'update-version-info'}
+                        loading={loadingButton === 'update-version-info'}
                       >
                         Update Version Info
                       </Button>
                       <Button
-                        leftIcon={<RepeatIcon />}
-                        colorScheme="orange"
+                        leftIcon={<RefreshCw size={16} />}
+                        colorPalette="orange"
                         onClick={handleReauthenticate}
                       >
                         Reauthenticate
                       </Button>
                       <Button
-                        leftIcon={<DeleteIcon />}
-                        colorScheme="red"
+                        leftIcon={<Trash2 size={16} />}
+                        colorPalette="red"
                         onClick={onRemoveDialogOpen}
                       >
                         Remove Site
@@ -1161,9 +1161,9 @@ const SiteDetails: React.FC = () => {
                         </FormControl>
                         <HStack spacing={3}>
                           <Button
-                            colorScheme="orange"
+                            colorPalette="orange"
                             onClick={handleReauthSubmit}
-                            isLoading={loadingButton === 'reauthenticate'}
+                            loading={loadingButton === 'reauthenticate'}
                             loadingText="Redirecting..."
                           >
                             Generate New Token
@@ -1197,15 +1197,15 @@ const SiteDetails: React.FC = () => {
                 {/* Server Configuration */}
                 <Box>
                   <HStack spacing={2} mb={4}>
-                    <SettingsIcon />
+                    <Settings size={20} />
                     <Heading size="md" color="blue.500">Server Configuration</Heading>
                   </HStack>
                   <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
                     <GridItem>
                       <Button
-                        colorScheme="blue"
+                        colorPalette="blue"
                         onClick={handleUpdateStatus}
-                        isLoading={loadingButton === 'update-status'}
+                        loading={loadingButton === 'update-status'}
                         width="full"
                       >
                         Get Update Status
@@ -1213,9 +1213,9 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="blue"
+                        colorPalette="blue"
                         onClick={() => handleApiCallWithButton('php-web-config', api.getPhpWebConfig, 'PHP Web Server Configuration')}
-                        isLoading={loadingButton === 'php-web-config'}
+                        loading={loadingButton === 'php-web-config'}
                         width="full"
                       >
                         PHP Web Config
@@ -1223,9 +1223,9 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="blue"
+                        colorPalette="blue"
                         onClick={() => handleApiCallWithButton('contao-config', api.getContaoConfig, 'Contao Configuration')}
-                        isLoading={loadingButton === 'contao-config'}
+                        loading={loadingButton === 'contao-config'}
                         width="full"
                       >
                         Contao Config
@@ -1240,9 +1240,9 @@ const SiteDetails: React.FC = () => {
                   <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
                     <GridItem>
                       <Button
-                        colorScheme="green"
+                        colorPalette="green"
                         onClick={() => handleApiCallWithButton('users-list', api.getUsersList, 'User List')}
-                        isLoading={loadingButton === 'users-list'}
+                        loading={loadingButton === 'users-list'}
                         width="full"
                       >
                         User List
@@ -1250,9 +1250,9 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="green"
+                        colorPalette="green"
                         onClick={handleTokenInfo}
-                        isLoading={loadingButton === 'token-info'}
+                        loading={loadingButton === 'token-info'}
                         width="full"
                       >
                         Get Token Info
@@ -1260,7 +1260,7 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="green"
+                        colorPalette="green"
                         onClick={async () => {
                           try {
                             setLoadingButton('token-list');
@@ -1288,7 +1288,7 @@ const SiteDetails: React.FC = () => {
                             setLoadingButton(null);
                           }
                         }}
-                        isLoading={loadingButton === 'token-list'}
+                        loading={loadingButton === 'token-list'}
                         width="full"
                       >
                         Token List
@@ -1303,9 +1303,9 @@ const SiteDetails: React.FC = () => {
                   <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
                     <GridItem>
                       <Button
-                        colorScheme="orange"
+                        colorPalette="orange"
                         onClick={() => handleApiCallWithButton('migration-status', api.getDatabaseMigrationStatus, 'Migration Task Status')}
-                        isLoading={loadingButton === 'migration-status'}
+                        loading={loadingButton === 'migration-status'}
                         width="full"
                       >
                         Migration Status
@@ -1313,10 +1313,10 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="orange"
-                        leftIcon={<EditIcon />}
+                        colorPalette="orange"
+                        leftIcon={<Edit size={16} />}
                         onClick={handleStartDatabaseMigration}
-                        isLoading={loadingButton === 'start-migration'}
+                        loading={loadingButton === 'start-migration'}
                         width="full"
                       >
                         Start Migration
@@ -1324,10 +1324,10 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="red"
-                        leftIcon={<DeleteIcon />}
+                        colorPalette="red"
+                        leftIcon={<Trash2 size={16} />}
                         onClick={() => handleApiCallWithButton('delete-migration', api.deleteDatabaseMigrationTask, 'Delete Migration Task')}
-                        isLoading={loadingButton === 'delete-migration'}
+                        loading={loadingButton === 'delete-migration'}
                         width="full"
                       >
                         Delete Migration Task
@@ -1335,9 +1335,9 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="orange"
+                        colorPalette="orange"
                         onClick={() => handleApiCallWithButton('maintenance-mode', api.getMaintenanceModeStatus, 'Maintenance Mode Status')}
-                        isLoading={loadingButton === 'maintenance-mode'}
+                        loading={loadingButton === 'maintenance-mode'}
                         width="full"
                       >
                         Maintenance Status
@@ -1345,10 +1345,10 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="green"
-                        leftIcon={<CheckIcon />}
+                        colorPalette="green"
+                        leftIcon={<Check size={16} />}
                         onClick={() => handleApiCallWithButton('enable-maintenance', api.enableMaintenanceMode, 'Enable Maintenance Mode')}
-                        isLoading={loadingButton === 'enable-maintenance'}
+                        loading={loadingButton === 'enable-maintenance'}
                         width="full"
                       >
                         Enable Maintenance
@@ -1356,10 +1356,10 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="red"
-                        leftIcon={<CloseIcon />}
+                        colorPalette="red"
+                        leftIcon={<X size={16} />}
                         onClick={() => handleApiCallWithButton('disable-maintenance', api.disableMaintenanceMode, 'Disable Maintenance Mode')}
-                        isLoading={loadingButton === 'disable-maintenance'}
+                        loading={loadingButton === 'disable-maintenance'}
                         width="full"
                       >
                         Disable Maintenance
@@ -1367,9 +1367,9 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="orange"
+                        colorPalette="orange"
                         onClick={() => handleApiCallWithButton('db-backups', api.getDatabaseBackups, 'Database Backups', formatDatabaseBackups)}
-                        isLoading={loadingButton === 'db-backups'}
+                        loading={loadingButton === 'db-backups'}
                         width="full"
                       >
                         Database Backups
@@ -1384,9 +1384,9 @@ const SiteDetails: React.FC = () => {
                   <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
                     <GridItem>
                       <Button
-                        colorScheme="cyan"
+                        colorPalette="cyan"
                         onClick={() => handleApiCallWithButton('get-task-data', api.getTaskData, 'Task Data')}
-                        isLoading={loadingButton === 'get-task-data'}
+                        loading={loadingButton === 'get-task-data'}
                         width="full"
                       >
                         Get Task Data
@@ -1394,9 +1394,9 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="cyan"
+                        colorPalette="cyan"
                         onClick={handleSetTaskData}
-                        isLoading={loadingButton === 'set-task'}
+                        loading={loadingButton === 'set-task'}
                         width="full"
                       >
                         Set Task Data
@@ -1404,9 +1404,9 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="red"
+                        colorPalette="red"
                         onClick={() => handleApiCallWithButton('delete-task', api.deleteTaskData, 'Delete Task Data')}
-                        isLoading={loadingButton === 'delete-task'}
+                        loading={loadingButton === 'delete-task'}
                         width="full"
                       >
                         Delete Task Data
@@ -1421,9 +1421,9 @@ const SiteDetails: React.FC = () => {
                   <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
                     <GridItem>
                       <Button
-                        colorScheme="purple"
+                        colorPalette="purple"
                         onClick={() => handleApiCallWithButton('root-package', api.getRootPackageDetails, 'Root Package Details')}
-                        isLoading={loadingButton === 'root-package'}
+                        loading={loadingButton === 'root-package'}
                         width="full"
                       >
                         Root Package Details
@@ -1431,9 +1431,9 @@ const SiteDetails: React.FC = () => {
                     </GridItem>
                     <GridItem>
                       <Button
-                        colorScheme="purple"
+                        colorPalette="purple"
                         onClick={() => handleApiCallWithButton('installed-packages', api.getInstalledPackages, 'Installed Packages', formatInstalledPackages)}
-                        isLoading={loadingButton === 'installed-packages'}
+                        loading={loadingButton === 'installed-packages'}
                         width="full"
                       >
                         Installed Packages
@@ -1450,9 +1450,9 @@ const SiteDetails: React.FC = () => {
                 <Flex justify="space-between" align="center">
                   <Heading size="lg">API Call Logs</Heading>
                   <Button
-                    colorScheme="blue"
+                    colorPalette="blue"
                     onClick={loadLogs}
-                    isLoading={logsLoading}
+                    loading={logsLoading}
                     size="sm"
                   >
                     Refresh Logs
@@ -1498,7 +1498,7 @@ const SiteDetails: React.FC = () => {
                               </Td>
                               <Td>
                                 <Badge 
-                                  colorScheme={
+                                  colorPalette={
                                     log.method === 'GET' ? 'blue' : 
                                     log.method === 'POST' ? 'green' : 
                                     log.method === 'PUT' ? 'orange' : 
@@ -1514,7 +1514,7 @@ const SiteDetails: React.FC = () => {
                               </Td>
                               <Td>
                                 <Badge 
-                                  colorScheme={
+                                  colorPalette={
                                     log.statusCode >= 200 && log.statusCode < 300 ? 'green' :
                                     log.statusCode >= 300 && log.statusCode < 400 ? 'blue' :
                                     log.statusCode >= 400 && log.statusCode < 500 ? 'orange' :
@@ -1639,7 +1639,7 @@ const SiteDetails: React.FC = () => {
               <Button ref={cancelRef} onClick={onRemoveDialogClose}>
                 Cancel
               </Button>
-              <Button colorScheme="red" onClick={handleRemoveSite} ml={3}>
+              <Button colorPalette="red" onClick={handleRemoveSite} ml={3}>
                 Remove
               </Button>
             </AlertDialogFooter>

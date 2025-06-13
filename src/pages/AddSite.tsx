@@ -203,9 +203,9 @@ const AddSite: React.FC = () => {
               
               <Button
                 type="submit"
-                colorScheme="blue"
+                colorPalette="blue"
                 size="lg"
-                isLoading={loading}
+                loading={loading}
                 loadingText="Redirecting..."
                 width="full"
               >
@@ -226,10 +226,10 @@ const AddSite: React.FC = () => {
             </FormControl>
             
             <Button
-              colorScheme="green"
+              colorPalette="green"
               size="lg"
               onClick={handleTokenSave}
-              isLoading={loading}
+              loading={loading}
               loadingText="Saving..."
               width="full"
             >

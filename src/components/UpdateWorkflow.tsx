@@ -23,7 +23,7 @@ import {
   Progress,
   Badge
 } from '@chakra-ui/react';
-import { TriangleUpIcon, TriangleDownIcon, RepeatIcon } from '@chakra-ui/icons';
+import { Play, Pause, RefreshCw } from 'lucide-react';
 import { WorkflowTimeline } from './WorkflowTimeline';
 import { useWorkflow } from '../hooks/useWorkflow';
 import { WorkflowConfig } from '../types';
@@ -170,15 +170,15 @@ export const UpdateWorkflow: React.FC = () => {
     const status = getWorkflowStatus();
     switch (status) {
       case 'complete':
-        return <Badge colorScheme="green" size="lg">Complete</Badge>;
+        return <Badge colorPalette="green" size="lg">Complete</Badge>;
       case 'error':
-        return <Badge colorScheme="red" size="lg">Error</Badge>;
+        return <Badge colorPalette="red" size="lg">Error</Badge>;
       case 'running':
-        return <Badge colorScheme="blue" size="lg">Running</Badge>;
+        return <Badge colorPalette="blue" size="lg">Running</Badge>;
       case 'paused':
-        return <Badge colorScheme="orange" size="lg">Paused</Badge>;
+        return <Badge colorPalette="orange" size="lg">Paused</Badge>;
       default:
-        return <Badge colorScheme="gray" size="lg">Ready</Badge>;
+        return <Badge colorPalette="gray" size="lg">Ready</Badge>;
     }
   };
 
@@ -204,7 +204,7 @@ export const UpdateWorkflow: React.FC = () => {
           {state.isRunning && (
             <Box>
               <Text fontSize="sm" mb={2}>Progress</Text>
-              <Progress value={getWorkflowProgress()} colorScheme="blue" />
+              <Progress value={getWorkflowProgress()} colorPalette="blue" />
             </Box>
           )}
 
@@ -236,8 +236,8 @@ export const UpdateWorkflow: React.FC = () => {
           <HStack spacing={3}>
             {canStart && (
               <Button
-                colorScheme="blue"
-                leftIcon={<TriangleUpIcon />}
+                colorPalette="blue"
+                leftIcon={<Play size={16} />}
                 onClick={handleStartWorkflow}
                 size="lg"
               >
@@ -247,8 +247,8 @@ export const UpdateWorkflow: React.FC = () => {
             
             {canStop && (
               <Button
-                colorScheme="orange"
-                leftIcon={<TriangleDownIcon />}
+                colorPalette="orange"
+                leftIcon={<Pause size={16} />}
                 onClick={handleStop}
                 size="lg"
               >
@@ -258,8 +258,8 @@ export const UpdateWorkflow: React.FC = () => {
             
             {canResume && (
               <Button
-                colorScheme="blue"
-                leftIcon={<TriangleUpIcon />}
+                colorPalette="blue"
+                leftIcon={<Play size={16} />}
                 onClick={handleResume}
                 size="lg"
               >
@@ -269,8 +269,8 @@ export const UpdateWorkflow: React.FC = () => {
 
             {isComplete && (
               <Button
-                colorScheme="green"
-                leftIcon={<RepeatIcon />}
+                colorPalette="green"
+                leftIcon={<RefreshCw size={16} />}
                 onClick={() => initializeWorkflow(config)}
                 size="lg"
               >
@@ -368,7 +368,7 @@ export const UpdateWorkflow: React.FC = () => {
             <Button variant="ghost" mr={3} onClick={() => setIsConfirmModalOpen(false)}>
               Cancel
             </Button>
-            <Button colorScheme="blue" onClick={handleConfirmStart}>
+            <Button colorPalette="blue" onClick={handleConfirmStart}>
               Start Update
             </Button>
           </ModalFooter>
@@ -412,7 +412,7 @@ export const UpdateWorkflow: React.FC = () => {
             <Button variant="ghost" mr={3} onClick={() => setPendingTasksModalOpen(false)}>
               Cancel
             </Button>
-            <Button colorScheme="orange" onClick={handleClearTasks}>
+            <Button colorPalette="orange" onClick={handleClearTasks}>
               Clear Tasks & Continue
             </Button>
           </ModalFooter>
@@ -480,7 +480,7 @@ export const UpdateWorkflow: React.FC = () => {
             <Button variant="ghost" mr={3} onClick={handleSkipMigrations}>
               Skip Migrations
             </Button>
-            <Button colorScheme="blue" onClick={handleConfirmMigrations}>
+            <Button colorPalette="blue" onClick={handleConfirmMigrations}>
               Run Migrations
             </Button>
           </ModalFooter>

@@ -90,7 +90,7 @@ const SitesOverview: React.FC = () => {
         <Heading size="xl">Your Sites</Heading>
         <Button
           leftIcon={<Plus size={16} />}
-          colorScheme="green"
+          colorPalette="green"
           onClick={handleAddSite}
         >
           Add New Site
@@ -157,17 +157,17 @@ const SitesOverview: React.FC = () => {
                         <VStack spacing={1} align="start">
                           <HStack spacing={2} wrap="wrap">
                             {site.versionInfo.contaoManagerVersion && (
-                              <Badge colorScheme="blue" fontSize="xs">
+                              <Badge colorPalette="blue" fontSize="xs">
                                 Manager: {site.versionInfo.contaoManagerVersion}
                               </Badge>
                             )}
                             {site.versionInfo.phpVersion && (
-                              <Badge colorScheme="green" fontSize="xs">
+                              <Badge colorPalette="green" fontSize="xs">
                                 PHP: {site.versionInfo.phpVersion}
                               </Badge>
                             )}
                             {site.versionInfo.contaoVersion && (
-                              <Badge colorScheme="orange" fontSize="xs">
+                              <Badge colorPalette="orange" fontSize="xs">
                                 Contao: {site.versionInfo.contaoVersion}
                               </Badge>
                             )}

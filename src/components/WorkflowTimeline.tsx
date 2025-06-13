@@ -11,7 +11,7 @@ import {
   VStack,
   Circle
 } from '@chakra-ui/react';
-import { CheckIcon, CloseIcon, WarningIcon, MinusIcon } from '@chakra-ui/icons';
+import { Check, X, AlertTriangle, Minus } from 'lucide-react';
 import { WorkflowStep } from '../types';
 
 interface WorkflowTimelineProps {
@@ -35,11 +35,11 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ step, isActive, isLast }) =
       case 'active':
         return <Spinner size="sm" />;
       case 'complete':
-        return <CheckIcon color="white" boxSize={3} />;
+        return <Check color="white" size={12} />;
       case 'error':
-        return <CloseIcon color="white" boxSize={3} />;
+        return <X color="white" size={12} />;
       case 'skipped':
-        return <MinusIcon color="white" boxSize={3} />;
+        return <Minus color="white" size={12} />;
       default:
         return null;
     }
@@ -63,15 +63,15 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ step, isActive, isLast }) =
   const getStatusBadge = () => {
     switch (step.status) {
       case 'active':
-        return <Badge colorScheme="blue">In Progress</Badge>;
+        return <Badge colorPalette="blue">In Progress</Badge>;
       case 'complete':
-        return <Badge colorScheme="green">Complete</Badge>;
+        return <Badge colorPalette="green">Complete</Badge>;
       case 'error':
-        return <Badge colorScheme="red">Error</Badge>;
+        return <Badge colorPalette="red">Error</Badge>;
       case 'skipped':
-        return <Badge colorScheme="gray">Skipped</Badge>;
+        return <Badge colorPalette="gray">Skipped</Badge>;
       default:
-        return <Badge colorScheme="gray">Pending</Badge>;
+        return <Badge colorPalette="gray">Pending</Badge>;
     }
   };
 
@@ -157,7 +157,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ step, isActive, isLast }) =
                 {step.error && (
                   <Box p={2} bg="red.50" borderRadius="md" border="1px" borderColor="red.200">
                     <HStack>
-                      <WarningIcon color="red.500" />
+                      <AlertTriangle color="#E53E3E" size={16} />
                       <Text fontSize="sm" color="red.700">
                         {step.error}
                       </Text>
