@@ -12,7 +12,6 @@ import {
   Select,
   VStack,
   Alert,
-  AlertIcon,
   useToast,
 } from '@chakra-ui/react';
 import { ArrowLeft } from 'lucide-react';

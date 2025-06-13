@@ -8,7 +8,6 @@ import {
   Heading,
   Checkbox,
   Alert,
-  AlertIcon,
   AlertTitle,
   AlertDescription,
   useToast,
@@ -22,7 +21,7 @@ import {
   Progress,
   Badge
 } from '@chakra-ui/react';
-import { Play, Pause, RefreshCw } from 'lucide-react';
+import { Play, Pause, RefreshCw, AlertTriangle, CheckCircle, Info, XCircle } from 'lucide-react';
 import { useColorModeValue } from '../hooks/useColorModeValue';
 import { WorkflowTimeline } from './WorkflowTimeline';
 import { useWorkflow } from '../hooks/useWorkflow';
@@ -282,7 +281,7 @@ export const UpdateWorkflow: React.FC = () => {
           {/* Error Alert */}
           {state.error && (
             <Alert status="error">
-              <AlertIcon />
+              <XCircle size={20} />
               <Box>
                 <AlertTitle>Workflow Error!</AlertTitle>
                 <AlertDescription>{state.error}</AlertDescription>
@@ -293,7 +292,7 @@ export const UpdateWorkflow: React.FC = () => {
           {/* Success Alert */}
           {isComplete && !state.error && (
             <Alert status="success">
-              <AlertIcon />
+              <CheckCircle size={20} />
               <Box>
                 <AlertTitle>Update Complete!</AlertTitle>
                 <AlertDescription>
@@ -322,7 +321,7 @@ export const UpdateWorkflow: React.FC = () => {
           <DialogBody>
             <VStack spacing={4} align="stretch">
               <Alert status="warning">
-                <AlertIcon />
+                <AlertTriangle size={20} />
                 <Box>
                   <AlertTitle>Important!</AlertTitle>
                   <AlertDescription>
@@ -384,7 +383,7 @@ export const UpdateWorkflow: React.FC = () => {
           <DialogBody>
             <VStack spacing={4} align="stretch">
               <Alert status="warning">
-                <AlertIcon />
+                <AlertTriangle size={20} />
                 <Box>
                   <AlertTitle>Tasks are currently running</AlertTitle>
                   <AlertDescription>
@@ -428,7 +427,7 @@ export const UpdateWorkflow: React.FC = () => {
           <DialogBody>
             <VStack spacing={4} align="stretch">
               <Alert status="info">
-                <AlertIcon />
+                <Info size={20} />
                 <Box>
                   <AlertTitle>Pending database migrations detected</AlertTitle>
                   <AlertDescription>
@@ -457,7 +456,7 @@ export const UpdateWorkflow: React.FC = () => {
                 </HStack>
                 {config.withDeletes && (
                   <Alert status="warning" size="sm" mt={2}>
-                    <AlertIcon />
+                    <AlertTriangle size={16} />
                     <AlertDescription fontSize="xs">
                       DROP queries will be executed, which may remove data or database structures.
                     </AlertDescription>

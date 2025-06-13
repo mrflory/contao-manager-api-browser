@@ -31,7 +31,6 @@ import {
   AlertDialogContent,
   AlertDialogOverlay,
   Alert,
-  AlertIcon,
   AlertTitle,
   AlertDescription,
   Accordion,
@@ -68,6 +67,10 @@ import {
   Check,
   X,
   RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  XCircle,
 } from 'lucide-react';
 import { useColorModeValue } from '../hooks/useColorModeValue';
 import { Config, UpdateStatus, TokenInfo } from '../types';
@@ -342,7 +345,7 @@ const SiteDetails: React.FC = () => {
 
             {data.errors && Object.keys(data.errors).length > 0 && (
               <Alert status="error">
-                <AlertIcon />
+                <XCircle size={20} />
                 <Box>
                   <AlertTitle>Errors!</AlertTitle>
                   <AlertDescription>
@@ -494,7 +497,7 @@ const SiteDetails: React.FC = () => {
       if (!data.success) {
         return (
           <Alert status="error">
-            <AlertIcon />
+            <Info size={20} />
             <AlertTitle>Error!</AlertTitle>
             <AlertDescription>
               {data.error || 'Failed to get token info'}
@@ -551,7 +554,7 @@ const SiteDetails: React.FC = () => {
 
           {currentLevel >= 0 && (
             <Alert status="info">
-              <AlertIcon />
+              <Info size={20} />
               <Box>
                 <AlertTitle>Analysis: Your "{tokenInfo.scope}" scope allows:</AlertTitle>
                 <VStack spacing={1} align="start" mt={2}>
@@ -649,7 +652,7 @@ const SiteDetails: React.FC = () => {
     if (!Array.isArray(data) || data.length === 0) {
       return (
         <Alert status="info">
-          <AlertIcon />
+          <Info size={20} />
           <AlertTitle>No backups found</AlertTitle>
           <AlertDescription>
             No database backups are available on this server.
@@ -710,7 +713,7 @@ const SiteDetails: React.FC = () => {
     if (!data || typeof data !== 'object') {
       return (
         <Alert status="info">
-          <AlertIcon />
+          <Info size={20} />
           <AlertTitle>No packages found</AlertTitle>
           <AlertDescription>
             No installed packages data available.
@@ -980,7 +983,7 @@ const SiteDetails: React.FC = () => {
         <Center h="400px">
           <VStack spacing={6}>
             <Alert status="error" borderRadius="lg" p={6} maxW="md">
-              <AlertIcon boxSize="40px" mr={4} />
+              <XCircle size={40} style={{ marginRight: '16px' }} />
               <Box>
                 <AlertTitle fontSize="xl" mb={2}>
                   Site Not Found
@@ -1464,7 +1467,7 @@ const SiteDetails: React.FC = () => {
                   </Center>
                 ) : logs.length === 0 ? (
                   <Alert status="info">
-                    <AlertIcon />
+                    <XCircle size={20} />
                     <AlertTitle>No logs found</AlertTitle>
                     <AlertDescription>
                       No API call logs are available for this site yet. Make some API calls from the Expert tab to see logs here.
