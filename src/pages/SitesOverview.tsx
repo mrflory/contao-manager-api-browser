@@ -4,12 +4,6 @@ import {
   Container,
   Heading,
   Button,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
   Text,
   Box,
   Flex,
@@ -19,6 +13,14 @@ import {
   HStack,
   Badge,
   Tooltip,
+} from '@chakra-ui/react';
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCell,
 } from '@chakra-ui/react';
 import { Plus } from 'lucide-react';
 import { useColorModeValue } from '../hooks/useColorModeValue';
@@ -123,17 +125,17 @@ const SitesOverview: React.FC = () => {
         >
           <Box overflowX="auto">
             <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Site Name</Th>
-                  <Th>URL</Th>
-                  <Th>Version Info</Th>
-                  <Th>Last Used</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
+              <TableHead>
+                <TableRow>
+                  <TableHeader>Site Name</TableHeader>
+                  <TableHeader>URL</TableHeader>
+                  <TableHeader>Version Info</TableHeader>
+                  <TableHeader>Last Used</TableHeader>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {sites.map((site) => (
-                  <Tr
+                  <TableRow
                     key={site.url}
                     onClick={() => handleSiteClick(site.url)}
                     cursor="pointer"
@@ -141,17 +143,17 @@ const SitesOverview: React.FC = () => {
                       bg: hoverBg
                     }}
                   >
-                    <Td>
+                    <TableCell>
                       <Text fontWeight="bold">{site.name}</Text>
-                    </Td>
-                    <Td>
+                    </TableCell>
+                    <TableCell>
                       <Tooltip label={site.url} placement="top">
                         <Text fontFamily="mono" fontSize="sm" color="gray.600" cursor="help">
                           {extractDomain(site.url)}
                         </Text>
                       </Tooltip>
-                    </Td>
-                    <Td>
+                    </TableCell>
+                    <TableCell>
                       {site.versionInfo ? (
                         <VStack spacing={1} align="start">
                           <HStack spacing={2} wrap="wrap">
@@ -182,15 +184,15 @@ const SitesOverview: React.FC = () => {
                           No version info
                         </Text>
                       )}
-                    </Td>
-                    <Td>
+                    </TableCell>
+                    <TableCell>
                       <Text color="gray.600">
                         {new Date(site.lastUsed).toLocaleDateString()} {new Date(site.lastUsed).toLocaleTimeString()}
                       </Text>
-                    </Td>
-                  </Tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </Tbody>
+              </TableBody>
             </Table>
           </Box>
         </Box>

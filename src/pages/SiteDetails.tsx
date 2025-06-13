@@ -47,11 +47,11 @@ import {
   Select,
   Textarea,
   Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCell,
   Tabs,
   TabList,
   TabPanels,
@@ -670,24 +670,24 @@ const SiteDetails: React.FC = () => {
         </Text>
         <Box overflowX="auto">
           <Table variant="simple" size="sm">
-            <Thead>
-              <Tr>
-                <Th>Backup Name</Th>
-                <Th>Created At</Th>
-                <Th>Size</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
+            <TableHead>
+              <TableRow>
+                <TableHeader>Backup Name</TableHeader>
+                <TableHeader>Created At</TableHeader>
+                <TableHeader>Size</TableHeader>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {data.map((backup, index) => (
-                <Tr key={index}>
-                  <Td>
+                <TableRow key={index}>
+                  <TableCell>
                     <Code fontSize="sm">{backup.name}</Code>
-                  </Td>
-                  <Td>{new Date(backup.createdAt).toLocaleString()}</Td>
-                  <Td>{(backup.size / 1024 / 1024).toFixed(2)} MB</Td>
-                </Tr>
+                  </TableCell>
+                  <TableCell>{new Date(backup.createdAt).toLocaleString()}</TableCell>
+                  <TableCell>{(backup.size / 1024 / 1024).toFixed(2)} MB</TableCell>
+                </TableRow>
               ))}
-            </Tbody>
+            </TableBody>
           </Table>
         </Box>
         <Box mt={4}>
@@ -733,34 +733,34 @@ const SiteDetails: React.FC = () => {
         </Text>
         <Box maxH="400px" overflowY="auto">
           <Table variant="simple" size="sm">
-            <Thead position="sticky" top={0} bg={cardBg}>
-              <Tr>
-                <Th>Package Name</Th>
-                <Th>Version</Th>
-                <Th>Type</Th>
-                <Th>Description</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
+            <TableHead position="sticky" top={0} bg={cardBg}>
+              <TableRow>
+                <TableHeader>Package Name</TableHeader>
+                <TableHeader>Version</TableHeader>
+                <TableHeader>Type</TableHeader>
+                <TableHeader>Description</TableHeader>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {packages.map(([name, pkg]: [string, any]) => (
-                <Tr key={name}>
-                  <Td>
+                <TableRow key={name}>
+                  <TableCell>
                     <Code fontSize="sm">{name}</Code>
-                  </Td>
-                  <Td>
+                  </TableCell>
+                  <TableCell>
                     <Badge colorPalette="blue" fontSize="xs">{pkg.version || 'N/A'}</Badge>
-                  </Td>
-                  <Td>
+                  </TableCell>
+                  <TableCell>
                     <Badge colorPalette="green" fontSize="xs">{pkg.type || 'library'}</Badge>
-                  </Td>
-                  <Td>
+                  </TableCell>
+                  <TableCell>
                     <Text fontSize="xs" noOfLines={2}>
                       {pkg.description || 'No description available'}
                     </Text>
-                  </Td>
-                </Tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </Tbody>
+            </TableBody>
           </Table>
         </Box>
         <Box mt={4}>
@@ -1134,7 +1134,7 @@ const SiteDetails: React.FC = () => {
                         Reauthenticate
                       </Button>
                       <Button
-                        leftIcon={<Trash2 size={16} />}
+                        leftIcon={<TableRowash2 size={16} />}
                         colorPalette="red"
                         onClick={onRemoveDialogOpen}
                       >
@@ -1329,7 +1329,7 @@ const SiteDetails: React.FC = () => {
                     <GridItem>
                       <Button
                         colorPalette="red"
-                        leftIcon={<Trash2 size={16} />}
+                        leftIcon={<TableRowash2 size={16} />}
                         onClick={() => handleApiCallWithButton('delete-migration', api.deleteDatabaseMigrationTask, 'Delete Migration Task')}
                         loading={loadingButton === 'delete-migration'}
                         width="full"
@@ -1482,25 +1482,25 @@ const SiteDetails: React.FC = () => {
                     </Text>
                     <Box maxH="600px" overflowY="auto">
                       <Table variant="simple" size="sm">
-                        <Thead position="sticky" top={0} bg={cardBg} zIndex={1}>
-                          <Tr>
-                            <Th>Timestamp</Th>
-                            <Th>Method</Th>
-                            <Th>Endpoint</Th>
-                            <Th>Status</Th>
-                            <Th>Error</Th>
-                            <Th>Details</Th>
-                          </Tr>
-                        </Thead>
-                        <Tbody>
+                        <TableHead position="sticky" top={0} bg={cardBg} zIndex={1}>
+                          <TableRow>
+                            <TableHeader>Timestamp</TableHeader>
+                            <TableHeader>Method</TableHeader>
+                            <TableHeader>Endpoint</TableHeader>
+                            <TableHeader>Status</TableHeader>
+                            <TableHeader>Error</TableHeader>
+                            <TableHeader>Details</TableHeader>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
                           {logs.map((log, index) => (
-                            <Tr key={index}>
-                              <Td>
+                            <TableRow key={index}>
+                              <TableCell>
                                 <Text fontSize="xs">
                                   {new Date(log.timestamp).toLocaleString()}
                                 </Text>
-                              </Td>
-                              <Td>
+                              </TableCell>
+                              <TableCell>
                                 <Badge 
                                   colorPalette={
                                     log.method === 'GET' ? 'blue' : 
@@ -1512,11 +1512,11 @@ const SiteDetails: React.FC = () => {
                                 >
                                   {log.method}
                                 </Badge>
-                              </Td>
-                              <Td>
+                              </TableCell>
+                              <TableCell>
                                 <Code fontSize="xs">{log.endpoint}</Code>
-                              </Td>
-                              <Td>
+                              </TableCell>
+                              <TableCell>
                                 <Badge 
                                   colorPalette={
                                     log.statusCode >= 200 && log.statusCode < 300 ? 'green' :
@@ -1528,8 +1528,8 @@ const SiteDetails: React.FC = () => {
                                 >
                                   {log.statusCode || 'N/A'}
                                 </Badge>
-                              </Td>
-                              <Td>
+                              </TableCell>
+                              <TableCell>
                                 {log.error ? (
                                   <Text fontSize="xs" color="red.500" noOfLines={1} maxW="150px">
                                     {log.error}
@@ -1537,8 +1537,8 @@ const SiteDetails: React.FC = () => {
                                 ) : (
                                   <Text fontSize="xs" color="gray.400">None</Text>
                                 )}
-                              </Td>
-                              <Td>
+                              </TableCell>
+                              <TableCell>
                                 <Button
                                   size="xs"
                                   variant="outline"
@@ -1582,10 +1582,10 @@ const SiteDetails: React.FC = () => {
                                 >
                                   View
                                 </Button>
-                              </Td>
-                            </Tr>
+                              </TableCell>
+                            </TableRow>
                           ))}
-                        </Tbody>
+                        </TableBody>
                       </Table>
                     </Box>
                   </Box>
