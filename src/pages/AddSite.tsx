@@ -12,7 +12,7 @@ import {
   Select,
   VStack,
   Alert,
-  useToast,
+  createToaster,
 } from '@chakra-ui/react';
 import { ArrowLeft } from 'lucide-react';
 import { useColorModeValue } from '../hooks/useColorModeValue';
@@ -20,7 +20,9 @@ import { api } from '../utils/api';
 
 const AddSite: React.FC = () => {
   const navigate = useNavigate();
-  const toast = useToast();
+  const toaster = createToaster({
+    placement: 'top',
+  });
   const [url, setUrl] = useState('');
   const [scope, setScope] = useState('admin');
   const [token, setToken] = useState('');
@@ -40,7 +42,7 @@ const AddSite: React.FC = () => {
       if (extractedToken) {
         setToken(extractedToken);
         setShowTokenForm(true);
-        toast({
+        toaster.create({
           title: 'Token Received',
           description: 'Token received! Please save it to continue.',
           status: 'success',
@@ -49,13 +51,13 @@ const AddSite: React.FC = () => {
         });
       }
     }
-  }, [toast]);
+  }, [toaster]);
 
   const handleAuthSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!url) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: 'Please enter a valid URL',
         status: 'error',
@@ -79,7 +81,7 @@ const AddSite: React.FC = () => {
         redirect_uri: redirectUri
       }).toString();
       
-      toast({
+      toaster.create({
         title: 'Redirecting',
         description: 'Redirecting to Contao Manager for authentication...',
         status: 'info',
@@ -94,7 +96,7 @@ const AddSite: React.FC = () => {
       }, 1000);
       
     } catch (error) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         status: 'error',
@@ -107,7 +109,7 @@ const AddSite: React.FC = () => {
 
   const handleTokenSave = async () => {
     if (!token.trim()) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: 'Please enter a valid token',
         status: 'error',
@@ -128,7 +130,7 @@ const AddSite: React.FC = () => {
       const response = await api.saveToken(token, managerUrlStored);
       
       if (response.success) {
-        toast({
+        toaster.create({
           title: 'Success',
           description: 'Site added successfully!',
           status: 'success',
@@ -142,7 +144,7 @@ const AddSite: React.FC = () => {
         throw new Error(response.error || 'Failed to save token');
       }
     } catch (error) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         status: 'error',

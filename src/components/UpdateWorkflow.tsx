@@ -10,7 +10,7 @@ import {
   Alert,
   AlertTitle,
   AlertDescription,
-  useToast,
+  createToaster,
   DialogRoot,
   DialogBackdrop,
   DialogContent,
@@ -40,7 +40,9 @@ export const UpdateWorkflow: React.FC = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const configSummaryBg = useColorModeValue('blue.50', 'blue.900');
   const configBg = useColorModeValue('gray.50', 'gray.700');
-  const toast = useToast();
+  const toaster = createToaster({
+    placement: 'top',
+  });
   
   const {
     state,
@@ -84,7 +86,7 @@ export const UpdateWorkflow: React.FC = () => {
   const handleConfirmStart = () => {
     setIsConfirmModalOpen(false);
     startWorkflow();
-    toast({
+    toaster.create({
       title: 'Workflow Started',
       description: 'Contao update workflow has begun',
       status: 'info',
@@ -95,7 +97,7 @@ export const UpdateWorkflow: React.FC = () => {
 
   const handleStop = () => {
     stopWorkflow();
-    toast({
+    toaster.create({
       title: 'Workflow Stopped',
       description: 'Update workflow has been paused',
       status: 'warning',
@@ -106,7 +108,7 @@ export const UpdateWorkflow: React.FC = () => {
 
   const handleResume = () => {
     resumeWorkflow();
-    toast({
+    toaster.create({
       title: 'Workflow Resumed',
       description: 'Update workflow is continuing',
       status: 'info',
@@ -123,7 +125,7 @@ export const UpdateWorkflow: React.FC = () => {
   const handleConfirmMigrations = () => {
     setMigrationsModalOpen(false);
     confirmMigrations();
-    toast({
+    toaster.create({
       title: 'Migrations Confirmed',
       description: 'Database migrations will now be executed',
       status: 'info',
@@ -135,7 +137,7 @@ export const UpdateWorkflow: React.FC = () => {
   const handleSkipMigrations = () => {
     setMigrationsModalOpen(false);
     skipMigrations();
-    toast({
+    toaster.create({
       title: 'Migrations Skipped',
       description: 'Database migrations were skipped. You can run them manually later.',
       status: 'warning',

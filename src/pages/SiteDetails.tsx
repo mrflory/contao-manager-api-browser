@@ -16,7 +16,7 @@ import {
   GridItem,
   Divider,
   Code,
-  useToast,
+  createToaster,
   DialogRoot,
   DialogBackdrop,
   DialogContent,
@@ -80,7 +80,9 @@ import { UpdateWorkflow } from '../components/UpdateWorkflow';
 const SiteDetails: React.FC = () => {
   const { siteUrl } = useParams<{ siteUrl: string }>();
   const navigate = useNavigate();
-  const toast = useToast();
+  const toaster = createToaster({
+    placement: 'top',
+  });
   const [isOpen, setIsOpen] = useState(false);
   const [isMigrationModalOpen, setIsMigrationModalOpen] = useState(false);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
@@ -147,7 +149,7 @@ const SiteDetails: React.FC = () => {
       setLogsTotal(logsData.total);
     } catch (error) {
       console.error('Error loading logs:', error);
-      toast({
+      toaster.create({
         title: 'Error',
         description: `Failed to load logs: ${error instanceof Error ? error.message : 'Unknown error'}`,
         status: 'error',
@@ -180,7 +182,7 @@ const SiteDetails: React.FC = () => {
         redirect_uri: redirectUri
       }).toString();
       
-      toast({
+      toaster.create({
         title: 'Redirecting',
         description: 'Redirecting to Contao Manager for reauthentication...',
         status: 'info',
@@ -196,7 +198,7 @@ const SiteDetails: React.FC = () => {
       }, 1000);
       
     } catch (error) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         status: 'error',
@@ -210,7 +212,7 @@ const SiteDetails: React.FC = () => {
   const handleReauthTokenSave = async (token: string) => {
     const siteUrl = localStorage.getItem('reauthSiteUrl');
     if (!siteUrl) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: 'Site URL not found. Please try reauthenticating again.',
         status: 'error',
@@ -226,7 +228,7 @@ const SiteDetails: React.FC = () => {
       const response = await api.saveToken(token, siteUrl);
       
       if (response.success) {
-        toast({
+        toaster.create({
           title: 'Success',
           description: 'Site reauthenticated successfully! New token saved.',
           status: 'success',
@@ -244,7 +246,7 @@ const SiteDetails: React.FC = () => {
         throw new Error(response.error || 'Failed to save new token');
       }
     } catch (error) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: `Error saving new token: ${error instanceof Error ? error.message : 'Unknown error'}`,
         status: 'error',
@@ -365,7 +367,7 @@ const SiteDetails: React.FC = () => {
 
       showModal('Update Status', formatUpdateInfo(data));
     } catch (error) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: `Error getting update status: ${error instanceof Error ? error.message : 'Unknown error'}`,
         status: 'error',
@@ -390,7 +392,7 @@ const SiteDetails: React.FC = () => {
 
       showModal(title, content);
     } catch (error) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: `Error calling ${title}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         status: 'error',
@@ -415,7 +417,7 @@ const SiteDetails: React.FC = () => {
 
       showModal(title, content);
     } catch (error) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: `Error calling ${title}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         status: 'error',
@@ -582,7 +584,7 @@ const SiteDetails: React.FC = () => {
         // Reload config to get updated version info
         await loadConfig();
         
-        toast({
+        toaster.create({
           title: 'Success',
           description: 'Version information updated successfully',
           status: 'success',
@@ -627,7 +629,7 @@ const SiteDetails: React.FC = () => {
 
         showModal('Version Information Updated', formatVersionInfo(data.versionInfo));
       } else {
-        toast({
+        toaster.create({
           title: 'Error',
           description: data.error || 'Failed to update version information',
           status: 'error',
@@ -636,7 +638,7 @@ const SiteDetails: React.FC = () => {
         });
       }
     } catch (error) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: `Error updating version information: ${error instanceof Error ? error.message : 'Unknown error'}`,
         status: 'error',
@@ -882,7 +884,7 @@ const SiteDetails: React.FC = () => {
     try {
       const response = await api.updateSiteName(site.url, newName);
       if (response.success) {
-        toast({
+        toaster.create({
           title: 'Success',
           description: 'Site name updated successfully',
           status: 'success',
@@ -894,7 +896,7 @@ const SiteDetails: React.FC = () => {
         throw new Error(response.error || 'Failed to update site name');
       }
     } catch (error) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: `Failed to update site name: ${error instanceof Error ? error.message : 'Unknown error'}`,
         status: 'error',
@@ -945,7 +947,7 @@ const SiteDetails: React.FC = () => {
 
     try {
       await api.removeSite(site.url);
-      toast({
+      toaster.create({
         title: 'Success',
         description: `Site "${site.name}" has been removed`,
         status: 'success',
@@ -954,7 +956,7 @@ const SiteDetails: React.FC = () => {
       });
       navigate('/');
     } catch (error) {
-      toast({
+      toaster.create({
         title: 'Error',
         description: `Failed to remove site: ${error instanceof Error ? error.message : 'Unknown error'}`,
         status: 'error',
@@ -1270,7 +1272,7 @@ const SiteDetails: React.FC = () => {
                             if (tokenInfo.success && tokenInfo.tokenInfo.username) {
                               await handleApiCallWithButton('token-list', () => api.getTokensList(tokenInfo.tokenInfo.username), 'Token List');
                             } else {
-                              toast({
+                              toaster.create({
                                 title: 'Error',
                                 description: 'Could not get username from token info',
                                 status: 'error',
@@ -1280,7 +1282,7 @@ const SiteDetails: React.FC = () => {
                               setLoadingButton(null);
                             }
                           } catch (error) {
-                            toast({
+                            toaster.create({
                               title: 'Error',
                               description: 'Failed to get token list',
                               status: 'error',
