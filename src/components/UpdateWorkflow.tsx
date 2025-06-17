@@ -6,18 +6,21 @@ import {
   Button,
   Text,
   Heading,
-  Checkbox,
   createToaster,
+  Progress,
+  Badge
+} from '@chakra-ui/react';
+import { Checkbox } from './ui/checkbox';
+import {
   DialogRoot,
   DialogBackdrop,
   DialogContent,
   DialogHeader,
+  DialogTitle,
   DialogBody,
   DialogFooter,
   DialogCloseTrigger,
-  Progress,
-  Badge
-} from '@chakra-ui/react';
+} from './ui/dialog';
 import { Alert } from '@chakra-ui/react';
 import { LuPlay as Play, LuPause as Pause, LuRefreshCw as RefreshCw, LuTriangleAlert as AlertTriangle, LuCircleCheck as CheckCircle, LuInfo as Info, LuCircleX as XCircle } from 'react-icons/lu';
 import { useColorModeValue } from './ui/color-mode';
@@ -212,24 +215,18 @@ export const UpdateWorkflow: React.FC = () => {
             <Box p={4} bg={configBg} borderRadius="md">
               <Text fontWeight="semibold" mb={3}>Configuration</Text>
               <VStack align="start" spacing={3}>
-                <Checkbox.Root
+                <Checkbox
                   checked={config.performDryRun}
                   onCheckedChange={(checked) => setConfig(prev => ({ ...prev, performDryRun: !!checked.checked }))}
                 >
-                  <Checkbox.Control />
-                  <Checkbox.Label>
-                    Perform composer dry-run before actual update
-                  </Checkbox.Label>
-                </Checkbox.Root>
-                <Checkbox.Root
+                  Perform composer dry-run before actual update
+                </Checkbox>
+                <Checkbox
                   checked={config.withDeletes}
                   onCheckedChange={(checked) => setConfig(prev => ({ ...prev, withDeletes: !!checked.checked }))}
                 >
-                  <Checkbox.Control />
-                  <Checkbox.Label>
-                    Execute migrations including DROP queries
-                  </Checkbox.Label>
-                </Checkbox.Root>
+                  Execute migrations including DROP queries
+                </Checkbox>
                 <Text fontSize="sm" color="gray.600">
                   <strong>Estimated time:</strong> {getEstimatedTime()}
                 </Text>
@@ -326,8 +323,10 @@ export const UpdateWorkflow: React.FC = () => {
       <DialogRoot open={isConfirmModalOpen} onOpenChange={(details) => !details.open && setIsConfirmModalOpen(false)}>
         <DialogBackdrop />
         <DialogContent>
-          <DialogHeader>Confirm Update Workflow</DialogHeader>
           <DialogCloseTrigger />
+          <DialogHeader>
+            <DialogTitle>Confirm Update Workflow</DialogTitle>
+          </DialogHeader>
           <DialogBody>
             <VStack spacing={4} align="stretch">
               <Alert.Root status="warning">
@@ -390,8 +389,10 @@ export const UpdateWorkflow: React.FC = () => {
       <DialogRoot open={pendingTasksModalOpen} onOpenChange={(details) => !details.open && setPendingTasksModalOpen(false)}>
         <DialogBackdrop />
         <DialogContent>
-          <DialogHeader>Pending Tasks Found</DialogHeader>
           <DialogCloseTrigger />
+          <DialogHeader>
+            <DialogTitle>Pending Tasks Found</DialogTitle>
+          </DialogHeader>
           <DialogBody>
             <VStack spacing={4} align="stretch">
               <Alert.Root status="warning">
@@ -436,8 +437,10 @@ export const UpdateWorkflow: React.FC = () => {
       <DialogRoot open={migrationsModalOpen} onOpenChange={(details) => !details.open && setMigrationsModalOpen(false)}>
         <DialogBackdrop />
         <DialogContent>
-          <DialogHeader>Database Migrations Required</DialogHeader>
           <DialogCloseTrigger />
+          <DialogHeader>
+            <DialogTitle>Database Migrations Required</DialogTitle>
+          </DialogHeader>
           <DialogBody>
             <VStack spacing={4} align="stretch">
               <Alert.Root status="info">

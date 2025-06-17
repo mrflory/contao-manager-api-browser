@@ -17,21 +17,8 @@ import {
   Separator,
   Code,
   createToaster,
-  DialogRoot,
-  DialogBackdrop,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogBody,
-  DialogCloseTrigger,
   Alert,
-  AccordionRoot,
-  AccordionItem,
-  AccordionItemTrigger,
-  AccordionItemContent,
   Input,
-  Field,
-  Checkbox,
   Select,
   Table,
   Tabs,
@@ -39,6 +26,22 @@ import {
   IconButton,
   Link,
 } from '@chakra-ui/react';
+import {
+  AccordionRoot,
+  AccordionItem,
+  AccordionItemTrigger,
+  AccordionItemContent,
+} from '../components/ui/accordion';
+import {
+  DialogRoot,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+  DialogBackdrop,
+  DialogCloseTrigger,
+} from '../components/ui/dialog';
 import {
   LuArrowLeft as ArrowLeft,
   LuTrash2 as Trash2,
@@ -49,8 +52,10 @@ import {
   LuRefreshCw as RefreshCw,
   LuInfo as Info,
   LuCircleX as XCircle,
-  LuChevronDown as ChevronDown,
 } from 'react-icons/lu';
+import { SelectTrigger, SelectItem, SelectRoot, SelectValueText, SelectContent, SelectItemText } from '../components/ui/select';
+import { Field } from '../components/ui/field';
+import { Checkbox } from '../components/ui/checkbox';
 import { useColorModeValue } from '../components/ui/color-mode';
 import { Config, UpdateStatus, TokenInfo } from '../types';
 import { api } from '../utils/api';
@@ -274,13 +279,12 @@ const SiteDetails: React.FC = () => {
                     )}
                   </VStack>
                 ) : null}
-                <AccordionRoot allowToggle mt={4}>
+                <AccordionRoot mt={4}>
                   <AccordionItem>
                     <AccordionItemTrigger>
                       <Box flex="1" textAlign="left">
                         Show full response
                       </Box>
-                      <ChevronDown size={16} />
                     </AccordionItemTrigger>
                     <AccordionItemContent pb={4}>
                       <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
@@ -306,13 +310,12 @@ const SiteDetails: React.FC = () => {
                     )}
                   </VStack>
                 ) : null}
-                <AccordionRoot allowToggle mt={4}>
+                <AccordionRoot mt={4}>
                   <AccordionItem>
                     <AccordionItemTrigger>
                       <Box flex="1" textAlign="left">
                         Show full response
                       </Box>
-                      <ChevronDown size={16} />
                     </AccordionItemTrigger>
                     <AccordionItemContent pb={4}>
                       <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
@@ -445,7 +448,7 @@ const SiteDetails: React.FC = () => {
         <Field>
           <Checkbox 
             checked={migrationFormData.withDeletes}
-            onChange={(e) => setMigrationFormData(prev => ({ ...prev, withDeletes: e.target.checked }))}
+            onCheckedChange={(checked) => setMigrationFormData(prev => ({ ...prev, withDeletes: !!checked.checked }))}
           >
             Execute migrations including DROP queries
           </Checkbox>
@@ -508,13 +511,12 @@ const SiteDetails: React.FC = () => {
                 <Text><strong>TOTP Enabled:</strong> {tokenInfo.totp_enabled ? 'Yes' : 'No'}</Text>
               )}
             </VStack>
-            <AccordionRoot allowToggle mt={4}>
+            <AccordionRoot mt={4}>
               <AccordionItem>
                 <AccordionItemTrigger>
                   <Box flex="1" textAlign="left">
                     Show full token info
                   </Box>
-                  <ChevronDown size={16} />
                 </AccordionItemTrigger>
                 <AccordionItemContent pb={4}>
                   <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
@@ -590,13 +592,12 @@ const SiteDetails: React.FC = () => {
                 </VStack>
               </Box>
               <Box mt={4}>
-                <AccordionRoot allowToggle>
+                <AccordionRoot>
                   <AccordionItem>
                     <AccordionItemTrigger>
                       <Box flex="1" textAlign="left">
                         Show raw version data
                       </Box>
-                      <ChevronDown size={16} />
                     </AccordionItemTrigger>
                     <AccordionItemContent pb={4}>
                       <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
@@ -676,13 +677,12 @@ const SiteDetails: React.FC = () => {
           </Table.Root>
         </Box>
         <Box mt={4}>
-          <AccordionRoot allowToggle>
+          <AccordionRoot>
             <AccordionItem>
               <AccordionItemTrigger>
                 <Box flex="1" textAlign="left">
                   Show raw backup data
                 </Box>
-                <ChevronDown size={16} />
               </AccordionItemTrigger>
               <AccordionItemContent pb={4}>
                 <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
@@ -751,13 +751,12 @@ const SiteDetails: React.FC = () => {
           </Table.Root>
         </Box>
         <Box mt={4}>
-          <AccordionRoot allowToggle>
+          <AccordionRoot>
             <AccordionItem>
               <AccordionItemTrigger>
                 <Box flex="1" textAlign="left">
                   Show raw package data
                 </Box>
-                <ChevronDown size={16} />
               </AccordionItemTrigger>
               <AccordionItemContent pb={4}>
                 <Code display="block" whiteSpace="pre" p={3} borderRadius="md" maxH="300px" overflowY="auto">
@@ -1117,17 +1116,26 @@ const SiteDetails: React.FC = () => {
                         <Text fontSize="sm" color="gray.600">
                           Select new permissions and generate a new API token. This will replace your current token.
                         </Text>
-                        <Field label="Required Permissions">
-                          <Select
-                            value={reauthScope}
-                            onChange={(e) => setReauthScope(e.target.value)}
-                            maxW="300px"
-                          >
-                            <option value="read">Read Only</option>
-                            <option value="update">Read + Update</option>
-                            <option value="install">Read + Update + Install</option>
-                            <option value="admin">Full Admin Access</option>
-                          </Select>
+                        <Field required label="Required Permissions">
+                          <SelectRoot value={[reauthScope]} onValueChange={(details) => setReauthScope(details.value[0])} size="sm" maxW="300px">
+                            <SelectTrigger>
+                              <SelectValueText placeholder="Select permissions" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem item="read">
+                                <SelectItemText>Read Only</SelectItemText>
+                              </SelectItem>
+                              <SelectItem item="update">
+                                <SelectItemText>Read + Update</SelectItemText>
+                              </SelectItem>
+                              <SelectItem item="install">
+                                <SelectItemText>Read + Update + Install</SelectItemText>
+                              </SelectItem>
+                              <SelectItem item="admin">
+                                <SelectItemText>Full Admin Access</SelectItemText>
+                              </SelectItem>
+                            </SelectContent>
+                          </SelectRoot>
                         </Field>
                         <HStack spacing={3}>
                           <Button
@@ -1563,11 +1571,13 @@ const SiteDetails: React.FC = () => {
         </Tabs.Root>
       </Box>
 
-      <DialogRoot open={isOpen} onOpenChange={(details) => !details.open && onClose()} size="4xl">
+      <DialogRoot open={isOpen} onOpenChange={(details) => !details.open && onClose()} size="lg">
         <DialogBackdrop />
         <DialogContent>
-          <DialogHeader>{modalTitle}</DialogHeader>
           <DialogCloseTrigger />
+          <DialogHeader>
+            <DialogTitle>{modalTitle}</DialogTitle>
+          </DialogHeader>
           <DialogBody maxH="70vh" overflowY="auto">
             {modalContent}
           </DialogBody>
@@ -1580,8 +1590,10 @@ const SiteDetails: React.FC = () => {
       <DialogRoot open={isMigrationModalOpen} onOpenChange={(details) => !details.open && onMigrationModalClose()} size="lg">
         <DialogBackdrop />
         <DialogContent>
-          <DialogHeader>{modalTitle}</DialogHeader>
           <DialogCloseTrigger />
+          <DialogHeader>
+            <DialogTitle>{modalTitle}</DialogTitle>
+          </DialogHeader>
           <DialogBody>
             {modalContent}
           </DialogBody>
@@ -1594,10 +1606,12 @@ const SiteDetails: React.FC = () => {
       <DialogRoot open={isRemoveDialogOpen} onOpenChange={(details) => !details.open && onRemoveDialogClose()} size="sm">
         <DialogBackdrop />
         <DialogContent>
-          <DialogHeader fontSize="lg" fontWeight="bold">
-            Remove Site
-          </DialogHeader>
           <DialogCloseTrigger />
+          <DialogHeader>
+            <DialogTitle fontSize="lg" fontWeight="bold">
+              Remove Site
+            </DialogTitle>
+          </DialogHeader>
           <DialogBody>
             Are you sure you want to remove "{site?.name}"? This action cannot be undone.
           </DialogBody>

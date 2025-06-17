@@ -4,8 +4,7 @@ import {
   Text,
   Badge,
   Spinner,
-  CollapsibleRoot,
-  CollapsibleContent,
+  Collapsible,
   Code,
   HStack,
   VStack,
@@ -153,8 +152,8 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ step, isActive, isLast }) =
               </HStack>
             )}
 
-            <CollapsibleRoot open={!!step.error || !!step.data}>
-              <CollapsibleContent>
+            <Collapsible.Root open={!!step.error || !!step.data}>
+              <Collapsible.Content>
                 <VStack align="stretch" spacing={2} mt={2}>
                   {step.error && (
                     <Box p={2} bg="red.50" borderRadius="md" border="1px" borderColor="red.200">
@@ -178,8 +177,8 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ step, isActive, isLast }) =
                     </Box>
                   )}
                 </VStack>
-              </CollapsibleContent>
-            </CollapsibleRoot>
+              </Collapsible.Content>
+            </Collapsible.Root>
           </Box>
         </Box>
       </HStack>

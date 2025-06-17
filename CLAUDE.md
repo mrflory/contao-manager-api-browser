@@ -80,7 +80,9 @@ This is a Node.js proxy application that provides a web interface for interactin
 
 ### Custom UI Components (src/components/ui/)
 Following Chakra UI v3 patterns, custom components include:
+- `accordion.tsx` - Accordion to show/hide sections
 - `button.tsx` - Enhanced button variants
+- `checkbox.tsx` - Enhanced checkbox components
 - `close-button.tsx` - Dialog and modal close buttons
 - `color-mode.tsx` - Theme switching utilities
 - `dialog.tsx` - Modal replacement with new Dialog API
