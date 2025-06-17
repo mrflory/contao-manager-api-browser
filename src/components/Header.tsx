@@ -2,16 +2,12 @@ import React from 'react';
 import {
   Box,
   Flex,
-  Heading,
-  IconButton,
+  Heading
 } from '@chakra-ui/react';
-import { Sun, Moon } from 'lucide-react';
-import { useColorMode, useColorModeValue } from '../hooks/useColorModeValue';
+import { ColorModeButton, useColorModeValue } from './ui/color-mode'
 
 const Header: React.FC = () => {
-  const { colorMode, toggleColorMode } = useColorMode();
   const bg = useColorModeValue('brand.500', 'brand.700');
-  const hoverBg = useColorModeValue('brand.600', 'brand.800');
   const color = 'white';
 
   return (
@@ -20,17 +16,7 @@ const Header: React.FC = () => {
         <Heading size="lg" fontWeight="bold">
           Contao Manager API Browser
         </Heading>
-        <IconButton
-          aria-label="Toggle color mode"
-          onClick={toggleColorMode}
-          variant="ghost"
-          color={color}
-          _hover={{
-            bg: hoverBg,
-          }}
-        >
-          {colorMode === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-        </IconButton>
+        <ColorModeButton />
       </Flex>
     </Box>
   );

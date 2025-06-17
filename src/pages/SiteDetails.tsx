@@ -33,36 +33,25 @@ import {
   Field,
   Checkbox,
   Select,
-  Textarea,
   Table,
-  TabsRoot,
-  TabsList,
-  TabsContent,
-  TabsTrigger,
-  EditableRoot,
-  EditableInput,
-  EditableTextarea,
-  EditablePreview,
-  EditableControl,
-  ButtonGroup,
+  Tabs,
+  Editable,
   IconButton,
   Link,
 } from '@chakra-ui/react';
 import {
-  ArrowLeft,
-  Trash2,
-  Settings,
-  Edit,
-  Check,
-  X,
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle,
-  Info,
-  XCircle,
-  ChevronDown,
-} from 'lucide-react';
-import { useColorModeValue } from '../hooks/useColorModeValue';
+  LuArrowLeft as ArrowLeft,
+  LuTrash2 as Trash2,
+  LuSettings as Settings,
+  LuPencil as Edit,
+  LuCheck as Check,
+  LuX as X,
+  LuRefreshCw as RefreshCw,
+  LuInfo as Info,
+  LuCircleX as XCircle,
+  LuChevronDown as ChevronDown,
+} from 'react-icons/lu';
+import { useColorModeValue } from '../components/ui/color-mode';
 import { Config, UpdateStatus, TokenInfo } from '../types';
 import { api } from '../utils/api';
 import { UpdateWorkflow } from '../components/UpdateWorkflow';
@@ -78,7 +67,7 @@ const SiteDetails: React.FC = () => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
   const [config, setConfig] = useState<Config | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
   const [loadingButton, setLoadingButton] = useState<string | null>(null);
   const [modalTitle, setModalTitle] = useState('');
   const [modalContent, setModalContent] = useState<React.ReactNode>(null);
@@ -95,8 +84,8 @@ const SiteDetails: React.FC = () => {
   const cancelRef = useRef<HTMLButtonElement>(null);
 
   const cardBg = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const hoverBg = useColorModeValue('gray.50', 'gray.700');
+  // const borderColor = useColorModeValue('gray.200', 'gray.600');
+  // const hoverBg = useColorModeValue('gray.50', 'gray.700');
 
   useEffect(() => {
     loadConfig();
@@ -272,7 +261,7 @@ const SiteDetails: React.FC = () => {
         return (
           <VStack spacing={4} align="stretch">
             {data.composer && (
-              <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+              <Box p={4} borderWidth="1px" borderRadius="md">
                 <Heading size="md" mb={3}>Composer Status</Heading>
                 {data.composer.current_version && data.composer.latest_version ? (
                   <VStack spacing={2} align="start">
@@ -304,7 +293,7 @@ const SiteDetails: React.FC = () => {
             )}
             
             {data.selfUpdate && (
-              <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+              <Box p={4} borderWidth="1px" borderRadius="md">
                 <Heading size="md" mb={3}>Self-Update Status</Heading>
                 {data.selfUpdate.current_version && data.selfUpdate.latest_version ? (
                   <VStack spacing={2} align="start">
@@ -371,30 +360,30 @@ const SiteDetails: React.FC = () => {
     }
   };
 
-  const handleApiCall = async (apiCall: () => Promise<any>, title: string, formatResponse?: (data: any) => React.ReactNode) => {
-    setLoadingButton('api-call');
-    try {
-      const data = await apiCall();
+  // const handleApiCall = async (apiCall: () => Promise<any>, title: string, formatResponse?: (data: any) => React.ReactNode) => {
+  //   setLoadingButton('api-call');
+  //   try {
+  //     const data = await apiCall();
       
-      const content = formatResponse ? formatResponse(data) : (
-        <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
-          {JSON.stringify(data, null, 2)}
-        </Code>
-      );
+  //     const content = formatResponse ? formatResponse(data) : (
+  //       <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
+  //         {JSON.stringify(data, null, 2)}
+  //       </Code>
+  //     );
 
-      showModal(title, content);
-    } catch (error) {
-      toaster.create({
-        title: 'Error',
-        description: `Error calling ${title}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    } finally {
-      setLoadingButton(null);
-    }
-  };
+  //     showModal(title, content);
+  //   } catch (error) {
+  //     toaster.create({
+  //       title: 'Error',
+  //       description: `Error calling ${title}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+  //       status: 'error',
+  //       duration: 5000,
+  //       isClosable: true,
+  //     });
+  //   } finally {
+  //     setLoadingButton(null);
+  //   }
+  // };
 
   const handleApiCallWithButton = async (buttonId: string, apiCall: () => Promise<any>, title: string, formatResponse?: (data: any) => React.ReactNode) => {
     setLoadingButton(buttonId);
@@ -506,7 +495,7 @@ const SiteDetails: React.FC = () => {
 
       return (
         <VStack spacing={4} align="stretch">
-          <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+          <Box p={4} borderWidth="1px" borderRadius="md">
             <Heading size="md" mb={3}>🔑 Token Information</Heading>
             <VStack spacing={2} align="start">
               {tokenInfo.scope && (
@@ -536,7 +525,7 @@ const SiteDetails: React.FC = () => {
             </AccordionRoot>
           </Box>
 
-          <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+          <Box p={4} borderWidth="1px" borderRadius="md">
             <Heading size="sm" mb={3}>Required Scopes</Heading>
             <VStack spacing={2} align="start">
               <Text><strong>Read operations:</strong> "read" or higher</Text>
@@ -592,7 +581,7 @@ const SiteDetails: React.FC = () => {
               <Text fontSize="md" color="gray.600" mb={2}>
                 Version information updated successfully:
               </Text>
-              <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+              <Box p={4} borderWidth="1px" borderRadius="md">
                 <VStack spacing={2} align="start">
                   <Text><strong>Contao Manager:</strong> {versionInfo.contaoManagerVersion || 'N/A'}</Text>
                   <Text><strong>PHP:</strong> {versionInfo.phpVersion || 'N/A'}</Text>
@@ -843,10 +832,8 @@ const SiteDetails: React.FC = () => {
             textAlign="left"
             justifyContent="flex-start"
             borderWidth="2px"
-            borderColor={borderColor}
             _hover={{
               borderColor: "blue.300",
-              bg: hoverBg,
               transform: "translateY(-1px)",
               boxShadow: "md"
             }}
@@ -979,30 +966,34 @@ const SiteDetails: React.FC = () => {
     <Container maxW="4xl">
       <Flex justify="space-between" align="center" mb={8}>
         <VStack align="start" spacing={2}>
-          <EditableRoot
+          <Editable.Root
             defaultValue={site.name}
             onValueCommit={(details) => handleUpdateSiteName(details.value)}
             fontSize="3xl"
             fontWeight="bold"
           >
             <Flex align="center" gap={2}>
-              <EditablePreview />
-              <EditableInput />
-              <EditableControl>
-                <ButtonGroup justifyContent="center" size="sm">
-                  <IconButton
-                    icon={<Check size={16} />}
-                    colorPalette="green"
-                    aria-label="Save"
-                  />
-                  <IconButton
-                    icon={<X size={16} />}
-                    aria-label="Cancel"
-                  />
-                </ButtonGroup>
-              </EditableControl>
+              <Editable.Preview />
+              <Editable.Input />
+              <Editable.Control>
+                <Editable.EditTrigger asChild>
+                  <IconButton variant="ghost" size="sm">
+                    <Edit />
+                  </IconButton>
+                </Editable.EditTrigger>
+                <Editable.CancelTrigger asChild>
+                  <IconButton variant="outline" size="sm">
+                    <X />
+                  </IconButton>
+                </Editable.CancelTrigger>
+                <Editable.SubmitTrigger asChild>
+                  <IconButton variant="outline" size="sm">
+                    <Check />
+                  </IconButton>
+                </Editable.SubmitTrigger>
+              </Editable.Control>
             </Flex>
-          </EditableRoot>
+          </Editable.Root>
           <Link 
             href={site.url} 
             target="_blank" 
@@ -1015,25 +1006,24 @@ const SiteDetails: React.FC = () => {
           </Link>
         </VStack>
         <Button
-          leftIcon={<ArrowLeft size={16} />}
           variant="ghost"
           onClick={() => navigate('/')}
         >
-          Back to Sites
+          <ArrowLeft size={16} /> Back to Sites
         </Button>
       </Flex>
 
-      <Box bg={cardBg} border="1px" borderColor={borderColor} borderRadius="lg" p={8}>
-        <TabsRoot colorPalette="blue" variant="line" defaultValue="site-info">
-          <TabsList>
-            <TabsTrigger value="site-info">Site Info</TabsTrigger>
-            <TabsTrigger value="update">Update</TabsTrigger>
-            <TabsTrigger value="expert">Expert</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
-          </TabsList>
+      <Box bg={cardBg} borderWidth="1px" borderRadius="lg" p={8}>
+        <Tabs.Root colorPalette="blue" variant="line" defaultValue="site-info">
+          <Tabs.List>
+            <Tabs.Trigger value="site-info">Site Info</Tabs.Trigger>
+            <Tabs.Trigger value="update">Update</Tabs.Trigger>
+            <Tabs.Trigger value="expert">Expert</Tabs.Trigger>
+            <Tabs.Trigger value="logs">Logs</Tabs.Trigger>
+          </Tabs.List>
 
             {/* Tab 1: Site Info */}
-            <TabsContent value="site-info">
+            <Tabs.Content value="site-info">
               <VStack spacing={6} align="stretch">
                 <Box>
                   <Heading size="lg" mb={4}>Site Information</Heading>
@@ -1119,7 +1109,7 @@ const SiteDetails: React.FC = () => {
                       </Button>
                     </HStack>
                   ) : (
-                    <Box p={4} border="1px" borderColor={borderColor} borderRadius="md" width="100%">
+                    <Box p={4} borderWidth="1px" borderRadius="md" width="100%">
                       <VStack spacing={4} align="stretch">
                         <Text fontSize="md" fontWeight="semibold">
                           Reauthenticate with {site?.name}
@@ -1160,17 +1150,17 @@ const SiteDetails: React.FC = () => {
                   )}
                 </VStack>
               </VStack>
-            </TabsContent>
+            </Tabs.Content>
 
             {/* Tab 2: Update */}
-            <TabsContent value="update">
+            <Tabs.Content value="update">
               <VStack spacing={6} align="stretch">
                 <UpdateWorkflow />
               </VStack>
-            </TabsContent>
+            </Tabs.Content>
 
             {/* Tab 3: Expert */}
-            <TabsContent value="expert">
+            <Tabs.Content value="expert">
               <VStack spacing={8} align="stretch">
                 <Heading size="lg" mb={4}>Expert Functions</Heading>
                 
@@ -1422,10 +1412,10 @@ const SiteDetails: React.FC = () => {
                   </Grid>
                 </Box>
               </VStack>
-            </TabsContent>
+            </Tabs.Content>
 
             {/* Tab 4: Logs */}
-            <TabsContent value="logs">
+            <Tabs.Content value="logs">
               <VStack spacing={6} align="stretch">
                 <Flex justify="space-between" align="center">
                   <Heading size="lg">API Call Logs</Heading>
@@ -1523,7 +1513,7 @@ const SiteDetails: React.FC = () => {
                                   onClick={() => {
                                     const logDetails = (
                                       <VStack spacing={4} align="stretch">
-                                        <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+                                        <Box p={4} borderWidth="1px" borderRadius="md">
                                           <Heading size="sm" mb={3}>Request Details</Heading>
                                           <VStack spacing={2} align="start">
                                             <Text><strong>Method:</strong> {log.method}</Text>
@@ -1537,7 +1527,7 @@ const SiteDetails: React.FC = () => {
                                         </Box>
                                         
                                         {log.requestData && (
-                                          <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+                                          <Box p={4} borderWidth="1px" borderRadius="md">
                                             <Heading size="sm" mb={3}>Request Data</Heading>
                                             <Code display="block" whiteSpace="pre" p={3} borderRadius="md" maxH="200px" overflowY="auto">
                                               {JSON.stringify(log.requestData, null, 2)}
@@ -1546,7 +1536,7 @@ const SiteDetails: React.FC = () => {
                                         )}
                                         
                                         {log.responseData && (
-                                          <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
+                                          <Box p={4} borderWidth="1px" borderRadius="md">
                                             <Heading size="sm" mb={3}>Response Data</Heading>
                                             <Code display="block" whiteSpace="pre" p={3} borderRadius="md" maxH="300px" overflowY="auto">
                                               {JSON.stringify(log.responseData, null, 2)}
@@ -1569,8 +1559,8 @@ const SiteDetails: React.FC = () => {
                   </Box>
                 )}
               </VStack>
-            </TabsContent>
-        </TabsRoot>
+            </Tabs.Content>
+        </Tabs.Root>
       </Box>
 
       <DialogRoot open={isOpen} onOpenChange={(details) => !details.open && onClose()} size="4xl">

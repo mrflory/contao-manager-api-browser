@@ -12,14 +12,12 @@ import {
   VStack,
   HStack,
   Badge,
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
   Table,
 } from '@chakra-ui/react';
-import { Plus } from 'lucide-react';
-import { useColorModeValue } from '../hooks/useColorModeValue';
-import { Config, Site } from '../types';
+import { LuPlus as Plus } from 'react-icons/lu';
+import { useColorModeValue } from '../components/ui/color-mode';
+import { Tooltip } from "../components/ui/tooltip";
+import { Config } from '../types';
 import { api } from '../utils/api';
 
 const SitesOverview: React.FC = () => {
@@ -28,8 +26,8 @@ const SitesOverview: React.FC = () => {
   const navigate = useNavigate();
 
   const cardBg = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const hoverBg = useColorModeValue('gray.50', 'gray.700');
+  // const borderColor = useColorModeValue('gray.200', 'gray.600');
+  // const hoverBg = useColorModeValue('gray.50', 'gray.700');
 
   const extractDomain = (url: string): string => {
     try {
@@ -85,19 +83,16 @@ const SitesOverview: React.FC = () => {
       <Flex justify="space-between" align="center" mb={8}>
         <Heading size="xl">Your Sites</Heading>
         <Button
-          leftIcon={<Plus size={16} />}
           colorPalette="green"
           onClick={handleAddSite}
         >
-          Add New Site
+          <Plus size={16} /> Add New Site
         </Button>
       </Flex>
 
       {sites.length === 0 ? (
         <Box
-          bg={cardBg}
-          border="1px"
-          borderColor={borderColor}
+          borderWidth="1px"
           borderRadius="lg"
           p={12}
         >
@@ -113,13 +108,12 @@ const SitesOverview: React.FC = () => {
       ) : (
         <Box
           bg={cardBg}
-          border="1px"
-          borderColor={borderColor}
+          borderWidth="1px"
           borderRadius="lg"
           overflow="hidden"
         >
           <Box overflowX="auto">
-            <Table.Root variant="simple">
+            <Table.Root interactive>
               <Table.Header>
                 <Table.Row>
                   <Table.ColumnHeader>Site Name</Table.ColumnHeader>
@@ -134,24 +128,16 @@ const SitesOverview: React.FC = () => {
                     key={site.url}
                     onClick={() => handleSiteClick(site.url)}
                     cursor="pointer"
-                    _hover={{
-                      bg: hoverBg
-                    }}
                   >
                     <Table.Cell>
                       <Text fontWeight="bold">{site.name}</Text>
                     </Table.Cell>
                     <Table.Cell>
-                      <TooltipRoot>
-                        <TooltipTrigger>
+                      <Tooltip content={site.url}>
                           <Text fontFamily="mono" fontSize="sm" color="gray.600" cursor="help">
                             {extractDomain(site.url)}
                           </Text>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {site.url}
-                        </TooltipContent>
-                      </TooltipRoot>
+                      </Tooltip>
                     </Table.Cell>
                     <Table.Cell>
                       {site.versionInfo ? (

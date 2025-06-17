@@ -11,8 +11,8 @@ import {
   VStack,
   Circle
 } from '@chakra-ui/react';
-import { Check, X, AlertTriangle, Minus } from 'lucide-react';
-import { useColorModeValue } from '../hooks/useColorModeValue';
+import { LuCheck as Check, LuX as X, LuTriangleAlert as AlertTriangle, LuMinus as Minus } from 'react-icons/lu';
+import { useColorModeValue } from './ui/color-mode';
 import { WorkflowStep } from '../types';
 
 interface WorkflowTimelineProps {

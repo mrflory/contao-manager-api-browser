@@ -19,8 +19,8 @@ import {
   Badge
 } from '@chakra-ui/react';
 import { Alert } from '@chakra-ui/react';
-import { Play, Pause, RefreshCw, AlertTriangle, CheckCircle, Info, XCircle } from 'lucide-react';
-import { useColorModeValue } from '../hooks/useColorModeValue';
+import { LuPlay as Play, LuPause as Pause, LuRefreshCw as RefreshCw, LuTriangleAlert as AlertTriangle, LuCircleCheck as CheckCircle, LuInfo as Info, LuCircleX as XCircle } from 'react-icons/lu';
+import { useColorModeValue } from './ui/color-mode';
 import { WorkflowTimeline } from './WorkflowTimeline';
 import { useWorkflow } from '../hooks/useWorkflow';
 import { WorkflowConfig } from '../types';

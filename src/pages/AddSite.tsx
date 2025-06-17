@@ -6,14 +6,14 @@ import {
   Button,
   Box,
   Flex,
-  Field,
   Input,
-  Select,
   VStack,
   createToaster,
 } from '@chakra-ui/react';
-import { ArrowLeft } from 'lucide-react';
-import { useColorModeValue } from '../hooks/useColorModeValue';
+import { LuArrowLeft } from 'react-icons/lu';
+import { useColorModeValue } from '../components/ui/color-mode';
+import { SelectTrigger, SelectItem, SelectRoot, SelectValueText, SelectContent, SelectItemText } from '../components/ui/select';
+import { Field } from '../components/ui/field'
 import { api } from '../utils/api';
 
 const AddSite: React.FC = () => {
@@ -28,7 +28,7 @@ const AddSite: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const cardBg = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  // const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -159,56 +159,52 @@ const AddSite: React.FC = () => {
       <Flex justify="space-between" align="center" mb={8}>
         <Heading size="xl">Add New Site</Heading>
         <Button
-          leftIcon={<ArrowLeft size={16} />}
           variant="ghost"
           onClick={() => navigate('/')}
         >
-          Back to Sites
+          <LuArrowLeft size={16} /> Back to Sites
         </Button>
       </Flex>
 
       <Box
         bg={cardBg}
-        border="1px"
-        borderColor={borderColor}
+        borderWidth="1px"
         borderRadius="lg"
         p={8}
       >
         {!showTokenForm ? (
           <form onSubmit={handleAuthSubmit}>
             <VStack spacing={6}>
-              <Field.Root required>
-                <Field.Label>Contao Manager URL</Field.Label>
+              <Field required label="Contao Manager URL">
                 <Input
                   type="url"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.com/contao-manager.phar.php"
                 />
-              </Field.Root>
+              </Field>
               
-              <Field.Root required>
-                <Field.Label>Required Permissions</Field.Label>
-                <Select.Root value={[scope]} onValueChange={(details) => setScope(details.value[0])}>
-                  <Select.Trigger>
-                    <Select.ValueText placeholder="Select permissions" />
-                  </Select.Trigger>
-                  <Select.Content>
-                    <Select.Item item="read">
-                      <Select.ItemText>Read Only</Select.ItemText>
-                    </Select.Item>
-                    <Select.Item item="update">
-                      <Select.ItemText>Read + Update</Select.ItemText>
-                    </Select.Item>
-                    <Select.Item item="install">
-                      <Select.ItemText>Read + Update + Install</Select.ItemText>
-                    </Select.Item>
-                    <Select.Item item="admin">
-                      <Select.ItemText>Full Admin Access</Select.ItemText>
-                    </Select.Item>
-                  </Select.Content>
-                </Select.Root>
-              </Field.Root>
+              <Field required label="Required Permissions">
+                <SelectRoot value={[scope]} onValueChange={(details) => setScope(details.value[0])}>
+                  <SelectTrigger>
+                    <SelectValueText placeholder="Select permissions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem item="read">
+                      <SelectItemText>Read Only</SelectItemText>
+                    </SelectItem>
+                    <SelectItem item="update">
+                      <SelectItemText>Read + Update</SelectItemText>
+                    </SelectItem>
+                    <SelectItem item="install">
+                      <SelectItemText>Read + Update + Install</SelectItemText>
+                    </SelectItem>
+                    <SelectItem item="admin">
+                      <SelectItemText>Full Admin Access</SelectItemText>
+                    </SelectItem>
+                  </SelectContent>
+                </SelectRoot>
+              </Field>
               
               <Button
                 type="submit"
@@ -224,15 +220,14 @@ const AddSite: React.FC = () => {
           </form>
         ) : (
           <VStack spacing={6}>
-            <Field.Root required>
-              <Field.Label>API Token (paste from redirect URL)</Field.Label>
+            <Field required label="API Token (paste from redirect URL)">
               <Input
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 placeholder="Enter your API token here"
                 fontFamily="mono"
               />
-            </Field.Root>
+            </Field>
             
             <Button
               colorPalette="green"
