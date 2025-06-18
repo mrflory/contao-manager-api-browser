@@ -107,7 +107,6 @@ const SitesOverview: React.FC = () => {
         </Box>
       ) : (
         <Box
-          bg={cardBg}
           borderWidth="1px"
           borderRadius="lg"
           overflow="hidden"

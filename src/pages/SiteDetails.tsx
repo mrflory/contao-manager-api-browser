@@ -1012,7 +1012,7 @@ const SiteDetails: React.FC = () => {
         </Button>
       </Flex>
 
-      <Box bg={cardBg} borderWidth="1px" borderRadius="lg" p={8}>
+      <Box borderWidth="1px" borderRadius="lg" p={8}>
         <Tabs.Root colorPalette="blue" variant="line" defaultValue="site-info">
           <Tabs.List>
             <Tabs.Trigger value="site-info">Site Info</Tabs.Trigger>

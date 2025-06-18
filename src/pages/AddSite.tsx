@@ -167,7 +167,6 @@ const AddSite: React.FC = () => {
       </Flex>
 
       <Box
-        bg={cardBg}
         borderWidth="1px"
         borderRadius="lg"
         p={8}

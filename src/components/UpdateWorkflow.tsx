@@ -191,7 +191,7 @@ export const UpdateWorkflow: React.FC = () => {
   return (
     <VStack spacing={6} align="stretch">
       {/* Workflow Header */}
-      <Box p={6} bg={cardBg} border="1px" borderColor={borderColor} borderRadius="lg">
+      <Box mb={6}>
         <VStack spacing={4} align="stretch">
           <HStack justify="space-between" align="center">
             <Heading size="lg">Automated Contao Update</Heading>
@@ -212,7 +212,7 @@ export const UpdateWorkflow: React.FC = () => {
 
           {/* Configuration */}
           {!state.isRunning && !isComplete && (
-            <Box p={4} bg={configBg} borderRadius="md">
+            <Box>
               <Text fontWeight="semibold" mb={3}>Configuration</Text>
               <VStack align="start" spacing={3}>
                 <Checkbox
@@ -313,7 +313,7 @@ export const UpdateWorkflow: React.FC = () => {
 
       {/* Timeline */}
       {state.steps.length > 0 && (
-        <Box p={6} bg={cardBg} border="1px" borderColor={borderColor} borderRadius="lg">
+        <Box borderWidth="1px" p={6} borderRadius="lg">
           <Heading size="md" mb={4}>Workflow Progress</Heading>
           <WorkflowTimeline steps={state.steps} currentStep={state.currentStep} />
         </Box>
@@ -466,7 +466,7 @@ export const UpdateWorkflow: React.FC = () => {
               )}
               
               {/* Migration Configuration Display */}
-              <Box p={3} border="1px" borderColor={borderColor} borderRadius="md">
+              <Box p={3} borderWidth="1px" borderRadius="md">
                 <Text fontSize="sm" fontWeight="semibold" mb={2}>Migration Settings:</Text>
                 <HStack spacing={4}>
                   <Text fontSize="sm">

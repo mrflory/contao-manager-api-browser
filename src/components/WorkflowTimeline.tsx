@@ -8,10 +8,18 @@ import {
   Code,
   HStack,
   VStack,
-  Circle
+  Card,
 } from '@chakra-ui/react';
-import { LuCheck as Check, LuX as X, LuTriangleAlert as AlertTriangle, LuMinus as Minus } from 'react-icons/lu';
+import { LuCheck as Check, LuX as X, LuTriangleAlert as AlertTriangle, LuMinus as Minus, LuCircle as Circle } from 'react-icons/lu';
 import { useColorModeValue } from './ui/color-mode';
+import {
+  TimelineRoot,
+  TimelineItem,
+  TimelineConnector,
+  TimelineContent,
+  TimelineTitle,
+  TimelineDescription,
+} from './ui/timeline';
 import { WorkflowStep } from '../types';
 
 interface WorkflowTimelineProps {
@@ -19,18 +27,12 @@ interface WorkflowTimelineProps {
   currentStep: number;
 }
 
-interface TimelineItemProps {
-  step: WorkflowStep;
-  isActive: boolean;
-  isLast: boolean;
-}
-
-const TimelineItem: React.FC<TimelineItemProps> = ({ step, isActive, isLast }) => {
+export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({ steps, currentStep }) => {
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const mutedColor = useColorModeValue('gray.500', 'gray.400');
   const bgColor = useColorModeValue('white', 'gray.800');
 
-  const getStepIcon = () => {
+  const getStepIcon = (step: WorkflowStep) => {
     switch (step.status) {
       case 'active':
         return <Spinner size="sm" />;
@@ -41,11 +43,11 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ step, isActive, isLast }) =
       case 'skipped':
         return <Minus color="white" size={12} />;
       default:
-        return null;
+        return <Circle color="white" size={12} />;
     }
   };
 
-  const getIndicatorColor = () => {
+  const getIndicatorColor = (step: WorkflowStep, isActive: boolean) => {
     switch (step.status) {
       case 'active':
         return 'blue.500';
@@ -60,7 +62,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ step, isActive, isLast }) =
     }
   };
 
-  const getStatusBadge = () => {
+  const getStatusBadge = (step: WorkflowStep) => {
     switch (step.status) {
       case 'active':
         return <Badge colorPalette="blue">In Progress</Badge>;
@@ -80,7 +82,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ step, isActive, isLast }) =
     return date.toLocaleTimeString();
   };
 
-  const getDuration = () => {
+  const getDuration = (step: WorkflowStep) => {
     if (!step.startTime) return '';
     const endTime = step.endTime || new Date();
     const duration = Math.round((endTime.getTime() - step.startTime.getTime()) / 1000);
@@ -88,120 +90,78 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ step, isActive, isLast }) =
   };
 
   return (
-    <Box position="relative">
-      {/* Connector Line */}
-      {!isLast && (
-        <Box
-          position="absolute"
-          left="16px"
-          top="32px"
-          bottom="-24px"
-          width="2px"
-          bg={borderColor}
-          zIndex={0}
-        />
-      )}
-      
-      <HStack align="flex-start" spacing={4}>
-        {/* Timeline Indicator */}
-        <Circle 
-          size="8" 
-          bg={getIndicatorColor()} 
-          flexShrink={0}
-          zIndex={1}
-          opacity={step.status === 'skipped' ? 0.6 : 1}
-        >
-          {getStepIcon()}
-        </Circle>
-
-        {/* Timeline Content */}
-        <Box 
-          flex="1" 
-          pb={isLast ? 0 : 6}
-          opacity={step.status === 'skipped' ? 0.6 : 1}
-        >
-          <Box
-            p={4}
-            border="1px"
-            borderColor={borderColor}
-            borderRadius="md"
-            bg={bgColor}
-          >
-            <HStack justify="space-between" mb={2}>
-              <Text fontWeight="semibold" fontSize="md">
-                {step.title}
-              </Text>
-              {getStatusBadge()}
-            </HStack>
-            
-            <Text fontSize="sm" color={mutedColor} mb={3}>
-              {step.description}
-            </Text>
-
-            {(step.startTime || step.endTime) && (
-              <HStack spacing={4} fontSize="xs" color={mutedColor} mb={2}>
-                {step.startTime && (
-                  <Text>Started: {formatTime(step.startTime)}</Text>
-                )}
-                {step.endTime && (
-                  <Text>Ended: {formatTime(step.endTime)}</Text>
-                )}
-                {step.startTime && (
-                  <Text>Duration: {getDuration()}</Text>
-                )}
-              </HStack>
-            )}
-
-            <Collapsible.Root open={!!step.error || !!step.data}>
-              <Collapsible.Content>
-                <VStack align="stretch" spacing={2} mt={2}>
-                  {step.error && (
-                    <Box p={2} bg="red.50" borderRadius="md" border="1px" borderColor="red.200">
-                      <HStack>
-                        <AlertTriangle color="#E53E3E" size={16} />
-                        <Text fontSize="sm" color="red.700">
-                          {step.error}
-                        </Text>
-                      </HStack>
-                    </Box>
-                  )}
-                  
-                  {step.data && step.status === 'active' && (
-                    <Box>
-                      <Text fontSize="xs" fontWeight="semibold" mb={1}>
-                        Progress:
-                      </Text>
-                      <Code fontSize="xs" p={2} display="block" whiteSpace="pre-wrap">
-                        {typeof step.data === 'string' ? step.data : JSON.stringify(step.data, null, 2)}
-                      </Code>
-                    </Box>
-                  )}
-                </VStack>
-              </Collapsible.Content>
-            </Collapsible.Root>
-          </Box>
-        </Box>
-      </HStack>
-    </Box>
-  );
-};
-
-export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({ steps, currentStep }) => {
-  return (
-    <VStack align="stretch" spacing={0} position="relative">
+    <TimelineRoot>
       {steps.map((step, index) => {
         const isActive = index === currentStep;
-        const isLast = index === steps.length - 1;
         
         return (
-          <TimelineItem
-            key={step.id}
-            step={step}
-            isActive={isActive}
-            isLast={isLast}
-          />
+          <TimelineItem key={step.id} opacity={step.status === 'skipped' ? 0.6 : 1}>
+            <TimelineConnector>
+              {getStepIcon(step)}
+            </TimelineConnector>
+            
+            <TimelineContent>
+              <TimelineTitle fontSize="md"> 
+                <HStack justify="space-between">
+                  {step.title}
+                  {getStatusBadge(step)}
+                </HStack>
+              </TimelineTitle>
+                
+                <TimelineDescription fontSize="sm" color={mutedColor}>
+                  {step.description}
+                </TimelineDescription>
+              <Card.Root>
+                <Card.Body>
+
+                {(step.startTime || step.endTime) && (
+                  <HStack spacing={4} fontSize="xs" color={mutedColor} mb={2}>
+                    {step.startTime && (
+                      <Text>Started: {formatTime(step.startTime)}</Text>
+                    )}
+                    {step.endTime && (
+                      <Text>Ended: {formatTime(step.endTime)}</Text>
+                    )}
+                    {step.startTime && (
+                      <Text>Duration: {getDuration(step)}</Text>
+                    )}
+                  </HStack>
+                )}
+
+                <Collapsible.Root open={!!step.error || !!step.data}>
+                  <Collapsible.Content>
+                    <VStack align="stretch" spacing={2} mt={2}>
+                      {step.error && (
+                        <Box p={2} bg="red.50" borderRadius="md" borderWidth="1px" borderColor="red.200">
+                          <HStack>
+                            <AlertTriangle color="#E53E3E" size={16} />
+                            <Text fontSize="sm" color="red.700">
+                              {step.error}
+                            </Text>
+                          </HStack>
+                        </Box>
+                      )}
+                      
+                      {step.data && step.status === 'active' && (
+                        <Box>
+                          <Text fontSize="xs" fontWeight="semibold" mb={1}>
+                            Progress:
+                          </Text>
+                          <Code fontSize="xs" p={2} display="block" whiteSpace="pre-wrap">
+                            {typeof step.data === 'string' ? step.data : JSON.stringify(step.data, null, 2)}
+                          </Code>
+                        </Box>
+                      )}
+                    </VStack>
+                  </Collapsible.Content>
+                </Collapsible.Root>
+
+              </Card.Body>
+              </Card.Root>
+            </TimelineContent>
+          </TimelineItem>
         );
       })}
-    </VStack>
+    </TimelineRoot>
   );
 };

@@ -25,7 +25,7 @@ export const system = createSystem(defaultConfig, {
   },
   globalCss: {
     body: {
-      bg: { base: 'gray.50', _dark: 'gray.900' },
+      bg: 'bg.subtle',
     },
   },
 })
