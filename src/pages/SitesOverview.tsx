@@ -25,9 +25,6 @@ const SitesOverview: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const cardBg = useColorModeValue('white', 'gray.800');
-  // const borderColor = useColorModeValue('gray.200', 'gray.600');
-  // const hoverBg = useColorModeValue('gray.50', 'gray.700');
 
   const extractDomain = (url: string): string => {
     try {
@@ -96,7 +93,7 @@ const SitesOverview: React.FC = () => {
           borderRadius="lg"
           p={12}
         >
-          <VStack spacing={4}>
+          <VStack gap={4}>
             <Text fontSize="lg" color="gray.500">
               No sites configured yet
             </Text>
@@ -140,8 +137,8 @@ const SitesOverview: React.FC = () => {
                     </Table.Cell>
                     <Table.Cell>
                       {site.versionInfo ? (
-                        <VStack spacing={1} align="start">
-                          <HStack spacing={2} wrap="wrap">
+                        <VStack gap={1} align="start">
+                          <HStack gap={2} wrap="wrap">
                             {site.versionInfo.contaoManagerVersion && (
                               <Badge colorPalette="blue" fontSize="xs">
                                 Manager: {site.versionInfo.contaoManagerVersion}

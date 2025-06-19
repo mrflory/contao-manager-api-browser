@@ -87,6 +87,7 @@ Following Chakra UI v3 patterns, custom components include:
 - `color-mode.tsx` - Theme switching utilities
 - `dialog.tsx` - Modal replacement with new Dialog API
 - `field.tsx` - Form field wrapper components
+- `progress.tsx` - Component for a progress bar
 - `provider.tsx` - Chakra UI theme and color mode provider
 - `select.tsx` - Enhanced select components
 - `timeline.tsx` - Workflow timeline visualization

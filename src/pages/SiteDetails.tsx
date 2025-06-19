@@ -264,12 +264,12 @@ const SiteDetails: React.FC = () => {
       
       const formatUpdateInfo = (data: UpdateStatus) => {
         return (
-          <VStack spacing={4} align="stretch">
+          <VStack gap={4} align="stretch">
             {data.composer && (
               <Box p={4} borderWidth="1px" borderRadius="md">
                 <Heading size="md" mb={3}>Composer Status</Heading>
                 {data.composer.current_version && data.composer.latest_version ? (
-                  <VStack spacing={2} align="start">
+                  <VStack gap={2} align="start">
                     <Text><strong>Current Version:</strong> {data.composer.current_version}</Text>
                     <Text><strong>Latest Version:</strong> {data.composer.latest_version}</Text>
                     {data.composer.current_version !== data.composer.latest_version ? (
@@ -300,7 +300,7 @@ const SiteDetails: React.FC = () => {
               <Box p={4} borderWidth="1px" borderRadius="md">
                 <Heading size="md" mb={3}>Self-Update Status</Heading>
                 {data.selfUpdate.current_version && data.selfUpdate.latest_version ? (
-                  <VStack spacing={2} align="start">
+                  <VStack gap={2} align="start">
                     <Text><strong>Current Version:</strong> {data.selfUpdate.current_version}</Text>
                     <Text><strong>Latest Version:</strong> {data.selfUpdate.latest_version}</Text>
                     {data.selfUpdate.current_version !== data.selfUpdate.latest_version ? (
@@ -422,7 +422,7 @@ const SiteDetails: React.FC = () => {
     });
 
     const migrationForm = (
-      <VStack spacing={4} align="stretch">
+      <VStack gap={4} align="stretch">
         <Text fontSize="md" color="gray.600" mb={2}>
           Configure database migration parameters:
         </Text>
@@ -497,10 +497,10 @@ const SiteDetails: React.FC = () => {
       const currentLevel = scopeOrder.indexOf(tokenInfo.scope);
 
       return (
-        <VStack spacing={4} align="stretch">
+        <VStack gap={4} align="stretch">
           <Box p={4} borderWidth="1px" borderRadius="md">
             <Heading size="md" mb={3}>🔑 Token Information</Heading>
-            <VStack spacing={2} align="start">
+            <VStack gap={2} align="start">
               {tokenInfo.scope && (
                 <Text><strong>Current Scope:</strong> <Badge colorPalette="blue">{tokenInfo.scope}</Badge></Text>
               )}
@@ -529,7 +529,7 @@ const SiteDetails: React.FC = () => {
 
           <Box p={4} borderWidth="1px" borderRadius="md">
             <Heading size="sm" mb={3}>Required Scopes</Heading>
-            <VStack spacing={2} align="start">
+            <VStack gap={2} align="start">
               <Text><strong>Read operations:</strong> "read" or higher</Text>
               <Text><strong>Update operations:</strong> "update" or higher</Text>
               <Text><strong>Install operations:</strong> "install" or higher</Text>
@@ -544,7 +544,7 @@ const SiteDetails: React.FC = () => {
               </Alert.Indicator>
               <Box>
                 <Alert.Title>Analysis: Your "{tokenInfo.scope}" scope allows:</Alert.Title>
-                <VStack spacing={1} align="start" mt={2}>
+                <VStack gap={1} align="start" mt={2}>
                   <Text>{currentLevel >= 0 ? '✅' : '❌'} Read operations</Text>
                   <Text>{currentLevel >= 1 ? '✅' : '❌'} Update operations</Text>
                   <Text>{currentLevel >= 2 ? '✅' : '❌'} Install operations</Text>
@@ -579,12 +579,12 @@ const SiteDetails: React.FC = () => {
 
         const formatVersionInfo = (versionInfo: any) => {
           return (
-            <VStack spacing={4} align="stretch">
+            <VStack gap={4} align="stretch">
               <Text fontSize="md" color="gray.600" mb={2}>
                 Version information updated successfully:
               </Text>
               <Box p={4} borderWidth="1px" borderRadius="md">
-                <VStack spacing={2} align="start">
+                <VStack gap={2} align="start">
                   <Text><strong>Contao Manager:</strong> {versionInfo.contaoManagerVersion || 'N/A'}</Text>
                   <Text><strong>PHP:</strong> {versionInfo.phpVersion || 'N/A'}</Text>
                   <Text><strong>Contao:</strong> {versionInfo.contaoVersion || 'N/A'}</Text>
@@ -650,7 +650,7 @@ const SiteDetails: React.FC = () => {
     }
 
     return (
-      <VStack spacing={4} align="stretch">
+      <VStack gap={4} align="stretch">
         <Text fontSize="md" color="gray.600">
           Found {data.length} database backup{data.length !== 1 ? 's' : ''}:
         </Text>
@@ -714,7 +714,7 @@ const SiteDetails: React.FC = () => {
     const packages = Object.entries(data);
     
     return (
-      <VStack spacing={4} align="stretch">
+      <VStack gap={4} align="stretch">
         <Text fontSize="md" color="gray.600">
           Found {packages.length} installed package{packages.length !== 1 ? 's' : ''}:
         </Text>
@@ -741,7 +741,7 @@ const SiteDetails: React.FC = () => {
                     <Badge colorPalette="green" fontSize="xs">{pkg.type || 'library'}</Badge>
                   </Table.Cell>
                   <Table.Cell>
-                    <Text fontSize="xs" noOfLines={2}>
+                    <Text fontSize="xs" lineClamp={2}>
                       {pkg.description || 'No description available'}
                     </Text>
                   </Table.Cell>
@@ -817,7 +817,7 @@ const SiteDetails: React.FC = () => {
     ];
 
     const taskSelector = (
-      <VStack spacing={4} align="stretch">
+      <VStack gap={4} align="stretch">
         <Text fontSize="md" color="gray.600" mb={2}>
           Select a task to execute on the Contao Manager:
         </Text>
@@ -842,7 +842,7 @@ const SiteDetails: React.FC = () => {
             }}
             onClick={() => handleTaskSelection(task.data)}
           >
-            <VStack align="start" spacing={1} width="100%">
+            <VStack align="start" gap={1} width="100%">
               <Heading size="sm" color="blue.500">{task.title}</Heading>
               <Text fontSize="sm" color="gray.600" fontWeight="normal">
                 {task.description}
@@ -933,7 +933,7 @@ const SiteDetails: React.FC = () => {
     return (
       <Container maxW="4xl">
         <Center h="400px">
-          <VStack spacing={6}>
+          <VStack gap={6}>
             <Alert.Root status="error" borderRadius="lg" p={6} maxW="md">
               <Alert.Indicator>
                 <XCircle size={40} style={{ marginRight: '16px' }} />
@@ -948,12 +948,11 @@ const SiteDetails: React.FC = () => {
               </Box>
             </Alert.Root>
             <Button 
-              leftIcon={<ArrowLeft size={16} />}
               colorPalette="blue"
               size="lg"
               onClick={() => navigate('/')}
             >
-              Back to Sites
+              <ArrowLeft size={16} /> Back to Sites
             </Button>
           </VStack>
         </Center>
@@ -964,7 +963,7 @@ const SiteDetails: React.FC = () => {
   return (
     <Container maxW="4xl">
       <Flex justify="space-between" align="center" mb={8}>
-        <VStack align="start" spacing={2}>
+        <VStack align="start" gap={2}>
           <Editable.Root
             defaultValue={site.name}
             onValueCommit={(details) => handleUpdateSiteName(details.value)}
@@ -1023,12 +1022,12 @@ const SiteDetails: React.FC = () => {
 
             {/* Tab 1: Site Info */}
             <Tabs.Content value="site-info">
-              <VStack spacing={6} align="stretch">
+              <VStack gap={6} align="stretch">
                 <Box>
                   <Heading size="lg" mb={4}>Site Information</Heading>
                   
-                  <VStack spacing={4} align="start">
-                    <VStack spacing={2} align="start" width="100%">
+                  <VStack gap={4} align="start">
+                    <VStack gap={2} align="start" width="100%">
                       <Text fontSize="sm"><strong>Last Used:</strong> {new Date(site.lastUsed).toLocaleString()}</Text>
                       <Text fontSize="sm"><strong>Token:</strong> <Code>{site.token.substring(0, 8)}...</Code></Text>
                     </VStack>
@@ -1036,7 +1035,7 @@ const SiteDetails: React.FC = () => {
                     {site.versionInfo && (
                       <>
                         <Separator />
-                        <VStack spacing={2} align="start" width="100%">
+                        <VStack gap={2} align="start" width="100%">
                           <Heading size="sm">Version Information</Heading>
                           <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={2} width="100%">
                             <GridItem>
@@ -1067,7 +1066,7 @@ const SiteDetails: React.FC = () => {
                     {!site.versionInfo && (
                       <>
                         <Separator />
-                        <VStack spacing={2} align="start" width="100%">
+                        <VStack gap={2} align="start" width="100%">
                           <Heading size="sm">Version Information</Heading>
                           <Text fontSize="sm" color="gray.500">
                             No version information available. Click "Update Version Info" to fetch current versions.
@@ -1080,36 +1079,33 @@ const SiteDetails: React.FC = () => {
 
                 <Separator />
                 
-                <VStack spacing={4} align="start">
+                <VStack gap={4} align="start">
                   <Heading size="md" color="gray.500">Site Management</Heading>
                   {!showReauthForm ? (
-                    <HStack spacing={4} wrap="wrap">
+                    <HStack gap={4} wrap="wrap">
                       <Button
-                        leftIcon={<Settings size={16} />}
                         colorPalette="blue"
                         onClick={handleUpdateVersionInfo}
                         loading={loadingButton === 'update-version-info'}
                       >
-                        Update Version Info
+                        <Settings size={16} /> Update Version Info
                       </Button>
                       <Button
-                        leftIcon={<RefreshCw size={16} />}
                         colorPalette="orange"
                         onClick={handleReauthenticate}
                       >
-                        Reauthenticate
+                        <RefreshCw size={16} /> Reauthenticate
                       </Button>
                       <Button
-                        leftIcon={<Trash2 size={16} />}
                         colorPalette="red"
                         onClick={onRemoveDialogOpen}
                       >
-                        Remove Site
+                        <Trash2 size={16} /> Remove Site
                       </Button>
                     </HStack>
                   ) : (
                     <Box p={4} borderWidth="1px" borderRadius="md" width="100%">
-                      <VStack spacing={4} align="stretch">
+                      <VStack gap={4} align="stretch">
                         <Text fontSize="md" fontWeight="semibold">
                           Reauthenticate with {site?.name}
                         </Text>
@@ -1137,7 +1133,7 @@ const SiteDetails: React.FC = () => {
                             </SelectContent>
                           </SelectRoot>
                         </Field>
-                        <HStack spacing={3}>
+                        <HStack gap={3}>
                           <Button
                             colorPalette="orange"
                             onClick={handleReauthSubmit}
@@ -1162,19 +1158,19 @@ const SiteDetails: React.FC = () => {
 
             {/* Tab 2: Update */}
             <Tabs.Content value="update">
-              <VStack spacing={6} align="stretch">
+              <VStack gap={6} align="stretch">
                 <UpdateWorkflow />
               </VStack>
             </Tabs.Content>
 
             {/* Tab 3: Expert */}
             <Tabs.Content value="expert">
-              <VStack spacing={8} align="stretch">
+              <VStack gap={8} align="stretch">
                 <Heading size="lg" mb={4}>Expert Functions</Heading>
                 
                 {/* Server Configuration */}
                 <Box>
-                  <HStack spacing={2} mb={4}>
+                  <HStack gap={2} mb={4}>
                     <Settings size={20} />
                     <Heading size="md" color="blue.500">Server Configuration</Heading>
                   </HStack>
@@ -1292,23 +1288,21 @@ const SiteDetails: React.FC = () => {
                     <GridItem>
                       <Button
                         colorPalette="orange"
-                        leftIcon={<Edit size={16} />}
                         onClick={handleStartDatabaseMigration}
                         loading={loadingButton === 'start-migration'}
                         width="full"
                       >
-                        Start Migration
+                        <Edit size={16} /> Start Migration
                       </Button>
                     </GridItem>
                     <GridItem>
                       <Button
                         colorPalette="red"
-                        leftIcon={<Trash2 size={16} />}
                         onClick={() => handleApiCallWithButton('delete-migration', api.deleteDatabaseMigrationTask, 'Delete Migration Task')}
                         loading={loadingButton === 'delete-migration'}
                         width="full"
                       >
-                        Delete Migration Task
+                        <Trash2 size={16} /> Delete Migration Task
                       </Button>
                     </GridItem>
                     <GridItem>
@@ -1324,23 +1318,21 @@ const SiteDetails: React.FC = () => {
                     <GridItem>
                       <Button
                         colorPalette="green"
-                        leftIcon={<Check size={16} />}
                         onClick={() => handleApiCallWithButton('enable-maintenance', api.enableMaintenanceMode, 'Enable Maintenance Mode')}
                         loading={loadingButton === 'enable-maintenance'}
                         width="full"
                       >
-                        Enable Maintenance
+                        <Check size={16} /> Enable Maintenance
                       </Button>
                     </GridItem>
                     <GridItem>
                       <Button
                         colorPalette="red"
-                        leftIcon={<X size={16} />}
                         onClick={() => handleApiCallWithButton('disable-maintenance', api.disableMaintenanceMode, 'Disable Maintenance Mode')}
                         loading={loadingButton === 'disable-maintenance'}
                         width="full"
                       >
-                        Disable Maintenance
+                        <X size={16} /> Disable Maintenance
                       </Button>
                     </GridItem>
                     <GridItem>
@@ -1424,7 +1416,7 @@ const SiteDetails: React.FC = () => {
 
             {/* Tab 4: Logs */}
             <Tabs.Content value="logs">
-              <VStack spacing={6} align="stretch">
+              <VStack gap={6} align="stretch">
                 <Flex justify="space-between" align="center">
                   <Heading size="lg">API Call Logs</Heading>
                   <Button
@@ -1507,7 +1499,7 @@ const SiteDetails: React.FC = () => {
                               </Table.Cell>
                               <Table.Cell>
                                 {log.error ? (
-                                  <Text fontSize="xs" color="red.500" noOfLines={1} maxW="150px">
+                                  <Text fontSize="xs" color="red.500" lineClamp={1} maxW="150px">
                                     {log.error}
                                   </Text>
                                 ) : (
@@ -1520,10 +1512,10 @@ const SiteDetails: React.FC = () => {
                                   variant="outline"
                                   onClick={() => {
                                     const logDetails = (
-                                      <VStack spacing={4} align="stretch">
+                                      <VStack gap={4} align="stretch">
                                         <Box p={4} borderWidth="1px" borderRadius="md">
                                           <Heading size="sm" mb={3}>Request Details</Heading>
-                                          <VStack spacing={2} align="start">
+                                          <VStack gap={2} align="start">
                                             <Text><strong>Method:</strong> {log.method}</Text>
                                             <Text><strong>Endpoint:</strong> {log.endpoint}</Text>
                                             <Text><strong>Timestamp:</strong> {new Date(log.timestamp).toLocaleString()}</Text>

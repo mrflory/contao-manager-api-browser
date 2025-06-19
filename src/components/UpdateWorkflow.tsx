@@ -7,9 +7,9 @@ import {
   Text,
   Heading,
   createToaster,
-  Progress,
   Badge
 } from '@chakra-ui/react';
+import { ProgressRoot, ProgressBar } from './ui/progress';
 import { Checkbox } from './ui/checkbox';
 import {
   DialogRoot,
@@ -37,8 +37,6 @@ export const UpdateWorkflow: React.FC = () => {
   const [pendingTasksModalOpen, setPendingTasksModalOpen] = useState(false);
   const [migrationsModalOpen, setMigrationsModalOpen] = useState(false);
   
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
   const configSummaryBg = useColorModeValue('blue.50', 'blue.900');
   const configBg = useColorModeValue('gray.50', 'gray.700');
   const toaster = createToaster({
@@ -90,9 +88,8 @@ export const UpdateWorkflow: React.FC = () => {
     toaster.create({
       title: 'Workflow Started',
       description: 'Contao update workflow has begun',
-      status: 'info',
+      type: 'info',
       duration: 3000,
-      isClosable: true,
     });
   };
 
@@ -101,9 +98,8 @@ export const UpdateWorkflow: React.FC = () => {
     toaster.create({
       title: 'Workflow Stopped',
       description: 'Update workflow has been paused',
-      status: 'warning',
+      type: 'warning',
       duration: 3000,
-      isClosable: true,
     });
   };
 
@@ -112,9 +108,8 @@ export const UpdateWorkflow: React.FC = () => {
     toaster.create({
       title: 'Workflow Resumed',
       description: 'Update workflow is continuing',
-      status: 'info',
+      type: 'info',
       duration: 3000,
-      isClosable: true,
     });
   };
 
@@ -129,9 +124,8 @@ export const UpdateWorkflow: React.FC = () => {
     toaster.create({
       title: 'Migrations Confirmed',
       description: 'Database migrations will now be executed',
-      status: 'info',
+      type: 'info',
       duration: 3000,
-      isClosable: true,
     });
   };
 
@@ -141,9 +135,8 @@ export const UpdateWorkflow: React.FC = () => {
     toaster.create({
       title: 'Migrations Skipped',
       description: 'Database migrations were skipped. You can run them manually later.',
-      status: 'warning',
+      type: 'warning',
       duration: 5000,
-      isClosable: true,
     });
   };
 
@@ -189,10 +182,10 @@ export const UpdateWorkflow: React.FC = () => {
   const canResume = state.isPaused;
 
   return (
-    <VStack spacing={6} align="stretch">
+    <VStack gap={6} align="stretch">
       {/* Workflow Header */}
       <Box mb={6}>
-        <VStack spacing={4} align="stretch">
+        <VStack gap={4} align="stretch">
           <HStack justify="space-between" align="center">
             <Heading size="lg">Automated Contao Update</Heading>
             {getStatusBadge()}
@@ -206,7 +199,9 @@ export const UpdateWorkflow: React.FC = () => {
           {state.isRunning && (
             <Box>
               <Text fontSize="sm" mb={2}>Progress</Text>
-              <Progress value={getWorkflowProgress()} colorPalette="blue" />
+              <ProgressRoot value={getWorkflowProgress()} colorPalette="blue">
+                <ProgressBar />
+              </ProgressRoot>
             </Box>
           )}
 
@@ -214,7 +209,7 @@ export const UpdateWorkflow: React.FC = () => {
           {!state.isRunning && !isComplete && (
             <Box>
               <Text fontWeight="semibold" mb={3}>Configuration</Text>
-              <VStack align="start" spacing={3}>
+              <VStack align="start" gap={3}>
                 <Checkbox
                   checked={config.performDryRun}
                   onCheckedChange={(checked) => setConfig(prev => ({ ...prev, performDryRun: !!checked.checked }))}
@@ -235,48 +230,44 @@ export const UpdateWorkflow: React.FC = () => {
           )}
 
           {/* Action Buttons */}
-          <HStack spacing={3}>
+          <HStack gap={3}>
             {canStart && (
               <Button
                 colorPalette="blue"
-                leftIcon={<Play size={16} />}
                 onClick={handleStartWorkflow}
                 size="lg"
               >
-                Start Update Workflow
+                <Play size={16} /> Start Update Workflow
               </Button>
             )}
             
             {canStop && (
               <Button
                 colorPalette="orange"
-                leftIcon={<Pause size={16} />}
                 onClick={handleStop}
                 size="lg"
               >
-                Pause Workflow
+                <Pause size={16} /> Pause Workflow
               </Button>
             )}
             
             {canResume && (
               <Button
                 colorPalette="blue"
-                leftIcon={<Play size={16} />}
                 onClick={handleResume}
                 size="lg"
               >
-                Resume Workflow
+                <Play size={16} /> Resume Workflow
               </Button>
             )}
 
             {isComplete && (
               <Button
                 colorPalette="green"
-                leftIcon={<RefreshCw size={16} />}
                 onClick={() => initializeWorkflow(config)}
                 size="lg"
               >
-                Run Again
+                <RefreshCw size={16} /> Run Again
               </Button>
             )}
           </HStack>
@@ -328,7 +319,7 @@ export const UpdateWorkflow: React.FC = () => {
             <DialogTitle>Confirm Update Workflow</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <VStack spacing={4} align="stretch">
+            <VStack gap={4} align="stretch">
               <Alert.Root status="warning">
                 <Alert.Indicator>
                   <AlertTriangle size={20} />
@@ -343,7 +334,7 @@ export const UpdateWorkflow: React.FC = () => {
               </Alert.Root>
               
               <Text>The workflow will perform the following steps:</Text>
-              <VStack align="start" spacing={1} pl={4}>
+              <VStack align="start" gap={1} pl={4}>
                 <Text fontSize="sm">• Check for pending tasks</Text>
                 <Text fontSize="sm">• Update Contao Manager (if needed)</Text>
                 {config.performDryRun && (
@@ -358,7 +349,7 @@ export const UpdateWorkflow: React.FC = () => {
               {/* Configuration Summary */}
               <Box p={3} bg={configSummaryBg} borderRadius="md">
                 <Text fontSize="sm" fontWeight="semibold" mb={2}>Configuration Summary:</Text>
-                <VStack align="start" spacing={1} fontSize="sm">
+                <VStack align="start" gap={1} fontSize="sm">
                   <Text>• Composer dry-run: {config.performDryRun ? 'Enabled' : 'Disabled'}</Text>
                   <Text>• Include DROP queries in migrations: {config.withDeletes ? 'Enabled' : 'Disabled'}</Text>
                 </VStack>
@@ -394,7 +385,7 @@ export const UpdateWorkflow: React.FC = () => {
             <DialogTitle>Pending Tasks Found</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <VStack spacing={4} align="stretch">
+            <VStack gap={4} align="stretch">
               <Alert.Root status="warning">
                 <Alert.Indicator>
                   <AlertTriangle size={20} />
@@ -442,7 +433,7 @@ export const UpdateWorkflow: React.FC = () => {
             <DialogTitle>Database Migrations Required</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <VStack spacing={4} align="stretch">
+            <VStack gap={4} align="stretch">
               <Alert.Root status="info">
                 <Alert.Indicator>
                   <Info size={20} />
@@ -468,7 +459,7 @@ export const UpdateWorkflow: React.FC = () => {
               {/* Migration Configuration Display */}
               <Box p={3} borderWidth="1px" borderRadius="md">
                 <Text fontSize="sm" fontWeight="semibold" mb={2}>Migration Settings:</Text>
-                <HStack spacing={4}>
+                <HStack gap={4}>
                   <Text fontSize="sm">
                     <strong>Include DROP queries:</strong> {config.withDeletes ? 'Yes' : 'No'}
                   </Text>
