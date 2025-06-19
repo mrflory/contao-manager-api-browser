@@ -15,7 +15,6 @@ import {
   Table,
 } from '@chakra-ui/react';
 import { LuPlus as Plus } from 'react-icons/lu';
-import { useColorModeValue } from '../components/ui/color-mode';
 import { Tooltip } from "../components/ui/tooltip";
 import { Config } from '../types';
 import { api } from '../utils/api';

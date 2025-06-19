@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createListCollection } from '@chakra-ui/react';
 import {
   Container,
   Heading,
@@ -11,7 +12,6 @@ import {
   createToaster,
 } from '@chakra-ui/react';
 import { LuArrowLeft } from 'react-icons/lu';
-import { useColorModeValue } from '../components/ui/color-mode';
 import { SelectTrigger, SelectItem, SelectRoot, SelectValueText, SelectContent, SelectItemText } from '../components/ui/select';
 import { Field } from '../components/ui/field'
 import { api } from '../utils/api';
@@ -27,8 +27,6 @@ const AddSite: React.FC = () => {
   const [showTokenForm, setShowTokenForm] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const cardBg = useColorModeValue('white', 'gray.800');
-  // const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -43,9 +41,9 @@ const AddSite: React.FC = () => {
         toaster.create({
           title: 'Token Received',
           description: 'Token received! Please save it to continue.',
-          status: 'success',
+          type: 'success',
           duration: 5000,
-          isClosable: true,
+          closable: true,
         });
       }
     }
@@ -58,9 +56,9 @@ const AddSite: React.FC = () => {
       toaster.create({
         title: 'Error',
         description: 'Please enter a valid URL',
-        status: 'error',
+        type: 'error',
         duration: 3000,
-        isClosable: true,
+        closable: true,
       });
       return;
     }
@@ -82,9 +80,9 @@ const AddSite: React.FC = () => {
       toaster.create({
         title: 'Redirecting',
         description: 'Redirecting to Contao Manager for authentication...',
-        status: 'info',
+        type: 'info',
         duration: 3000,
-        isClosable: true,
+        closable: true,
       });
       
       localStorage.setItem('managerUrl', managerUrlClean);
@@ -97,9 +95,9 @@ const AddSite: React.FC = () => {
       toaster.create({
         title: 'Error',
         description: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        status: 'error',
+        type: 'error',
         duration: 5000,
-        isClosable: true,
+        closable: true,
       });
       setLoading(false);
     }
@@ -110,9 +108,9 @@ const AddSite: React.FC = () => {
       toaster.create({
         title: 'Error',
         description: 'Please enter a valid token',
-        status: 'error',
+        type: 'error',
         duration: 3000,
-        isClosable: true,
+        closable: true,
       });
       return;
     }
@@ -131,9 +129,9 @@ const AddSite: React.FC = () => {
         toaster.create({
           title: 'Success',
           description: 'Site added successfully!',
-          status: 'success',
+          type: 'success',
           duration: 3000,
-          isClosable: true,
+          closable: true,
         });
         setTimeout(() => {
           navigate('/');
@@ -145,9 +143,9 @@ const AddSite: React.FC = () => {
       toaster.create({
         title: 'Error',
         description: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        status: 'error',
+        type: 'error',
         duration: 5000,
-        isClosable: true,
+        closable: true,
       });
     } finally {
       setLoading(false);
@@ -173,7 +171,7 @@ const AddSite: React.FC = () => {
       >
         {!showTokenForm ? (
           <form onSubmit={handleAuthSubmit}>
-            <VStack spacing={6}>
+            <VStack gap={6}>
               <Field required label="Contao Manager URL">
                 <Input
                   type="url"
@@ -184,7 +182,18 @@ const AddSite: React.FC = () => {
               </Field>
               
               <Field required label="Required Permissions">
-                <SelectRoot value={[scope]} onValueChange={(details) => setScope(details.value[0])}>
+                <SelectRoot 
+                  value={[scope]} 
+                  onValueChange={(details) => setScope(details.value[0])}
+                  collection={createListCollection({
+                    items: [
+                      { label: "Read Only", value: "read" },
+                      { label: "Read + Update", value: "update" },
+                      { label: "Read + Update + Install", value: "install" },
+                      { label: "Full Admin Access", value: "admin" }
+                    ]
+                  })}
+                >
                   <SelectTrigger>
                     <SelectValueText placeholder="Select permissions" />
                   </SelectTrigger>
@@ -218,7 +227,7 @@ const AddSite: React.FC = () => {
             </VStack>
           </form>
         ) : (
-          <VStack spacing={6}>
+          <VStack gap={6}>
             <Field required label="API Token (paste from redirect URL)">
               <Input
                 value={token}

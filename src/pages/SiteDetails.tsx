@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { createListCollection } from '@chakra-ui/react';
 import {
   Container,
   Heading,
@@ -19,7 +20,6 @@ import {
   createToaster,
   Alert,
   Input,
-  Select,
   Table,
   Tabs,
   Editable,
@@ -78,7 +78,7 @@ const SiteDetails: React.FC = () => {
   const [modalContent, setModalContent] = useState<React.ReactNode>(null);
   const [logs, setLogs] = useState<any[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
-  const [logsTotal, setLogsTotal] = useState(0);
+  const [, setLogsTotal] = useState(0);
   const [reauthScope, setReauthScope] = useState('admin');
   const [showReauthForm, setShowReauthForm] = useState(false);
   const [migrationFormData, setMigrationFormData] = useState({
@@ -136,9 +136,9 @@ const SiteDetails: React.FC = () => {
       toaster.create({
         title: 'Error',
         description: `Failed to load logs: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        status: 'error',
+        type: 'error',
         duration: 5000,
-        isClosable: true,
+        closable: true,
       });
     } finally {
       setLogsLoading(false);
@@ -169,9 +169,9 @@ const SiteDetails: React.FC = () => {
       toaster.create({
         title: 'Redirecting',
         description: 'Redirecting to Contao Manager for reauthentication...',
-        status: 'info',
+        type: 'info',
         duration: 3000,
-        isClosable: true,
+        closable: true,
       });
       
       // Store site URL for reauthentication
@@ -185,9 +185,9 @@ const SiteDetails: React.FC = () => {
       toaster.create({
         title: 'Error',
         description: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        status: 'error',
+        type: 'error',
         duration: 5000,
-        isClosable: true,
+        closable: true,
       });
       setLoadingButton(null);
     }
@@ -199,9 +199,9 @@ const SiteDetails: React.FC = () => {
       toaster.create({
         title: 'Error',
         description: 'Site URL not found. Please try reauthenticating again.',
-        status: 'error',
+        type: 'error',
         duration: 5000,
-        isClosable: true,
+        closable: true,
       });
       return;
     }
@@ -215,9 +215,9 @@ const SiteDetails: React.FC = () => {
         toaster.create({
           title: 'Success',
           description: 'Site reauthenticated successfully! New token saved.',
-          status: 'success',
+          type: 'success',
           duration: 5000,
-          isClosable: true,
+          closable: true,
         });
         
         // Reload config to get updated token info
@@ -233,9 +233,9 @@ const SiteDetails: React.FC = () => {
       toaster.create({
         title: 'Error',
         description: `Error saving new token: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        status: 'error',
+        type: 'error',
         duration: 5000,
-        isClosable: true,
+        closable: true,
       });
     } finally {
       setLoadingButton(null);
@@ -280,7 +280,7 @@ const SiteDetails: React.FC = () => {
                   </VStack>
                 ) : null}
                 <AccordionRoot mt={4}>
-                  <AccordionItem>
+                  <AccordionItem value="response-details">
                     <AccordionItemTrigger>
                       <Box flex="1" textAlign="left">
                         Show full response
@@ -311,7 +311,7 @@ const SiteDetails: React.FC = () => {
                   </VStack>
                 ) : null}
                 <AccordionRoot mt={4}>
-                  <AccordionItem>
+                  <AccordionItem value="error-details">
                     <AccordionItemTrigger>
                       <Box flex="1" textAlign="left">
                         Show full response
@@ -353,10 +353,10 @@ const SiteDetails: React.FC = () => {
     } catch (error) {
       toaster.create({
         title: 'Error',
-        description: `Error getting update status: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        status: 'error',
+        description: `Error getting update type: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        type: 'error',
         duration: 5000,
-        isClosable: true,
+        closable: true,
       });
     } finally {
       setLoadingButton(null);
@@ -379,9 +379,9 @@ const SiteDetails: React.FC = () => {
   //     toaster.create({
   //       title: 'Error',
   //       description: `Error calling ${title}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-  //       status: 'error',
+  //       type: 'error',
   //       duration: 5000,
-  //       isClosable: true,
+  //       closable: true,
   //     });
   //   } finally {
   //     setLoadingButton(null);
@@ -404,9 +404,9 @@ const SiteDetails: React.FC = () => {
       toaster.create({
         title: 'Error',
         description: `Error calling ${title}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        status: 'error',
+        type: 'error',
         duration: 5000,
-        isClosable: true,
+        closable: true,
       });
     } finally {
       setLoadingButton(null);
@@ -435,14 +435,32 @@ const SiteDetails: React.FC = () => {
         </Field>
         
         <Field label="Migration Type">
-          <Select 
-            value={migrationFormData.type}
-            onChange={(e) => setMigrationFormData(prev => ({ ...prev, type: e.target.value }))}
+          <SelectRoot 
+            value={[migrationFormData.type]}
+            onValueChange={(details) => setMigrationFormData(prev => ({ ...prev, type: details.value[0] }))}
+            collection={createListCollection({
+              items: [
+                { label: "All migrations and schema updates", value: "" },
+                { label: "Migrations only", value: "migrations-only" },
+                { label: "Schema updates only", value: "schema-only" }
+              ]
+            })}
           >
-            <option value="">All migrations and schema updates</option>
-            <option value="migrations-only">Migrations only</option>
-            <option value="schema-only">Schema updates only</option>
-          </Select>
+            <SelectTrigger>
+              <SelectValueText placeholder="Select migration type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem item="">
+                <SelectItemText>All migrations and schema updates</SelectItemText>
+              </SelectItem>
+              <SelectItem item="migrations-only">
+                <SelectItemText>Migrations only</SelectItemText>
+              </SelectItem>
+              <SelectItem item="schema-only">
+                <SelectItemText>Schema updates only</SelectItemText>
+              </SelectItem>
+            </SelectContent>
+          </SelectRoot>
         </Field>
 
         <Field>
@@ -512,7 +530,7 @@ const SiteDetails: React.FC = () => {
               )}
             </VStack>
             <AccordionRoot mt={4}>
-              <AccordionItem>
+              <AccordionItem value="migration-response">
                 <AccordionItemTrigger>
                   <Box flex="1" textAlign="left">
                     Show full token info
@@ -572,9 +590,9 @@ const SiteDetails: React.FC = () => {
         toaster.create({
           title: 'Success',
           description: 'Version information updated successfully',
-          status: 'success',
+          type: 'success',
           duration: 3000,
-          isClosable: true,
+          closable: true,
         });
 
         const formatVersionInfo = (versionInfo: any) => {
@@ -593,7 +611,7 @@ const SiteDetails: React.FC = () => {
               </Box>
               <Box mt={4}>
                 <AccordionRoot>
-                  <AccordionItem>
+                  <AccordionItem value="migration-details">
                     <AccordionItemTrigger>
                       <Box flex="1" textAlign="left">
                         Show raw version data
@@ -616,18 +634,18 @@ const SiteDetails: React.FC = () => {
         toaster.create({
           title: 'Error',
           description: data.error || 'Failed to update version information',
-          status: 'error',
+          type: 'error',
           duration: 5000,
-          isClosable: true,
+          closable: true,
         });
       }
     } catch (error) {
       toaster.create({
         title: 'Error',
         description: `Error updating version information: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        status: 'error',
+        type: 'error',
         duration: 5000,
-        isClosable: true,
+        closable: true,
       });
     } finally {
       setLoadingButton(null);
@@ -655,7 +673,7 @@ const SiteDetails: React.FC = () => {
           Found {data.length} database backup{data.length !== 1 ? 's' : ''}:
         </Text>
         <Box overflowX="auto">
-          <Table.Root variant="simple" size="sm">
+          <Table.Root variant="outline" size="sm">
             <Table.Header>
               <Table.Row>
                 <Table.ColumnHeader>Backup Name</Table.ColumnHeader>
@@ -678,7 +696,7 @@ const SiteDetails: React.FC = () => {
         </Box>
         <Box mt={4}>
           <AccordionRoot>
-            <AccordionItem>
+            <AccordionItem value="raw-response-1">
               <AccordionItemTrigger>
                 <Box flex="1" textAlign="left">
                   Show raw backup data
@@ -719,7 +737,7 @@ const SiteDetails: React.FC = () => {
           Found {packages.length} installed package{packages.length !== 1 ? 's' : ''}:
         </Text>
         <Box maxH="400px" overflowY="auto">
-          <Table.Root variant="simple" size="sm">
+          <Table.Root variant="outline" size="sm">
             <Table.Header position="sticky" top={0} bg={cardBg}>
               <Table.Row>
                 <Table.ColumnHeader>Package Name</Table.ColumnHeader>
@@ -752,7 +770,7 @@ const SiteDetails: React.FC = () => {
         </Box>
         <Box mt={4}>
           <AccordionRoot>
-            <AccordionItem>
+            <AccordionItem value="raw-response-2">
               <AccordionItemTrigger>
                 <Box flex="1" textAlign="left">
                   Show raw package data
@@ -871,9 +889,9 @@ const SiteDetails: React.FC = () => {
         toaster.create({
           title: 'Success',
           description: 'Site name updated successfully',
-          status: 'success',
+          type: 'success',
           duration: 3000,
-          isClosable: true,
+          closable: true,
         });
         await loadConfig();
       } else {
@@ -883,9 +901,9 @@ const SiteDetails: React.FC = () => {
       toaster.create({
         title: 'Error',
         description: `Failed to update site name: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        status: 'error',
+        type: 'error',
         duration: 5000,
-        isClosable: true,
+        closable: true,
       });
     }
   };
@@ -900,18 +918,18 @@ const SiteDetails: React.FC = () => {
       toaster.create({
         title: 'Success',
         description: `Site "${site.name}" has been removed`,
-        status: 'success',
+        type: 'success',
         duration: 3000,
-        isClosable: true,
+        closable: true,
       });
       navigate('/');
     } catch (error) {
       toaster.create({
         title: 'Error',
         description: `Failed to remove site: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        status: 'error',
+        type: 'error',
         duration: 5000,
-        isClosable: true,
+        closable: true,
       });
     }
   };
@@ -1113,7 +1131,20 @@ const SiteDetails: React.FC = () => {
                           Select new permissions and generate a new API token. This will replace your current token.
                         </Text>
                         <Field required label="Required Permissions">
-                          <SelectRoot value={[reauthScope]} onValueChange={(details) => setReauthScope(details.value[0])} size="sm" maxW="300px">
+                          <SelectRoot 
+                            value={[reauthScope]} 
+                            onValueChange={(details) => setReauthScope(details.value[0])} 
+                            size="sm" 
+                            maxW="300px"
+                            collection={createListCollection({
+                              items: [
+                                { label: "Read Only", value: "read" },
+                                { label: "Read + Update", value: "update" },
+                                { label: "Read + Update + Install", value: "install" },
+                                { label: "Full Admin Access", value: "admin" }
+                              ]
+                            })}
+                          >
                             <SelectTrigger>
                               <SelectValueText placeholder="Select permissions" />
                             </SelectTrigger>
@@ -1240,14 +1271,14 @@ const SiteDetails: React.FC = () => {
                             setLoadingButton('token-list');
                             const tokenInfo = await api.getTokenInfo();
                             if (tokenInfo.success && tokenInfo.tokenInfo.username) {
-                              await handleApiCallWithButton('token-list', () => api.getTokensList(tokenInfo.tokenInfo.username), 'Token List');
+                              await handleApiCallWithButton('token-list', () => api.getTokensList(tokenInfo.tokenInfo.username || ''), 'Token List');
                             } else {
                               toaster.create({
                                 title: 'Error',
                                 description: 'Could not get username from token info',
-                                status: 'error',
+                                type: 'error',
                                 duration: 3000,
-                                isClosable: true,
+                                closable: true,
                               });
                               setLoadingButton(null);
                             }
@@ -1255,9 +1286,9 @@ const SiteDetails: React.FC = () => {
                             toaster.create({
                               title: 'Error',
                               description: 'Failed to get token list',
-                              status: 'error',
+                              type: 'error',
                               duration: 3000,
-                              isClosable: true,
+                              closable: true,
                             });
                             setLoadingButton(null);
                           }
@@ -1449,7 +1480,7 @@ const SiteDetails: React.FC = () => {
                       Showing {logs.length} log entries for {site?.name}
                     </Text>
                     <Box maxH="600px" overflowY="auto">
-                      <Table.Root variant="simple" size="sm">
+                      <Table.Root variant="outline" size="sm">
                         <Table.Header position="sticky" top={0} bg={cardBg} zIndex={1}>
                           <Table.Row>
                             <Table.ColumnHeader>Timestamp</Table.ColumnHeader>

@@ -27,10 +27,8 @@ interface WorkflowTimelineProps {
   currentStep: number;
 }
 
-export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({ steps, currentStep }) => {
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
+export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({ steps }) => {
   const mutedColor = useColorModeValue('gray.500', 'gray.400');
-  const bgColor = useColorModeValue('white', 'gray.800');
 
   const getStepIcon = (step: WorkflowStep) => {
     switch (step.status) {
@@ -47,20 +45,6 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({ steps, curre
     }
   };
 
-  const getIndicatorColor = (step: WorkflowStep, isActive: boolean) => {
-    switch (step.status) {
-      case 'active':
-        return 'blue.500';
-      case 'complete':
-        return 'green.500';
-      case 'error':
-        return 'red.500';
-      case 'skipped':
-        return 'gray.400';
-      default:
-        return isActive ? 'blue.200' : 'gray.200';
-    }
-  };
 
   const getStatusBadge = (step: WorkflowStep) => {
     switch (step.status) {
@@ -91,8 +75,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({ steps, curre
 
   return (
     <TimelineRoot>
-      {steps.map((step, index) => {
-        const isActive = index === currentStep;
+      {steps.map((step) => {
         
         return (
           <TimelineItem key={step.id} opacity={step.status === 'skipped' ? 0.6 : 1}>
@@ -115,7 +98,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({ steps, curre
                 <Card.Body>
 
                 {(step.startTime || step.endTime) && (
-                  <HStack spacing={4} fontSize="xs" color={mutedColor} mb={2}>
+                  <HStack gap={4} fontSize="xs" color={mutedColor} mb={2}>
                     {step.startTime && (
                       <Text>Started: {formatTime(step.startTime)}</Text>
                     )}
@@ -130,7 +113,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({ steps, curre
 
                 <Collapsible.Root open={!!step.error || !!step.data}>
                   <Collapsible.Content>
-                    <VStack align="stretch" spacing={2} mt={2}>
+                    <VStack align="stretch" gap={2} mt={2}>
                       {step.error && (
                         <Box p={2} bg="red.50" borderRadius="md" borderWidth="1px" borderColor="red.200">
                           <HStack>

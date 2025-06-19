@@ -20,8 +20,8 @@ export const usePolling = (
     onTimeout
   } = options;
 
-  const intervalRef = useRef<number>();
-  const startTimeRef = useRef<number>();
+  const intervalRef = useRef<number | undefined>(undefined);
+  const startTimeRef = useRef<number | undefined>(undefined);
   const isActiveRef = useRef(false);
 
   const stopPolling = useCallback(() => {
@@ -44,7 +44,7 @@ export const usePolling = (
       if (!isActiveRef.current) return;
 
       // Check timeout
-      if (startTimeRef.current && Date.now() - startTimeRef.current > maxDuration) {
+      if (startTimeRef.current !== undefined && Date.now() - startTimeRef.current > maxDuration) {
         stopPolling();
         onTimeout?.();
         return;
@@ -74,7 +74,7 @@ export const usePolling = (
 
     // Set up interval polling if still active
     if (isActiveRef.current) {
-      intervalRef.current = setInterval(poll, interval);
+      intervalRef.current = setInterval(poll, interval) as unknown as number;
     }
   }, [pollFunction, shouldContinue, onResult, interval, maxDuration, onError, onTimeout, stopPolling]);
 

@@ -130,7 +130,7 @@ export const useWorkflow = () => {
   }, [updateState]);
 
   // Forward declaration for recursive calls
-  const executeCurrentStepRef = useRef<() => Promise<void>>();
+  const executeCurrentStepRef = useRef<() => Promise<void>>(async () => {});
 
   // Define callback handlers with proper dependencies
   const handleTaskResult = useCallback((result: any) => {
