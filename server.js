@@ -1069,7 +1069,7 @@ app.get('/', (req, res) => {
 });
 
 // Catch-all handler for React Router (MUST be last)
-app.get('*', (req, res) => {
+app.get('/*splat', (req, res) => {
     // Don't handle API routes
     if (req.path.startsWith('/api')) {
         return res.status(404).json({ error: 'API endpoint not found' });
