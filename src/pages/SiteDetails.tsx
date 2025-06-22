@@ -52,6 +52,7 @@ import {
   LuRefreshCw as RefreshCw,
   LuInfo as Info,
   LuCircleX as XCircle,
+  LuRefreshCcw,
 } from 'react-icons/lu';
 import { SelectTrigger, SelectItem, SelectRoot, SelectValueText, SelectContent, SelectItemText } from '../components/ui/select';
 import { Field } from '../components/ui/field';
@@ -67,9 +68,9 @@ const SiteDetails: React.FC = () => {
   const toaster = createToaster({
     placement: 'top',
   });
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMigrationModalOpen, setIsMigrationModalOpen] = useState(false);
-  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [migrationModalOpen, setMigrationModalOpen] = useState(false);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [config, setConfig] = useState<Config | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   // const [loading, setLoading] = useState(false);
@@ -248,14 +249,14 @@ const SiteDetails: React.FC = () => {
   const showModal = (title: string, content: React.ReactNode) => {
     setModalTitle(title);
     setModalContent(content);
-    setIsOpen(true);
+    setOpen(true);
   };
 
-  const onClose = () => setIsOpen(false);
-  const onMigrationModalOpen = () => setIsMigrationModalOpen(true);
-  const onMigrationModalClose = () => setIsMigrationModalOpen(false);
-  const onRemoveDialogOpen = () => setIsRemoveDialogOpen(true);
-  const onRemoveDialogClose = () => setIsRemoveDialogOpen(false);
+  const onClose = () => setOpen(false);
+  const onMigrationModalOpen = () => setMigrationModalOpen(true);
+  const onMigrationModalClose = () => setMigrationModalOpen(false);
+  const onRemoveDialogOpen = () => setRemoveDialogOpen(true);
+  const onRemoveDialogClose = () => setRemoveDialogOpen(false);
 
   const handleUpdateStatus = async () => {
     setLoadingButton('update-status');
@@ -1323,7 +1324,7 @@ const SiteDetails: React.FC = () => {
                         loading={loadingButton === 'start-migration'}
                         width="full"
                       >
-                        <Edit size={16} /> Start Migration
+                        Start Migration
                       </Button>
                     </GridItem>
                     <GridItem>
@@ -1333,7 +1334,7 @@ const SiteDetails: React.FC = () => {
                         loading={loadingButton === 'delete-migration'}
                         width="full"
                       >
-                        <Trash2 size={16} /> Delete Migration Task
+                        Delete Migration Task
                       </Button>
                     </GridItem>
                     <GridItem>
@@ -1353,7 +1354,7 @@ const SiteDetails: React.FC = () => {
                         loading={loadingButton === 'enable-maintenance'}
                         width="full"
                       >
-                        <Check size={16} /> Enable Maintenance
+                        Enable Maintenance
                       </Button>
                     </GridItem>
                     <GridItem>
@@ -1363,7 +1364,7 @@ const SiteDetails: React.FC = () => {
                         loading={loadingButton === 'disable-maintenance'}
                         width="full"
                       >
-                        <X size={16} /> Disable Maintenance
+                        Disable Maintenance
                       </Button>
                     </GridItem>
                     <GridItem>
@@ -1456,7 +1457,7 @@ const SiteDetails: React.FC = () => {
                     loading={logsLoading}
                     size="sm"
                   >
-                    Refresh Logs
+                    <LuRefreshCcw size={16} /> Refresh Logs
                   </Button>
                 </Flex>
                 
@@ -1594,7 +1595,7 @@ const SiteDetails: React.FC = () => {
         </Tabs.Root>
       </Box>
 
-      <DialogRoot open={isOpen} onOpenChange={(details) => !details.open && onClose()} size="lg">
+      <DialogRoot open={open} onOpenChange={(details) => !details.open && onClose()} size="lg">
         <DialogBackdrop />
         <DialogContent>
           <DialogCloseTrigger />
@@ -1610,7 +1611,7 @@ const SiteDetails: React.FC = () => {
         </DialogContent>
       </DialogRoot>
 
-      <DialogRoot open={isMigrationModalOpen} onOpenChange={(details) => !details.open && onMigrationModalClose()} size="lg">
+      <DialogRoot open={migrationModalOpen} onOpenChange={(details) => !details.open && onMigrationModalClose()} size="lg">
         <DialogBackdrop />
         <DialogContent>
           <DialogCloseTrigger />
@@ -1626,7 +1627,7 @@ const SiteDetails: React.FC = () => {
         </DialogContent>
       </DialogRoot>
 
-      <DialogRoot open={isRemoveDialogOpen} onOpenChange={(details) => !details.open && onRemoveDialogClose()} size="sm">
+      <DialogRoot open={removeDialogOpen} onOpenChange={(details) => !details.open && onRemoveDialogClose()} size="sm">
         <DialogBackdrop />
         <DialogContent>
           <DialogCloseTrigger />
