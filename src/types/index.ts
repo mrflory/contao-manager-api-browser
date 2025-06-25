@@ -58,11 +58,13 @@ export interface WorkflowStep {
   error?: string;
   data?: any;
   conditional?: boolean; // Whether this step can be skipped
+  migrationHistory?: MigrationExecutionHistory[]; // Track migration execution cycles
 }
 
 export interface WorkflowConfig {
   performDryRun: boolean;
   withDeletes?: boolean; // Execute migrations including DROP queries
+  skipComposer?: boolean; // Skip composer dry-run and update steps (for testing)
 }
 
 export interface WorkflowState {
@@ -102,4 +104,15 @@ export interface DatabaseMigrationStatus {
     message?: string;
   }>;
   hash?: string;
+}
+
+export interface MigrationExecutionHistory {
+  cycle: number;
+  stepType: 'check' | 'execute';
+  timestamp: Date;
+  data: DatabaseMigrationStatus;
+  startTime: Date;
+  endTime?: Date;
+  status: 'pending' | 'active' | 'complete' | 'error';
+  error?: string;
 }

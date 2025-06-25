@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { WorkflowState, WorkflowStep, WorkflowConfig, DatabaseMigrationStatus } from '../types';
+import { WorkflowState, WorkflowStep, WorkflowConfig, DatabaseMigrationStatus, MigrationExecutionHistory } from '../types';
 import { api } from '../utils/api';
 import { usePolling } from './usePolling';
 
@@ -26,22 +26,25 @@ const createInitialSteps = (config: WorkflowConfig): WorkflowStep[] => {
     }
   ];
 
-  if (config.performDryRun) {
+  if (!config.skipComposer) {
+    if (config.performDryRun) {
+      steps.push({
+        id: 'composer-dry-run',
+        title: 'Composer Dry Run',
+        description: 'Test composer update without making changes',
+        status: 'pending'
+      });
+    }
+
     steps.push({
-      id: 'composer-dry-run',
-      title: 'Composer Dry Run',
-      description: 'Test composer update without making changes',
+      id: 'composer-update',
+      title: 'Composer Update',
+      description: 'Update all Composer packages',
       status: 'pending'
     });
   }
 
   steps.push(
-    {
-      id: 'composer-update',
-      title: 'Composer Update',
-      description: 'Update all Composer packages',
-      status: 'pending'
-    },
     {
       id: 'check-migrations-loop',
       title: 'Check Database Migrations',
@@ -64,6 +67,34 @@ const createInitialSteps = (config: WorkflowConfig): WorkflowStep[] => {
   );
 
   return steps;
+};
+
+// Helper function to get current migration cycle number
+const getCurrentMigrationCycle = (step: WorkflowStep): number => {
+  return step.migrationHistory ? step.migrationHistory.length + 1 : 1;
+};
+
+// Helper function to add migration execution to history
+const addMigrationToHistory = (
+  step: WorkflowStep, 
+  stepType: 'check' | 'execute', 
+  data: DatabaseMigrationStatus, 
+  status: 'pending' | 'active' | 'complete' | 'error',
+  error?: string
+): MigrationExecutionHistory => {
+  const cycle = getCurrentMigrationCycle(step);
+  const now = new Date();
+  
+  return {
+    cycle,
+    stepType,
+    timestamp: now,
+    data,
+    startTime: step.startTime || now,
+    endTime: status === 'complete' || status === 'error' ? now : undefined,
+    status,
+    error
+  };
 };
 
 export const useWorkflow = () => {
@@ -141,8 +172,20 @@ export const useWorkflow = () => {
       if (result.status === 'complete') {
         markCurrentStepComplete(result);
         api.deleteTaskData().then(() => {
-          moveToNextStep();
-          setTimeout(() => executeCurrentStepRef.current?.(), 100);
+          // Check if this was the dry-run step
+          if (currentStepRef.current?.id === 'composer-dry-run') {
+            // Pause workflow for user confirmation after dry-run
+            moveToNextStep();
+            updateState(prev => ({
+              ...prev,
+              isRunning: false,
+              isPaused: true
+            }));
+          } else {
+            // Continue workflow normally for other steps
+            moveToNextStep();
+            setTimeout(() => executeCurrentStepRef.current?.(), 100);
+          }
         }).catch(error => {
           markCurrentStepError(`Failed to clean up task: ${error.message}`);
         });
@@ -150,7 +193,7 @@ export const useWorkflow = () => {
         markCurrentStepError(result.console || 'Task failed');
       }
     }
-  }, [updateCurrentStep, markCurrentStepComplete, moveToNextStep, markCurrentStepError]);
+  }, [updateCurrentStep, markCurrentStepComplete, moveToNextStep, markCurrentStepError, updateState]);
 
   const handleMigrationResult = useCallback((result: DatabaseMigrationStatus) => {
     if (currentStepRef.current) {
@@ -182,6 +225,34 @@ export const useWorkflow = () => {
           } else {
             // Migrations needed - complete check step and wait for user confirmation
             markCurrentStepComplete(result);
+            
+            // Add check execution to history
+            updateState(prev => {
+              const checkMigrationIndex = prev.steps.findIndex(step => step.id === 'check-migrations-loop');
+              if (checkMigrationIndex !== -1) {
+                const newSteps = [...prev.steps];
+                const checkStep = newSteps[checkMigrationIndex];
+                
+                const checkHistory = addMigrationToHistory(
+                  checkStep,
+                  'check',
+                  result,
+                  'complete'
+                );
+                
+                newSteps[checkMigrationIndex] = {
+                  ...checkStep,
+                  migrationHistory: [...(checkStep.migrationHistory || []), checkHistory]
+                };
+                
+                return {
+                  ...prev,
+                  steps: newSteps
+                };
+              }
+              return prev;
+            });
+            
             api.deleteDatabaseMigrationTask().then(() => {
               // Stop here - user needs to confirm before proceeding
               updateState(prev => ({
@@ -202,19 +273,41 @@ export const useWorkflow = () => {
         api.deleteDatabaseMigrationTask().then(() => {
           if (currentStepId === 'execute-migrations') {
             // After executing migrations, loop back to check for more migrations
-            // Find the check-migrations-loop step and reset it to pending
+            // Find the check-migrations-loop step and reset it to pending while preserving history
             updateState(prev => {
               const checkMigrationIndex = prev.steps.findIndex(step => step.id === 'check-migrations-loop');
-              if (checkMigrationIndex !== -1) {
+              const executeStepIndex = prev.steps.findIndex(step => step.id === 'execute-migrations');
+              
+              if (checkMigrationIndex !== -1 && executeStepIndex !== -1) {
                 const newSteps = [...prev.steps];
+                const executeStep = newSteps[executeStepIndex];
+                
+                // Add the completed execution to history
+                const executionHistory = addMigrationToHistory(
+                  executeStep,
+                  'execute',
+                  result,
+                  'complete'
+                );
+                
+                // Update execute step with history
+                newSteps[executeStepIndex] = {
+                  ...executeStep,
+                  migrationHistory: [...(executeStep.migrationHistory || []), executionHistory]
+                };
+                
+                // Reset check step to pending but preserve its history
+                const checkStep = newSteps[checkMigrationIndex];
                 newSteps[checkMigrationIndex] = {
-                  ...newSteps[checkMigrationIndex],
+                  ...checkStep,
                   status: 'pending',
                   startTime: undefined,
                   endTime: undefined,
                   error: undefined,
                   data: undefined
+                  // Keep migrationHistory intact
                 };
+                
                 return {
                   ...prev,
                   currentStep: checkMigrationIndex,
@@ -306,6 +399,7 @@ export const useWorkflow = () => {
   // Define all step execution functions first
   const executeCheckTasks = useCallback(async () => {
     try {
+      // Check for regular tasks first
       const taskData = await api.getTaskData();
       if (taskData && Object.keys(taskData).length > 0) {
         // Tasks are pending - this needs user interaction
@@ -313,6 +407,33 @@ export const useWorkflow = () => {
         updateCurrentStep({ data: taskData });
         return;
       }
+      
+      // Also check for database migration tasks
+      try {
+        const migrationStatus = await api.getDatabaseMigrationStatus();
+        // Check if we got actual migration data (not empty object)
+        if (migrationStatus && Object.keys(migrationStatus).length > 0 && migrationStatus.status) {
+          // Check if the migration task is in an active state that blocks the workflow
+          if (migrationStatus.status === 'active' || migrationStatus.status === 'pending') {
+            // Database migration task is blocking - needs user interaction
+            markCurrentStepError('Pending database migration task found. Please resolve before continuing.');
+            updateCurrentStep({ 
+              data: { 
+                migrationType: 'database-migration',
+                migrationStatus 
+              } 
+            });
+            return;
+          }
+          // If status is 'complete' or 'error', the task can be cleaned up but doesn't block
+        }
+        // If migrationStatus is empty {} or null, no migration task exists - continue normally
+      } catch (migrationError) {
+        // Log unexpected migration errors but don't fail the workflow
+        console.warn('Migration status check failed:', migrationError);
+      }
+      
+      // No pending tasks found
       markCurrentStepComplete();
       moveToNextStep();
       setTimeout(() => executeCurrentStepRef.current?.(), 100);
@@ -485,14 +606,55 @@ export const useWorkflow = () => {
 
   const clearPendingTasks = useCallback(async () => {
     try {
-      await api.deleteTaskData();
-      markCurrentStepComplete();
-      moveToNextStep();
+      // Get current step data to check what type of pending task we have
+      const currentStepData = state.steps[state.currentStep]?.data;
+      
+      // Clear regular tasks
+      try {
+        await api.deleteTaskData();
+      } catch (error) {
+        // Ignore 400/404 errors for task deletion - means no tasks to delete
+        if (!(error instanceof Error && 
+              (error.message.includes('400') || error.message.includes('404')))) {
+          throw error;
+        }
+      }
+      
+      // Clear database migration tasks if present
+      if (currentStepData?.migrationType === 'database-migration') {
+        try {
+          await api.deleteDatabaseMigrationTask();
+        } catch (error) {
+          // If deletion fails, log but continue - the task might have completed naturally
+          console.warn('Failed to delete migration task:', error);
+        }
+      }
+      
+      // Reset the check-tasks step and restart from the beginning
+      updateState(prev => {
+        const newSteps = [...prev.steps];
+        newSteps[0] = {
+          ...newSteps[0],
+          status: 'pending',
+          startTime: undefined,
+          endTime: undefined,
+          error: undefined,
+          data: undefined
+        };
+        return {
+          ...prev,
+          currentStep: 0,
+          steps: newSteps,
+          isRunning: true,
+          error: undefined
+        };
+      });
+      
       setTimeout(() => executeCurrentStepRef.current?.(), 100);
     } catch (error) {
       markCurrentStepError(error instanceof Error ? error.message : 'Failed to clear tasks');
     }
-  }, [markCurrentStepComplete, markCurrentStepError, moveToNextStep]);
+  }, [markCurrentStepError, updateState, state.steps, state.currentStep]);
 
   const confirmMigrations = useCallback(() => {
     // Move to the run-migrations step and resume workflow
@@ -507,17 +669,24 @@ export const useWorkflow = () => {
 
   const skipMigrations = useCallback(() => {
     // Skip the execute-migrations step and continue to next workflow step
-    moveToNextStep();
-    updateState(prev => ({
-      ...prev,
-      steps: prev.steps.map(step => 
-        step.id === 'execute-migrations' ? { ...step, status: 'skipped' } : step
-      ),
-      isRunning: true,
-      isPaused: false
-    }));
+    updateState(prev => {
+      const executeStepIndex = prev.steps.findIndex(step => step.id === 'execute-migrations');
+      if (executeStepIndex !== -1) {
+        const newSteps = [...prev.steps];
+        newSteps[executeStepIndex] = { ...newSteps[executeStepIndex], status: 'skipped' };
+        
+        return {
+          ...prev,
+          currentStep: executeStepIndex + 1, // Move past the execute-migrations step
+          steps: newSteps,
+          isRunning: true,
+          isPaused: false
+        };
+      }
+      return prev;
+    });
     setTimeout(() => executeCurrentStepRef.current?.(), 100);
-  }, [moveToNextStep, updateState]);
+  }, [updateState]);
 
   return {
     state,

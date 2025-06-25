@@ -6,7 +6,8 @@ import {
   Button,
   Text,
   Heading,
-  Badge
+  Badge,
+  Code
 } from '@chakra-ui/react';
 import { ProgressRoot, ProgressBar } from './ui/progress';
 import { Checkbox } from './ui/checkbox';
@@ -28,10 +29,56 @@ import { WorkflowTimeline } from './WorkflowTimeline';
 import { useWorkflow } from '../hooks/useWorkflow';
 import { WorkflowConfig } from '../types';
 
+// Helper function to analyze migration operations and create summary
+const createMigrationSummary = (migrationData: any) => {
+  if (!migrationData || !migrationData.operations) {
+    return null;
+  }
+
+  const operationCounts: Record<string, number> = {};
+  const sqlOperations = ['CREATE', 'ALTER', 'DROP', 'INSERT', 'UPDATE', 'DELETE'];
+  
+  // Initialize counters
+  sqlOperations.forEach(op => operationCounts[op] = 0);
+  operationCounts['OTHER'] = 0;
+
+  // Analyze each operation
+  migrationData.operations.forEach((operation: any) => {
+    const operationName = operation.name || '';
+    let classified = false;
+    
+    // Check for each SQL operation type
+    for (const sqlOp of sqlOperations) {
+      if (operationName.toUpperCase().includes(sqlOp)) {
+        operationCounts[sqlOp]++;
+        classified = true;
+        break;
+      }
+    }
+    
+    if (!classified) {
+      operationCounts['OTHER']++;
+    }
+  });
+
+  // Filter out zero counts and create summary
+  const nonZeroOperations = Object.entries(operationCounts)
+    .filter(([_, count]) => count > 0)
+    .map(([operation, count]) => ({ operation, count }));
+
+  return {
+    totalOperations: migrationData.operations.length,
+    operationBreakdown: nonZeroOperations,
+    migrationType: migrationData.type || 'unknown',
+    migrationHash: migrationData.hash
+  };
+};
+
 export const UpdateWorkflow: React.FC = () => {
   const [config, setConfig] = useState<WorkflowConfig>({ 
     performDryRun: true,
-    withDeletes: false 
+    withDeletes: false,
+    skipComposer: false
   });
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [pendingTasksModalOpen, setPendingTasksModalOpen] = useState(false);
@@ -75,19 +122,19 @@ export const UpdateWorkflow: React.FC = () => {
     if (hasPendingTasksError && !pendingTasksModalOpen) {
       setPendingTasksModalOpen(true);
     }
-  }, [hasPendingTasksError, pendingTasksModalOpen]);
+  }, [hasPendingTasksError]);
 
   useEffect(() => {
     if (hasPendingMigrations && !migrationsModalOpen) {
       setMigrationsModalOpen(true);
     }
-  }, [hasPendingMigrations, migrationsModalOpen]);
+  }, [hasPendingMigrations]);
 
   useEffect(() => {
     if (hasDryRunComplete && !dryRunConfirmModalOpen) {
       setDryRunConfirmModalOpen(true);
     }
-  }, [hasDryRunComplete, dryRunConfirmModalOpen]);
+  }, [hasDryRunComplete]);
 
   const handleStartWorkflow = () => {
     setIsConfirmModalOpen(true);
@@ -205,6 +252,9 @@ export const UpdateWorkflow: React.FC = () => {
   };
 
   const getEstimatedTime = () => {
+    if (config.skipComposer) {
+      return "2-3 minutes"; // Only manager updates and migrations
+    }
     const baseTime = 5; // Base 5 minutes
     const dryRunTime = config.performDryRun ? 3 : 0;
     return `${baseTime + dryRunTime}-${baseTime + dryRunTime + 5} minutes`;
@@ -278,6 +328,12 @@ export const UpdateWorkflow: React.FC = () => {
                   onCheckedChange={(checked) => setConfig(prev => ({ ...prev, withDeletes: !!checked.checked }))}
                 >
                   Execute migrations including DROP queries
+                </Checkbox>
+                <Checkbox
+                  checked={config.skipComposer}
+                  onCheckedChange={(checked) => setConfig(prev => ({ ...prev, skipComposer: !!checked.checked }))}
+                >
+                  Skip composer steps (testing mode)
                 </Checkbox>
                 <Text fontSize="sm" color="gray.600">
                   <strong>Estimated time:</strong> {getEstimatedTime()}
@@ -394,10 +450,15 @@ export const UpdateWorkflow: React.FC = () => {
               <VStack align="start" gap={1} pl={4}>
                 <Text fontSize="sm">• Check for pending tasks</Text>
                 <Text fontSize="sm">• Update Contao Manager (if needed)</Text>
-                {config.performDryRun && (
+                {!config.skipComposer && config.performDryRun && (
                   <Text fontSize="sm">• Run composer dry-run test</Text>
                 )}
-                <Text fontSize="sm">• Update composer packages</Text>
+                {!config.skipComposer && (
+                  <Text fontSize="sm">• Update composer packages</Text>
+                )}
+                {config.skipComposer && (
+                  <Text fontSize="sm" color="orange.600">• Skip composer steps (testing mode)</Text>
+                )}
                 <Text fontSize="sm">• Check for database migrations (cyclically until complete)</Text>
                 <Text fontSize="sm">• Execute database migrations (with confirmation){config.withDeletes ? ' including DROP queries' : ''}</Text>
                 <Text fontSize="sm">• Update version information</Text>
@@ -407,7 +468,11 @@ export const UpdateWorkflow: React.FC = () => {
               <Box p={3} bg={configSummaryBg} borderRadius="md">
                 <Text fontSize="sm" fontWeight="semibold" mb={2}>Configuration Summary:</Text>
                 <VStack align="start" gap={1} fontSize="sm">
-                  <Text>• Composer dry-run: {config.performDryRun ? 'Will be performed' : 'Skipped'}</Text>
+                  {config.skipComposer ? (
+                    <Text color="orange.600">• Composer steps: Skipped (testing mode)</Text>
+                  ) : (
+                    <Text>• Composer dry-run: {config.performDryRun ? 'Will be performed' : 'Skipped'}</Text>
+                  )}
                   <Text>• Include DROP queries in migrations: {config.withDeletes ? 'Enabled' : 'Disabled'}</Text>
                 </VStack>
                 {config.withDeletes && (
@@ -560,14 +625,106 @@ export const UpdateWorkflow: React.FC = () => {
                 </Box>
               </Alert.Root>
               
-              {state.steps.find(step => step.id === 'check-migrations-loop')?.data && (
-                <Box p={3} bg={configBg} borderRadius="md">
-                  <Text fontSize="sm" fontWeight="semibold" mb={2}>Migration details:</Text>
-                  <Text fontSize="xs" fontFamily="mono">
-                    {JSON.stringify(state.steps.find(step => step.id === 'check-migrations-loop')?.data, null, 2)}
-                  </Text>
-                </Box>
-              )}
+              {(() => {
+                const migrationStep = state.steps.find(step => step.id === 'check-migrations-loop');
+                const migrationData = migrationStep?.data;
+                const summary = migrationData ? createMigrationSummary(migrationData) : null;
+                
+                return (
+                  <VStack align="stretch" gap={3}>
+                    {summary && (
+                      <Box p={3} bg={configBg} borderRadius="md">
+                        <Text fontSize="sm" fontWeight="semibold" mb={3}>Current Migration Summary:</Text>
+                        <VStack align="stretch" gap={2}>
+                          <HStack justify="space-between">
+                            <Text fontSize="sm">Migration Type:</Text>
+                            <Badge colorPalette="blue" size="sm">{summary.migrationType}</Badge>
+                          </HStack>
+                          <HStack justify="space-between">
+                            <Text fontSize="sm">Total Operations:</Text>
+                            <Text fontSize="sm" fontWeight="semibold">{summary.totalOperations}</Text>
+                          </HStack>
+                          
+                          {summary.operationBreakdown.length > 0 && (
+                            <>
+                              <Text fontSize="sm" fontWeight="semibold" mt={2}>Operations by Type:</Text>
+                              <VStack align="stretch" gap={1}>
+                                {summary.operationBreakdown.map(({ operation, count }) => (
+                                  <HStack key={operation} justify="space-between">
+                                    <Text fontSize="sm">{operation}:</Text>
+                                    <Badge 
+                                      colorPalette={
+                                        operation === 'DROP' ? 'red' :
+                                        operation === 'CREATE' ? 'green' :
+                                        operation === 'ALTER' ? 'orange' :
+                                        'gray'
+                                      }
+                                      size="sm"
+                                    >
+                                      {count}
+                                    </Badge>
+                                  </HStack>
+                                ))}
+                              </VStack>
+                            </>
+                          )}
+                          
+                          {summary.migrationHash && (
+                            <HStack justify="space-between" mt={2}>
+                              <Text fontSize="xs">Hash:</Text>
+                              <Code fontSize="xs">{summary.migrationHash.substring(0, 12)}...</Code>
+                            </HStack>
+                          )}
+                        </VStack>
+                      </Box>
+                    )}
+                    
+                    {migrationStep?.migrationHistory && migrationStep.migrationHistory.length > 0 && (
+                      <Box p={3} bg={configBg} borderRadius="md">
+                        <Text fontSize="sm" fontWeight="semibold" mb={2}>
+                          Previous Migration Cycles ({migrationStep.migrationHistory.length}):
+                        </Text>
+                        <VStack align="stretch" gap={2}>
+                          {migrationStep.migrationHistory.slice(-3).map((history, index) => (
+                            <HStack key={index} justify="space-between" align="center">
+                              <HStack>
+                                <Badge 
+                                  colorPalette={history.stepType === 'check' ? 'blue' : 'orange'} 
+                                  size="xs"
+                                >
+                                  Cycle {history.cycle}
+                                </Badge>
+                                <Text fontSize="xs">
+                                  {history.stepType === 'check' ? 'Check' : 'Execute'}
+                                </Text>
+                              </HStack>
+                              <HStack>
+                                <Badge 
+                                  colorPalette={
+                                    history.status === 'complete' ? 'green' : 
+                                    history.status === 'error' ? 'red' : 'gray'
+                                  } 
+                                  size="xs"
+                                >
+                                  {history.status}
+                                </Badge>
+                                <Text fontSize="xs" color="gray.500">
+                                  {history.timestamp.toLocaleTimeString()}
+                                </Text>
+                              </HStack>
+                            </HStack>
+                          ))}
+                          {migrationStep.migrationHistory.length > 3 && (
+                            <Text fontSize="xs" color="gray.500" textAlign="center">
+                              ... and {migrationStep.migrationHistory.length - 3} more cycles
+                            </Text>
+                          )}
+                        </VStack>
+                      </Box>
+                    )}
+                  </VStack>
+                );
+              })()}
               
               {/* Migration Configuration Display */}
               <Box p={3} borderWidth="1px" borderRadius="md">
@@ -615,7 +772,7 @@ export const UpdateWorkflow: React.FC = () => {
       </DialogRoot>
 
       {/* Dry-run Confirmation Modal */}
-      <DialogRoot open={dryRunConfirmModalOpen} onOpenChange={(details) => !details.open && setDryRunConfirmModalOpen(false)}>
+      <DialogRoot open={dryRunConfirmModalOpen} onOpenChange={(details) => !details.open && handleStopWorkflow()}>
         <DialogBackdrop />
         <DialogContent>
           <DialogCloseTrigger />

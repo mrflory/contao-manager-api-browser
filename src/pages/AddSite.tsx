@@ -9,18 +9,15 @@ import {
   Flex,
   Input,
   VStack,
-  createToaster,
 } from '@chakra-ui/react';
 import { LuArrowLeft } from 'react-icons/lu';
 import { SelectTrigger, SelectItem, SelectRoot, SelectValueText, SelectContent, SelectItemText } from '../components/ui/select';
 import { Field } from '../components/ui/field'
+import { toaster } from '../components/ui/toaster';
 import { api } from '../utils/api';
 
 const AddSite: React.FC = () => {
   const navigate = useNavigate();
-  const toaster = createToaster({
-    placement: 'top',
-  });
   const [url, setUrl] = useState('');
   const [scope, setScope] = useState('admin');
   const [token, setToken] = useState('');

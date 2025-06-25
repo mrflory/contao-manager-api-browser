@@ -17,7 +17,6 @@ import {
   GridItem,
   Separator,
   Code,
-  createToaster,
   Alert,
   Input,
   Table,
@@ -58,6 +57,7 @@ import { SelectTrigger, SelectItem, SelectRoot, SelectValueText, SelectContent, 
 import { Field } from '../components/ui/field';
 import { Checkbox } from '../components/ui/checkbox';
 import { useColorModeValue } from '../components/ui/color-mode';
+import { toaster } from '../components/ui/toaster';
 import { Config, UpdateStatus, TokenInfo } from '../types';
 import { api } from '../utils/api';
 import { UpdateWorkflow } from '../components/UpdateWorkflow';
@@ -65,9 +65,6 @@ import { UpdateWorkflow } from '../components/UpdateWorkflow';
 const SiteDetails: React.FC = () => {
   const { siteUrl } = useParams<{ siteUrl: string }>();
   const navigate = useNavigate();
-  const toaster = createToaster({
-    placement: 'top',
-  });
   const [open, setOpen] = useState(false);
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
