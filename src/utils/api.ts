@@ -214,6 +214,12 @@ export const api = {
     return makeApiCall(`/logs/${encodeURIComponent(siteUrl)}`);
   },
 
+  async cleanupOldLogs(siteUrl: string): Promise<{ success: boolean; deletedCount: number; message?: string; error?: string }> {
+    return makeApiCall(`/logs/${encodeURIComponent(siteUrl)}/cleanup`, {
+      method: 'DELETE'
+    });
+  },
+
   // Task status management
   async patchTaskStatus(status: 'active' | 'aborting'): Promise<any> {
     return makeApiCall('/task', {

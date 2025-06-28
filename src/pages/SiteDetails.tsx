@@ -143,6 +143,37 @@ const SiteDetails: React.FC = () => {
     }
   };
 
+  const handleCleanupOldLogs = async () => {
+    if (!site) return;
+    setLoadingButton('cleanup-logs');
+    try {
+      const response = await api.cleanupOldLogs(site.url);
+      if (response.success) {
+        toaster.create({
+          title: 'Success',
+          description: `Cleaned up ${response.deletedCount} old log entries (older than 1 week)`,
+          type: 'success',
+          duration: 5000,
+          closable: true,
+        });
+        // Reload logs to show updated list
+        await loadLogs();
+      } else {
+        throw new Error(response.error || 'Failed to cleanup logs');
+      }
+    } catch (error) {
+      toaster.create({
+        title: 'Error',
+        description: `Failed to cleanup logs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        type: 'error',
+        duration: 5000,
+        closable: true,
+      });
+    } finally {
+      setLoadingButton(null);
+    }
+  };
+
   const handleReauthenticate = () => {
     setShowReauthForm(true);
   };
@@ -1448,14 +1479,24 @@ const SiteDetails: React.FC = () => {
               <VStack gap={6} align="stretch">
                 <Flex justify="space-between" align="center">
                   <Heading size="lg">API Call Logs</Heading>
-                  <Button
-                    colorPalette="blue"
-                    onClick={loadLogs}
-                    loading={logsLoading}
-                    size="sm"
-                  >
-                    <LuRefreshCcw size={16} /> Refresh Logs
-                  </Button>
+                  <HStack gap={3}>
+                    <Button
+                      colorPalette="red"
+                      onClick={handleCleanupOldLogs}
+                      loading={loadingButton === 'cleanup-logs'}
+                      size="sm"
+                    >
+                      <Trash2 size={16} /> Cleanup Old Logs
+                    </Button>
+                    <Button
+                      colorPalette="blue"
+                      onClick={loadLogs}
+                      loading={logsLoading}
+                      size="sm"
+                    >
+                      <LuRefreshCcw size={16} /> Refresh Logs
+                    </Button>
+                  </HStack>
                 </Flex>
                 
                 {logsLoading ? (

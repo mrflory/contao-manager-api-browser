@@ -1059,6 +1059,67 @@ app.get('/api/logs/:siteUrl', (req, res) => {
     }
 });
 
+// Log cleanup endpoint
+app.delete('/api/logs/:siteUrl/cleanup', (req, res) => {
+    try {
+        const siteUrl = decodeURIComponent(req.params.siteUrl);
+        const hostname = extractSiteName(siteUrl);
+        const logFile = path.join(__dirname, 'data', `${hostname}.log`);
+        
+        // Check if log file exists
+        if (!fs.existsSync(logFile)) {
+            return res.json({ 
+                success: true, 
+                deletedCount: 0, 
+                message: 'No logs found for this site' 
+            });
+        }
+        
+        // Read log file and parse JSON lines
+        const logContent = fs.readFileSync(logFile, 'utf8');
+        const logLines = logContent.trim().split('\n').filter(line => line.trim());
+        
+        const logs = [];
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        
+        let deletedCount = 0;
+        
+        for (const line of logLines) {
+            try {
+                const logEntry = JSON.parse(line);
+                const logDate = new Date(logEntry.timestamp);
+                
+                // Keep logs that are newer than one week
+                if (logDate > oneWeekAgo) {
+                    logs.push(line);
+                } else {
+                    deletedCount++;
+                }
+            } catch (parseError) {
+                // Keep unparseable lines as they might be important
+                logs.push(line);
+            }
+        }
+        
+        // Write the filtered logs back to the file
+        const newLogContent = logs.length > 0 ? logs.join('\n') + '\n' : '';
+        fs.writeFileSync(logFile, newLogContent);
+        
+        res.json({ 
+            success: true, 
+            deletedCount,
+            message: `Successfully deleted ${deletedCount} log entries older than 1 week`
+        });
+    } catch (error) {
+        console.error('[LOG-CLEANUP] Error:', error.message);
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to cleanup log file: ' + error.message 
+        });
+    }
+});
+
 // Serve React app for all non-API routes
 app.get('/', (req, res) => {
     if (process.env.NODE_ENV === 'production') {
