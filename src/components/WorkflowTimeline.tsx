@@ -232,12 +232,13 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                         fontSize="xs" 
                         p={3} 
                         display="block" 
-                        whiteSpace="pre-wrap" 
+                        whiteSpace="pre" 
                         bg="black"
                         color="white"
                         borderRadius="md"
                         maxH="300px"
                         overflowY="auto"
+                        overflowX="auto"
                         fontFamily="mono"
                       >
                         {addLineNumbers(operation.console)}
@@ -489,12 +490,13 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                                 fontSize="xs" 
                                 p={3} 
                                 display="block" 
-                                whiteSpace="pre-wrap" 
+                                whiteSpace="pre" 
                                 bg="black"
                                 color="white"
                                 borderRadius="md"
                                 maxH="300px"
                                 overflowY="auto"
+                                overflowX="auto"
                                 fontFamily="mono"
                               >
                                 {addLineNumbers(operation.console)}
