@@ -6,23 +6,12 @@ import {
   Button,
   Text,
   Heading,
-  Badge,
-  Code
+  Badge
 } from '@chakra-ui/react';
 import { ProgressRoot, ProgressBar } from './ui/progress';
 import { Checkbox } from './ui/checkbox';
-import {
-  DialogRoot,
-  DialogBackdrop,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-  DialogFooter,
-  DialogCloseTrigger,
-} from './ui/dialog';
 import { Alert } from '@chakra-ui/react';
-import { LuPlay as Play, LuPause as Pause, LuRefreshCw as RefreshCw, LuTriangleAlert as AlertTriangle, LuCircleCheck as CheckCircle, LuInfo as Info, LuCircleX as XCircle } from 'react-icons/lu';
+import { LuPlay as Play, LuPause as Pause, LuRefreshCw as RefreshCw, LuCircleCheck as CheckCircle } from 'react-icons/lu';
 import { useColorModeValue } from './ui/color-mode';
 import { toaster } from './ui/toaster';
 import { WorkflowTimeline } from './WorkflowTimeline';
@@ -63,7 +52,7 @@ const createMigrationSummary = (migrationData: any) => {
 
   // Filter out zero counts and create summary
   const nonZeroOperations = Object.entries(operationCounts)
-    .filter(([_, count]) => count > 0)
+    .filter(([, count]) => count > 0)
     .map(([operation, count]) => ({ operation, count }));
 
   return {
@@ -80,12 +69,6 @@ export const UpdateWorkflow: React.FC = () => {
     withDeletes: false,
     skipComposer: false
   });
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [pendingTasksModalOpen, setPendingTasksModalOpen] = useState(false);
-  const [migrationsModalOpen, setMigrationsModalOpen] = useState(false);
-  const [dryRunConfirmModalOpen, setDryRunConfirmModalOpen] = useState(false);
-  
-  const configSummaryBg = useColorModeValue('blue.50', 'blue.900');
   const configBg = useColorModeValue('gray.50', 'gray.700');
   
   const {
@@ -118,30 +101,8 @@ export const UpdateWorkflow: React.FC = () => {
                            state.isPaused && 
                            currentStep?.id === 'composer-update';
 
-  useEffect(() => {
-    if (hasPendingTasksError && !pendingTasksModalOpen) {
-      setPendingTasksModalOpen(true);
-    }
-  }, [hasPendingTasksError]);
-
-  useEffect(() => {
-    if (hasPendingMigrations && !migrationsModalOpen) {
-      setMigrationsModalOpen(true);
-    }
-  }, [hasPendingMigrations]);
-
-  useEffect(() => {
-    if (hasDryRunComplete && !dryRunConfirmModalOpen) {
-      setDryRunConfirmModalOpen(true);
-    }
-  }, [hasDryRunComplete]);
 
   const handleStartWorkflow = () => {
-    setIsConfirmModalOpen(true);
-  };
-
-  const handleConfirmStart = () => {
-    setIsConfirmModalOpen(false);
     startWorkflow();
     toaster.create({
       title: 'Workflow Started',
@@ -172,12 +133,10 @@ export const UpdateWorkflow: React.FC = () => {
   };
 
   const handleClearTasks = async () => {
-    setPendingTasksModalOpen(false);
     await clearPendingTasks();
   };
 
   const handleCancelPendingTasks = () => {
-    setPendingTasksModalOpen(false);
     // Reset the workflow to allow the dialog to appear again on next start
     initializeWorkflow(config);
     toaster.create({
@@ -189,7 +148,6 @@ export const UpdateWorkflow: React.FC = () => {
   };
 
   const handleConfirmMigrations = () => {
-    setMigrationsModalOpen(false);
     confirmMigrations();
     toaster.create({
       title: 'Migrations Confirmed',
@@ -200,7 +158,6 @@ export const UpdateWorkflow: React.FC = () => {
   };
 
   const handleSkipMigrations = () => {
-    setMigrationsModalOpen(false);
     skipMigrations();
     toaster.create({
       title: 'Migrations Skipped',
@@ -211,7 +168,6 @@ export const UpdateWorkflow: React.FC = () => {
   };
 
   const handleCancelMigrations = () => {
-    setMigrationsModalOpen(false);
     // Reset the workflow to allow the dialog to appear again on next start
     initializeWorkflow(config);
     toaster.create({
@@ -223,7 +179,6 @@ export const UpdateWorkflow: React.FC = () => {
   };
 
   const handleContinueUpdate = () => {
-    setDryRunConfirmModalOpen(false);
     resumeWorkflow();
     toaster.create({
       title: 'Update Continuing',
@@ -234,7 +189,6 @@ export const UpdateWorkflow: React.FC = () => {
   };
 
   const handleStopWorkflow = () => {
-    setDryRunConfirmModalOpen(false);
     stopWorkflow();
     toaster.create({
       title: 'Workflow Stopped',
@@ -385,18 +339,6 @@ export const UpdateWorkflow: React.FC = () => {
             )}
           </HStack>
 
-          {/* Error Alert */}
-          {state.error && (
-            <Alert.Root status="error">
-              <Alert.Indicator>
-                <XCircle size={20} />
-              </Alert.Indicator>
-              <Box>
-                <Alert.Title>Workflow Error!</Alert.Title>
-                <Alert.Description>{state.error}</Alert.Description>
-              </Box>
-            </Alert.Root>
-          )}
 
           {/* Success Alert */}
           {isComplete && !state.error && (
@@ -415,431 +357,35 @@ export const UpdateWorkflow: React.FC = () => {
         </VStack>
       </Box>
 
+
       {/* Timeline */}
       {state.steps.length > 0 && (
         <Box borderWidth="1px" p={6} borderRadius="lg">
           <Heading size="md" mb={4}>Workflow Progress</Heading>
-          <WorkflowTimeline steps={state.steps} currentStep={state.currentStep} />
+          <WorkflowTimeline 
+            steps={state.steps} 
+            currentStep={state.currentStep}
+            config={config}
+            createMigrationSummary={createMigrationSummary}
+            hasPendingTasksError={!!hasPendingTasksError}
+            hasPendingMigrations={!!hasPendingMigrations}
+            hasDryRunComplete={!!hasDryRunComplete}
+            onClearTasks={handleClearTasks}
+            onCancelPendingTasks={handleCancelPendingTasks}
+            onConfirmMigrations={handleConfirmMigrations}
+            onSkipMigrations={handleSkipMigrations}
+            onCancelMigrations={handleCancelMigrations}
+            onContinueUpdate={handleContinueUpdate}
+            onStopWorkflow={handleStopWorkflow}
+            configBg={configBg}
+            getEstimatedTime={getEstimatedTime}
+          />
         </Box>
       )}
 
-      {/* Confirm Start Modal */}
-      <DialogRoot open={isConfirmModalOpen} onOpenChange={(details) => !details.open && setIsConfirmModalOpen(false)}>
-        <DialogBackdrop />
-        <DialogContent>
-          <DialogCloseTrigger />
-          <DialogHeader>
-            <DialogTitle>Confirm Update Workflow</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <VStack gap={4} align="stretch">
-              <Alert.Root status="warning">
-                <Alert.Indicator>
-                  <AlertTriangle size={20} />
-                </Alert.Indicator>
-                <Box>
-                  <Alert.Title>Important!</Alert.Title>
-                  <Alert.Description>
-                    This process will update your Contao installation and may cause temporary downtime. 
-                    Make sure you have a backup before proceeding.
-                  </Alert.Description>
-                </Box>
-              </Alert.Root>
-              
-              <Text>The workflow will perform the following steps:</Text>
-              <VStack align="start" gap={1} pl={4}>
-                <Text fontSize="sm">• Check for pending tasks</Text>
-                <Text fontSize="sm">• Update Contao Manager (if needed)</Text>
-                {!config.skipComposer && config.performDryRun && (
-                  <Text fontSize="sm">• Run composer dry-run test</Text>
-                )}
-                {!config.skipComposer && (
-                  <Text fontSize="sm">• Update composer packages</Text>
-                )}
-                {config.skipComposer && (
-                  <Text fontSize="sm" color="orange.600">• Skip composer steps (testing mode)</Text>
-                )}
-                <Text fontSize="sm">• Check for database migrations (cyclically until complete)</Text>
-                <Text fontSize="sm">• Execute database migrations (with confirmation){config.withDeletes ? ' including DROP queries' : ''}</Text>
-                <Text fontSize="sm">• Update version information</Text>
-              </VStack>
 
-              {/* Configuration Summary */}
-              <Box p={3} bg={configSummaryBg} borderRadius="md">
-                <Text fontSize="sm" fontWeight="semibold" mb={2}>Configuration Summary:</Text>
-                <VStack align="start" gap={1} fontSize="sm">
-                  {config.skipComposer ? (
-                    <Text color="orange.600">• Composer steps: Skipped (testing mode)</Text>
-                  ) : (
-                    <Text>• Composer dry-run: {config.performDryRun ? 'Will be performed' : 'Skipped'}</Text>
-                  )}
-                  <Text>• Include DROP queries in migrations: {config.withDeletes ? 'Enabled' : 'Disabled'}</Text>
-                </VStack>
-                {config.withDeletes && (
-                  <Text fontSize="xs" color="orange.600" mt={2}>
-                    ⚠️ DROP queries may remove data or database structures
-                  </Text>
-                )}
-              </Box>
-              
-              <Text fontSize="sm" color="gray.600">
-                Estimated time: {getEstimatedTime()}
-              </Text>
-            </VStack>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="ghost" mr={3} onClick={() => setIsConfirmModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button colorPalette="blue" onClick={handleConfirmStart}>
-              Start Update
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </DialogRoot>
 
-      {/* Pending Tasks Modal */}
-      <DialogRoot open={pendingTasksModalOpen} onOpenChange={(details) => !details.open && handleCancelPendingTasks()}>
-        <DialogBackdrop />
-        <DialogContent>
-          <DialogCloseTrigger />
-          <DialogHeader>
-            <DialogTitle>Pending Tasks Found</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <VStack gap={4} align="stretch">
-              <Alert.Root status="warning">
-                <Alert.Indicator>
-                  <AlertTriangle size={20} />
-                </Alert.Indicator>
-                <Box>
-                  <Alert.Title>Tasks are currently running</Alert.Title>
-                  <Alert.Description>
-                    There are pending tasks or database migrations that must be cleared before the update workflow can proceed.
-                  </Alert.Description>
-                </Box>
-              </Alert.Root>
-              
-              {(currentStep?.data || currentStep?.error) && (
-                <Box p={3} bg={configBg} borderRadius="md">
-                  <Text fontSize="sm" fontWeight="semibold" mb={2}>
-                    {currentStep.data?.migrationType === 'database-migration' 
-                      ? 'Current pending database migration task:' 
-                      : 'Current pending tasks:'}
-                  </Text>
-                  
-                  {/* Handle database migration tasks */}
-                  {currentStep.data?.migrationType === 'database-migration' && currentStep.data?.migrationStatus ? (
-                    <HStack justify="space-between" align="center">
-                      <Text fontSize="sm" flex="1">
-                        Database Migration Task
-                      </Text>
-                      <Badge 
-                        colorPalette={
-                          currentStep.data.migrationStatus.status === 'active' ? 'blue' :
-                          currentStep.data.migrationStatus.status === 'pending' ? 'gray' :
-                          currentStep.data.migrationStatus.status === 'complete' ? 'green' :
-                          currentStep.data.migrationStatus.status === 'error' ? 'red' : 'gray'
-                        }
-                        size="sm"
-                      >
-                        {currentStep.data.migrationStatus.status === 'active' ? 'Running' :
-                         currentStep.data.migrationStatus.status === 'pending' ? 'Pending' :
-                         currentStep.data.migrationStatus.status === 'complete' ? 'Complete' :
-                         currentStep.data.migrationStatus.status === 'error' ? 'Error' :
-                         currentStep.data.migrationStatus.status}
-                      </Badge>
-                    </HStack>
-                  ) : 
-                  /* Handle regular composer tasks */
-                  currentStep.data?.operations && Array.isArray(currentStep.data.operations) ? (
-                    <VStack align="stretch" gap={2}>
-                      {currentStep.data.operations.map((operation: any, index: number) => (
-                        <HStack key={index} justify="space-between" align="center">
-                          <Text fontSize="sm" flex="1">
-                            {operation.summary}
-                          </Text>
-                          <Badge 
-                            colorPalette={
-                              operation.status === 'complete' ? 'green' :
-                              operation.status === 'active' ? 'blue' :
-                              operation.status === 'error' ? 'red' :
-                              operation.status === 'stopped' ? 'orange' : 'gray'
-                            }
-                            size="sm"
-                          >
-                            {operation.status === 'active' ? 'Running' : 
-                             operation.status === 'complete' ? 'Complete' :
-                             operation.status === 'error' ? 'Error' :
-                             operation.status === 'stopped' ? 'Stopped' : 
-                             operation.status}
-                          </Badge>
-                        </HStack>
-                      ))}
-                    </VStack>
-                  ) : (
-                    <Text fontSize="sm" color="gray.600">
-                      {currentStep.data?.title || currentStep.error || 'Task running...'}
-                    </Text>
-                  )}
-                </Box>
-              )}
-              
-              <Text fontSize="sm">
-                You can either wait for the current tasks to complete, or force clear them to continue 
-                with the update workflow.
-              </Text>
-            </VStack>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="ghost" mr={3} onClick={handleCancelPendingTasks}>
-              Cancel
-            </Button>
-            <Button colorPalette="orange" onClick={handleClearTasks}>
-              Clear Tasks & Continue
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </DialogRoot>
 
-      {/* Database Migrations Confirmation Modal */}
-      <DialogRoot open={migrationsModalOpen} onOpenChange={(details) => !details.open && handleCancelMigrations()}>
-        <DialogBackdrop />
-        <DialogContent>
-          <DialogCloseTrigger />
-          <DialogHeader>
-            <DialogTitle>Database Migrations Required</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <VStack gap={4} align="stretch">
-              <Alert.Root status="info">
-                <Alert.Indicator>
-                  <Info size={20} />
-                </Alert.Indicator>
-                <Box>
-                  <Alert.Title>Pending database migrations detected</Alert.Title>
-                  <Alert.Description>
-                    The system has detected pending database migrations that need to be executed 
-                    to complete the update process.
-                  </Alert.Description>
-                </Box>
-              </Alert.Root>
-              
-              {(() => {
-                const migrationStep = state.steps.find(step => step.id === 'check-migrations-loop');
-                const migrationData = migrationStep?.data;
-                const summary = migrationData ? createMigrationSummary(migrationData) : null;
-                
-                return (
-                  <VStack align="stretch" gap={3}>
-                    {summary && (
-                      <Box p={3} bg={configBg} borderRadius="md">
-                        <Text fontSize="sm" fontWeight="semibold" mb={3}>Current Migration Summary:</Text>
-                        <VStack align="stretch" gap={2}>
-                          <HStack justify="space-between">
-                            <Text fontSize="sm">Migration Type:</Text>
-                            <Badge colorPalette="blue" size="sm">{summary.migrationType}</Badge>
-                          </HStack>
-                          <HStack justify="space-between">
-                            <Text fontSize="sm">Total Operations:</Text>
-                            <Text fontSize="sm" fontWeight="semibold">{summary.totalOperations}</Text>
-                          </HStack>
-                          
-                          {summary.operationBreakdown.length > 0 && (
-                            <>
-                              <Text fontSize="sm" fontWeight="semibold" mt={2}>Operations by Type:</Text>
-                              <VStack align="stretch" gap={1}>
-                                {summary.operationBreakdown.map(({ operation, count }) => (
-                                  <HStack key={operation} justify="space-between">
-                                    <Text fontSize="sm">{operation}:</Text>
-                                    <Badge 
-                                      colorPalette={
-                                        operation === 'DROP' ? 'red' :
-                                        operation === 'CREATE' ? 'green' :
-                                        operation === 'ALTER' ? 'orange' :
-                                        'gray'
-                                      }
-                                      size="sm"
-                                    >
-                                      {count}
-                                    </Badge>
-                                  </HStack>
-                                ))}
-                              </VStack>
-                            </>
-                          )}
-                          
-                          {summary.migrationHash && (
-                            <HStack justify="space-between" mt={2}>
-                              <Text fontSize="xs">Hash:</Text>
-                              <Code fontSize="xs">{summary.migrationHash.substring(0, 12)}...</Code>
-                            </HStack>
-                          )}
-                        </VStack>
-                      </Box>
-                    )}
-                    
-                    {migrationStep?.migrationHistory && migrationStep.migrationHistory.length > 0 && (
-                      <Box p={3} bg={configBg} borderRadius="md">
-                        <Text fontSize="sm" fontWeight="semibold" mb={2}>
-                          Previous Migration Cycles ({migrationStep.migrationHistory.length}):
-                        </Text>
-                        <VStack align="stretch" gap={2}>
-                          {migrationStep.migrationHistory.slice(-3).map((history, index) => (
-                            <HStack key={index} justify="space-between" align="center">
-                              <HStack>
-                                <Badge 
-                                  colorPalette={history.stepType === 'check' ? 'blue' : 'orange'} 
-                                  size="xs"
-                                >
-                                  Cycle {history.cycle}
-                                </Badge>
-                                <Text fontSize="xs">
-                                  {history.stepType === 'check' ? 'Check' : 'Execute'}
-                                </Text>
-                              </HStack>
-                              <HStack>
-                                <Badge 
-                                  colorPalette={
-                                    history.status === 'complete' ? 'green' : 
-                                    history.status === 'error' ? 'red' : 'gray'
-                                  } 
-                                  size="xs"
-                                >
-                                  {history.status}
-                                </Badge>
-                                <Text fontSize="xs" color="gray.500">
-                                  {history.timestamp.toLocaleTimeString()}
-                                </Text>
-                              </HStack>
-                            </HStack>
-                          ))}
-                          {migrationStep.migrationHistory.length > 3 && (
-                            <Text fontSize="xs" color="gray.500" textAlign="center">
-                              ... and {migrationStep.migrationHistory.length - 3} more cycles
-                            </Text>
-                          )}
-                        </VStack>
-                      </Box>
-                    )}
-                  </VStack>
-                );
-              })()}
-              
-              {/* Migration Configuration Display */}
-              <Box p={3} borderWidth="1px" borderRadius="md">
-                <Text fontSize="sm" fontWeight="semibold" mb={2}>Migration Settings:</Text>
-                <HStack gap={4}>
-                  <Text fontSize="sm">
-                    <strong>Include DROP queries:</strong> {config.withDeletes ? 'Yes' : 'No'}
-                  </Text>
-                </HStack>
-                {config.withDeletes && (
-                  <Alert.Root status="warning" size="sm" mt={2}>
-                    <Alert.Indicator>
-                      <AlertTriangle size={16} />
-                    </Alert.Indicator>
-                    <Alert.Description fontSize="xs">
-                      DROP queries will be executed, which may remove data or database structures.
-                    </Alert.Description>
-                  </Alert.Root>
-                )}
-              </Box>
-              
-              <Text fontSize="sm">
-                <strong>Important:</strong> Database migrations will modify your database structure. 
-                It's recommended to have a backup before proceeding.
-              </Text>
-              
-              <Text fontSize="sm">
-                You can either proceed with the migrations now, or skip them and run them manually later 
-                through the Expert functions.
-              </Text>
-            </VStack>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="ghost" mr={3} onClick={handleCancelMigrations}>
-              Cancel Workflow
-            </Button>
-            <Button variant="outline" mr={3} onClick={handleSkipMigrations}>
-              Skip Migrations
-            </Button>
-            <Button colorPalette="blue" onClick={handleConfirmMigrations}>
-              Run Migrations
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </DialogRoot>
-
-      {/* Dry-run Confirmation Modal */}
-      <DialogRoot open={dryRunConfirmModalOpen} onOpenChange={(details) => !details.open && handleStopWorkflow()}>
-        <DialogBackdrop />
-        <DialogContent>
-          <DialogCloseTrigger />
-          <DialogHeader>
-            <DialogTitle>Dry-run Complete - Proceed with Update?</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <VStack gap={4} align="stretch">
-              <Alert.Root status="success">
-                <Alert.Indicator>
-                  <CheckCircle size={20} />
-                </Alert.Indicator>
-                <Box>
-                  <Alert.Title>Dry-run completed successfully!</Alert.Title>
-                  <Alert.Description>
-                    The composer dry-run has finished. You can review the results above to see what changes would be made.
-                  </Alert.Description>
-                </Box>
-              </Alert.Root>
-              
-              {dryRunStep?.data && (
-                <Box p={3} bg={configBg} borderRadius="md">
-                  <Text fontSize="sm" fontWeight="semibold" mb={2}>Dry-run summary:</Text>
-                  {dryRunStep.data.operations && Array.isArray(dryRunStep.data.operations) ? (
-                    <VStack align="stretch" gap={2}>
-                      {dryRunStep.data.operations.map((operation: any, index: number) => (
-                        <HStack key={index} justify="space-between" align="center">
-                          <Text fontSize="sm" flex="1">
-                            {operation.summary}
-                          </Text>
-                          <Badge 
-                            colorPalette={operation.status === 'complete' ? 'green' : 'gray'}
-                            size="sm"
-                          >
-                            {operation.status === 'complete' ? 'Complete' : operation.status}
-                          </Badge>
-                        </HStack>
-                      ))}
-                    </VStack>
-                  ) : (
-                    <Text fontSize="sm" color="gray.600">
-                      {dryRunStep.data.title || 'Dry-run completed'}
-                    </Text>
-                  )}
-                </Box>
-              )}
-              
-              <Text fontSize="sm">
-                <strong>Would you like to proceed with the actual composer update?</strong>
-              </Text>
-              
-              <Text fontSize="sm" color="gray.600">
-                You can continue with the update or stop the workflow here. If you stop, 
-                you can restart the workflow later from the beginning.
-              </Text>
-            </VStack>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="ghost" mr={3} onClick={handleStopWorkflow}>
-              Stop Workflow
-            </Button>
-            <Button colorPalette="blue" onClick={handleContinueUpdate}>
-              Continue Update
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </DialogRoot>
     </VStack>
   );
 };
