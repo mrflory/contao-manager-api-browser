@@ -75,11 +75,13 @@ export const UpdateWorkflow: React.FC = () => {
     state,
     initializeWorkflow,
     startWorkflow,
+    startWorkflowFromStep,
     stopWorkflow,
     resumeWorkflow,
     clearPendingTasks,
     confirmMigrations,
     skipMigrations,
+    skipComposerUpdate,
     isComplete,
     hasPendingMigrations
   } = useWorkflow();
@@ -188,12 +190,43 @@ export const UpdateWorkflow: React.FC = () => {
     });
   };
 
-  const handleStopWorkflow = () => {
-    stopWorkflow();
+  const handleSkipComposerUpdate = () => {
+    skipComposerUpdate();
     toaster.create({
-      title: 'Workflow Stopped',
-      description: 'Update workflow has been stopped after dry-run',
+      title: 'Composer Update Skipped',
+      description: 'Skipping composer update and proceeding to database migrations',
       type: 'warning',
+      duration: 5000,
+    });
+  };
+
+  const handleCancelWorkflow = () => {
+    // Reset the workflow to allow the dialog to appear again on next start
+    initializeWorkflow(config);
+    toaster.create({
+      title: 'Workflow Cancelled',
+      description: 'Update workflow has been cancelled',
+      type: 'warning',
+      duration: 3000,
+    });
+  };
+
+  const handleStartFromDryRun = () => {
+    startWorkflowFromStep('composer-dry-run');
+    toaster.create({
+      title: 'Debug Mode',
+      description: 'Starting workflow from composer dry-run step',
+      type: 'info',
+      duration: 3000,
+    });
+  };
+
+  const handleStartFromMigrations = () => {
+    startWorkflowFromStep('check-migrations-loop');
+    toaster.create({
+      title: 'Debug Mode', 
+      description: 'Starting workflow from database migration check step',
+      type: 'info',
       duration: 3000,
     });
   };
@@ -297,7 +330,7 @@ export const UpdateWorkflow: React.FC = () => {
           )}
 
           {/* Action Buttons */}
-          <HStack gap={3}>
+          <VStack gap={3} align="stretch">
             {canStart && (
               <Button
                 colorPalette="blue"
@@ -306,6 +339,27 @@ export const UpdateWorkflow: React.FC = () => {
               >
                 <Play size={16} /> Start Update Workflow
               </Button>
+            )}
+            
+            {canStart && (
+              <HStack gap={2} justify="center">
+                <Button
+                  variant="outline"
+                  colorPalette="gray"
+                  onClick={handleStartFromDryRun}
+                  size="xs"
+                >
+                  🔧 Debug: Start from Dry-run
+                </Button>
+                <Button
+                  variant="outline"
+                  colorPalette="gray"
+                  onClick={handleStartFromMigrations}
+                  size="xs"
+                >
+                  🔧 Debug: Start from Migrations
+                </Button>
+              </HStack>
             )}
             
             {canStop && (
@@ -337,7 +391,7 @@ export const UpdateWorkflow: React.FC = () => {
                 <RefreshCw size={16} /> Run Again
               </Button>
             )}
-          </HStack>
+          </VStack>
 
 
           {/* Success Alert */}
@@ -376,7 +430,8 @@ export const UpdateWorkflow: React.FC = () => {
             onSkipMigrations={handleSkipMigrations}
             onCancelMigrations={handleCancelMigrations}
             onContinueUpdate={handleContinueUpdate}
-            onStopWorkflow={handleStopWorkflow}
+            onSkipComposerUpdate={handleSkipComposerUpdate}
+            onCancelWorkflow={handleCancelWorkflow}
             configBg={configBg}
             getEstimatedTime={getEstimatedTime}
           />

@@ -203,21 +203,47 @@ export const useWorkflow = () => {
       const currentStepId = currentStepRef.current?.id;
       
       if (result.status === 'pending') {
-        if (currentStepId === 'check-migrations-loop') {
+        if (currentStepId.startsWith('check-migrations-loop')) {
           // Checking migrations step
           if (!result.hash || result.hash === '') {
-            // No migrations needed - skip the execute-migrations step and continue to next workflow step
+            // No migrations needed - skip all remaining migration steps and continue to next workflow step
             markCurrentStepComplete(result);
             api.deleteDatabaseMigrationTask().then(() => {
-              moveToNextStep();
-              // Skip the execute-migrations step
-              updateState(prev => ({
-                ...prev,
-                currentStep: prev.currentStep + 1,
-                steps: prev.steps.map(step => 
-                  step.id === 'execute-migrations' ? { ...step, status: 'skipped' } : step
-                )
-              }));
+              updateState(prev => {
+                const currentCycle = currentStepId.includes('-') ? 
+                  currentStepId.split('-').pop() : '1';
+                const executeStepId = currentCycle === '1' ? 'execute-migrations' : `execute-migrations-${currentCycle}`;
+                const executeStepIndex = prev.steps.findIndex(step => step.id === executeStepId);
+                
+                if (executeStepIndex !== -1) {
+                  const newSteps = [...prev.steps];
+                  
+                  // Skip the corresponding execute step
+                  newSteps[executeStepIndex] = { ...newSteps[executeStepIndex], status: 'skipped' };
+                  
+                  // Find next step after all migration-related steps
+                  let nextStepIndex = executeStepIndex + 1;
+                  
+                  // Skip any additional migration cycle steps that were created
+                  while (nextStepIndex < newSteps.length && 
+                         (newSteps[nextStepIndex].id.startsWith('check-migrations-loop-') || 
+                          newSteps[nextStepIndex].id.startsWith('execute-migrations-'))) {
+                    newSteps[nextStepIndex] = { ...newSteps[nextStepIndex], status: 'skipped' };
+                    nextStepIndex++;
+                  }
+                  
+                  return {
+                    ...prev,
+                    currentStep: nextStepIndex,
+                    steps: newSteps
+                  };
+                }
+                
+                return {
+                  ...prev,
+                  currentStep: prev.currentStep + 1
+                };
+              });
               setTimeout(() => executeCurrentStepRef.current?.(), 100);
             }).catch(error => {
               markCurrentStepError(`Failed to clean up migration task: ${error.message}`);
@@ -228,7 +254,7 @@ export const useWorkflow = () => {
             
             // Add check execution to history
             updateState(prev => {
-              const checkMigrationIndex = prev.steps.findIndex(step => step.id === 'check-migrations-loop');
+              const checkMigrationIndex = prev.currentStep;
               if (checkMigrationIndex !== -1) {
                 const newSteps = [...prev.steps];
                 const checkStep = newSteps[checkMigrationIndex];
@@ -271,12 +297,11 @@ export const useWorkflow = () => {
       } else if (result.status === 'complete') {
         markCurrentStepComplete(result);
         api.deleteDatabaseMigrationTask().then(() => {
-          if (currentStepId === 'execute-migrations') {
-            // After executing migrations, loop back to check for more migrations
-            // Find the check-migrations-loop step and reset it to pending while preserving history
+          if (currentStepId.startsWith('execute-migrations')) {
+            // After executing migrations, create new workflow steps for next iteration
             updateState(prev => {
-              const checkMigrationIndex = prev.steps.findIndex(step => step.id === 'check-migrations-loop');
-              const executeStepIndex = prev.steps.findIndex(step => step.id === 'execute-migrations');
+              const executeStepIndex = prev.currentStep;
+              const checkMigrationIndex = prev.steps.findIndex(step => step.id.startsWith('check-migrations-loop'));
               
               if (checkMigrationIndex !== -1 && executeStepIndex !== -1) {
                 const newSteps = [...prev.steps];
@@ -296,21 +321,38 @@ export const useWorkflow = () => {
                   migrationHistory: [...(executeStep.migrationHistory || []), executionHistory]
                 };
                 
-                // Reset check step to pending but preserve its history
-                const checkStep = newSteps[checkMigrationIndex];
-                newSteps[checkMigrationIndex] = {
-                  ...checkStep,
+                // Get current cycle number for creating new steps
+                const allMigrationHistory = [
+                  ...(executeStep.migrationHistory || []),
+                  executionHistory
+                ];
+                const maxCycle = Math.max(...allMigrationHistory.map(h => h.cycle), 0);
+                const nextCycle = maxCycle + 1;
+                
+                // Create new check step for next iteration with clean state
+                const newCheckStep: WorkflowStep = {
+                  id: `check-migrations-loop-${nextCycle}`,
+                  title: `Check Database Migrations (Cycle ${nextCycle})`,
+                  description: `Checking for pending database migrations in cycle ${nextCycle}`,
                   status: 'pending',
-                  startTime: undefined,
-                  endTime: undefined,
-                  error: undefined,
-                  data: undefined
-                  // Keep migrationHistory intact
+                  migrationHistory: [] // Start with empty history for new cycle
                 };
+                
+                // Create new execute step for next iteration with clean state
+                const newExecuteStep: WorkflowStep = {
+                  id: `execute-migrations-${nextCycle}`,
+                  title: `Execute Database Migrations (Cycle ${nextCycle})`,
+                  description: `Executing database migrations in cycle ${nextCycle}`,
+                  status: 'pending',
+                  migrationHistory: [] // Start with empty history for new cycle
+                };
+                
+                // Insert new steps after the current execute step
+                newSteps.splice(executeStepIndex + 1, 0, newCheckStep, newExecuteStep);
                 
                 return {
                   ...prev,
-                  currentStep: checkMigrationIndex,
+                  currentStep: executeStepIndex + 1, // Move to new check step
                   steps: newSteps
                 };
               }
@@ -393,6 +435,36 @@ export const useWorkflow = () => {
     }));
 
     // Use the ref to avoid dependency issues
+    setTimeout(() => executeCurrentStepRef.current?.(), 100);
+  }, [updateState]);
+
+  const startWorkflowFromStep = useCallback((stepId: string) => {
+    updateState(prev => {
+      const stepIndex = prev.steps.findIndex(step => step.id === stepId);
+      if (stepIndex === -1) {
+        console.error(`Step ${stepId} not found`);
+        return prev;
+      }
+
+      // Mark all previous steps as skipped
+      const newSteps = prev.steps.map((step, index) => {
+        if (index < stepIndex) {
+          return { ...step, status: 'skipped' as const };
+        }
+        return step;
+      });
+
+      return {
+        ...prev,
+        isRunning: true,
+        isPaused: false,
+        currentStep: stepIndex,
+        startTime: new Date(),
+        endTime: undefined,
+        error: undefined,
+        steps: newSteps
+      };
+    });
     setTimeout(() => executeCurrentStepRef.current?.(), 100);
   }, [updateState]);
 
@@ -504,12 +576,34 @@ export const useWorkflow = () => {
   }, [migrationPolling]);
 
   const executeExecuteMigrations = useCallback(async () => {
-    // Get the stored migration hash from the previous step
-    const checkMigrationsStep = state.steps.find(step => step.id === 'check-migrations-loop');
+    // Get the stored migration hash from the corresponding check step
+    const currentExecuteStep = state.steps[state.currentStep];
+    
+    // Extract cycle number from execute step ID
+    let currentCycle = '1';
+    if (currentExecuteStep?.id.startsWith('execute-migrations-')) {
+      const cyclePart = currentExecuteStep.id.replace('execute-migrations-', '');
+      if (cyclePart && !isNaN(Number(cyclePart))) {
+        currentCycle = cyclePart;
+      }
+    }
+    
+    // Find the corresponding check step for this cycle
+    const checkStepId = currentCycle === '1' ? 'check-migrations-loop' : `check-migrations-loop-${currentCycle}`;
+    const checkMigrationsStep = state.steps.find(step => step.id === checkStepId);
     const migrationHash = checkMigrationsStep?.data?.hash;
     
     if (!migrationHash) {
-      markCurrentStepError('No migration hash found from previous step');
+      const debugInfo = {
+        currentExecuteStepId: currentExecuteStep?.id,
+        currentCycle,
+        checkStepId,
+        checkStepFound: !!checkMigrationsStep,
+        checkStepData: checkMigrationsStep?.data,
+        allStepIds: state.steps.map(s => s.id)
+      };
+      console.error('Migration hash debug info:', debugInfo);
+      markCurrentStepError(`No migration hash found from step ${checkStepId}. Debug: ${JSON.stringify(debugInfo)}`);
       return;
     }
     
@@ -522,7 +616,7 @@ export const useWorkflow = () => {
       withDeletes: withDeletes
     });
     migrationPolling.startPolling();
-  }, [migrationPolling, state.steps, state.config.withDeletes, markCurrentStepError]);
+  }, [migrationPolling, state.steps, state.currentStep, state.config.withDeletes, markCurrentStepError]);
 
   const executeUpdateVersions = useCallback(async () => {
     const result = await api.updateVersionInfo();
@@ -570,7 +664,17 @@ export const useWorkflow = () => {
     });
 
     try {
-      const executor = stepExecutorsRef.current[currentStep.id as keyof typeof stepExecutorsRef.current];
+      // Handle dynamic step IDs by finding the base step type
+      let executorKey = currentStep.id;
+      
+      // Map dynamic step IDs to their base executors
+      if (currentStep.id.startsWith('check-migrations-loop')) {
+        executorKey = 'check-migrations-loop';
+      } else if (currentStep.id.startsWith('execute-migrations')) {
+        executorKey = 'execute-migrations';
+      }
+      
+      const executor = stepExecutorsRef.current[executorKey as keyof typeof stepExecutorsRef.current];
       if (executor) {
         await executor();
       } else {
@@ -668,16 +772,59 @@ export const useWorkflow = () => {
   }, [moveToNextStep, updateState]);
 
   const skipMigrations = useCallback(() => {
-    // Skip the execute-migrations step and continue to next workflow step
+    // Skip the current execute-migrations step and continue to next workflow step
     updateState(prev => {
-      const executeStepIndex = prev.steps.findIndex(step => step.id === 'execute-migrations');
-      if (executeStepIndex !== -1) {
-        const newSteps = [...prev.steps];
-        newSteps[executeStepIndex] = { ...newSteps[executeStepIndex], status: 'skipped' };
+      const currentStep = prev.steps[prev.currentStep];
+      
+      // If current step is a check step, find and skip the corresponding execute step
+      if (currentStep?.id.startsWith('check-migrations-loop')) {
+        const currentCycle = currentStep.id.includes('-') ? 
+          currentStep.id.split('-').pop() : '1';
+        const executeStepId = currentCycle === '1' ? 'execute-migrations' : `execute-migrations-${currentCycle}`;
+        const executeStepIndex = prev.steps.findIndex(step => step.id === executeStepId);
         
+        if (executeStepIndex !== -1) {
+          const newSteps = [...prev.steps];
+          newSteps[executeStepIndex] = { ...newSteps[executeStepIndex], status: 'skipped' };
+          
+          // Move to the step after the execute step (should be update-versions or next workflow step)
+          let nextStepIndex = executeStepIndex + 1;
+          
+          // Skip any additional migration cycle steps that were created
+          while (nextStepIndex < newSteps.length && 
+                 (newSteps[nextStepIndex].id.startsWith('check-migrations-loop-') || 
+                  newSteps[nextStepIndex].id.startsWith('execute-migrations-'))) {
+            newSteps[nextStepIndex] = { ...newSteps[nextStepIndex], status: 'skipped' };
+            nextStepIndex++;
+          }
+          
+          return {
+            ...prev,
+            currentStep: nextStepIndex,
+            steps: newSteps,
+            isRunning: true,
+            isPaused: false
+          };
+        }
+      }
+      
+      return prev;
+    });
+    setTimeout(() => executeCurrentStepRef.current?.(), 100);
+  }, [updateState]);
+
+  const skipComposerUpdate = useCallback(() => {
+    // Skip the composer-update step and move to migrations
+    updateState(prev => {
+      const composerUpdateIndex = prev.steps.findIndex(step => step.id === 'composer-update');
+      if (composerUpdateIndex !== -1) {
+        const newSteps = [...prev.steps];
+        newSteps[composerUpdateIndex] = { ...newSteps[composerUpdateIndex], status: 'skipped' };
+        
+        // Move to next step after composer-update (should be check-migrations-loop)
         return {
           ...prev,
-          currentStep: executeStepIndex + 1, // Move past the execute-migrations step
+          currentStep: composerUpdateIndex + 1,
           steps: newSteps,
           isRunning: true,
           isPaused: false
@@ -692,11 +839,13 @@ export const useWorkflow = () => {
     state,
     initializeWorkflow,
     startWorkflow,
+    startWorkflowFromStep,
     stopWorkflow,
     resumeWorkflow,
     clearPendingTasks,
     confirmMigrations,
     skipMigrations,
+    skipComposerUpdate,
     isComplete: state.currentStep >= state.steps.length && !state.isRunning,
     hasPendingMigrations: state.steps.find(step => step.id === 'check-migrations-loop')?.status === 'complete' && 
                          state.steps.find(step => step.id === 'check-migrations-loop')?.data?.hash &&

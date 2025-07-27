@@ -41,7 +41,8 @@ interface WorkflowTimelineProps {
   onSkipMigrations: () => void;
   onCancelMigrations: () => void;
   onContinueUpdate: () => void;
-  onStopWorkflow: () => void;
+  onSkipComposerUpdate: () => void;
+  onCancelWorkflow: () => void;
   configBg: string;
   getEstimatedTime: () => string;
 }
@@ -59,7 +60,8 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
   onSkipMigrations,
   onCancelMigrations,
   onContinueUpdate,
-  onStopWorkflow,
+  onSkipComposerUpdate,
+  onCancelWorkflow,
   configBg
 }) => {
   const mutedColor = useColorModeValue('gray.500', 'gray.400');
@@ -204,7 +206,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
         {data.sponsor && renderSponsor(data.sponsor)}
         
         {data.operations.map((operation: any, index: number) => (
-          <Box key={index} p={4} borderWidth="1px" borderRadius="md" bg={cardBg}>
+          <Box key={index} p={4} borderWidth="1px" borderRadius="md" bg={cardBg} maxW="100%" minW={0}>
             <VStack align="stretch" gap={3}>
               <HStack justify="space-between" align="start">
                 <Text fontSize="sm" fontWeight="bold" color="blue.600" flex="1">
@@ -220,14 +222,14 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
               )}
               
               {operation.console && operation.console.trim() && (
-                <Collapsible.Root>
+                <Collapsible.Root maxW="100%" width="100%">
                   <Collapsible.Trigger asChild>
                     <Button variant="outline" size="xs" width="fit-content">
                       <ChevronDown size={12} /> View Console Output
                     </Button>
                   </Collapsible.Trigger>
-                  <Collapsible.Content>
-                    <Box mt={2}>
+                  <Collapsible.Content maxW="100%" overflow="hidden">
+                    <Box mt={2} maxW="100%" overflowX="hidden">
                       <Code 
                         fontSize="xs" 
                         p={3} 
@@ -237,6 +239,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                         color="white"
                         borderRadius="md"
                         maxH="300px"
+                        width="100%"
                         overflowY="auto"
                         overflowX="auto"
                         fontFamily="mono"
@@ -257,107 +260,30 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
   const renderMigrationOperations = (data: any) => {
     if (!data || !data.operations) return null;
 
-    const getOperationBadge = (status: string) => {
-      switch (status) {
-        case 'complete':
-          return <Badge colorPalette="green" size="sm">Complete</Badge>;
-        case 'active':
-          return <Badge colorPalette="blue" size="sm">Running</Badge>;
-        case 'pending':
-          return <Badge colorPalette="gray" size="sm">Pending</Badge>;
-        case 'error':
-          return <Badge colorPalette="red" size="sm">Error</Badge>;
-        default:
-          return <Badge colorPalette="gray" size="sm">{status}</Badge>;
-      }
-    };
-
     return (
-      <VStack align="stretch" gap={3}>
+      <VStack align="stretch" gap={2}>
         {data.type && (
           <HStack>
-            <Text fontSize="xs" fontWeight="semibold">Migration Type:</Text>
+            <Text fontSize="sm" fontWeight="semibold">Type:</Text>
             <Badge colorPalette="blue" size="sm">{data.type}</Badge>
           </HStack>
         )}
         
-        <Text fontSize="xs" fontWeight="semibold">Database Operations:</Text>
-        {data.operations.map((operation: any, index: number) => (
-          <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg={cardBg}>
-            <HStack justify="space-between" align="start">
-              <Text fontSize="sm" fontWeight="bold" color="orange.600" flex="1">
-                {operation.name || `Operation ${index + 1}`}
-              </Text>
-              {operation.status && getOperationBadge(operation.status)}
-            </HStack>
-          </Box>
-        ))}
+        <HStack>
+          <Text fontSize="sm" fontWeight="semibold">Operations:</Text>
+          <Text fontSize="sm">{data.operations.length} pending</Text>
+        </HStack>
         
         {data.hash && (
           <HStack>
-            <Text fontSize="xs" fontWeight="semibold">Migration Hash:</Text>
-            <Code fontSize="xs">{data.hash}</Code>
+            <Text fontSize="sm" fontWeight="semibold">Hash:</Text>
+            <Code fontSize="sm">{data.hash.substring(0, 12)}...</Code>
           </HStack>
         )}
       </VStack>
     );
   };
 
-  const renderMigrationHistory = (step: WorkflowStep) => {
-    if (!step.migrationHistory || step.migrationHistory.length === 0) return null;
-
-    return (
-      <Box mt={3}>
-        <Text fontSize="xs" fontWeight="semibold" mb={2}>
-          Migration Execution History ({step.migrationHistory.length} cycles):
-        </Text>
-        <VStack align="stretch" gap={2}>
-          {step.migrationHistory.map((history, index) => (
-            <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg={cardBg}>
-              <VStack align="stretch" gap={2}>
-                <HStack justify="space-between">
-                  <HStack>
-                    <Badge 
-                      colorPalette={history.stepType === 'check' ? 'blue' : 'orange'} 
-                      size="xs"
-                    >
-                      Cycle {history.cycle} - {history.stepType === 'check' ? 'Check' : 'Execute'}
-                    </Badge>
-                    <Badge 
-                      colorPalette={
-                        history.status === 'complete' ? 'green' : 
-                        history.status === 'error' ? 'red' : 'gray'
-                      } 
-                      size="xs"
-                    >
-                      {history.status}
-                    </Badge>
-                  </HStack>
-                  <Text fontSize="xs" color={mutedColor}>
-                    {history.timestamp.toLocaleTimeString()}
-                  </Text>
-                </HStack>
-                
-                {history.data.operations && (
-                  <Text fontSize="xs" color={mutedColor}>
-                    {history.data.operations.length} operations 
-                    {history.data.type && ` (${history.data.type})`}
-                    {history.data.hash && ` - Hash: ${history.data.hash.substring(0, 8)}...`}
-                  </Text>
-                )}
-                
-                {history.error && (
-                  <Text fontSize="xs" color="red.500">
-                    Error: {history.error}
-                  </Text>
-                )}
-              </VStack>
-            </Box>
-          ))}
-        </VStack>
-      </Box>
-    );
-  };
 
   const renderPendingTasksConfirmation = (step: WorkflowStep) => {
     if (step.id !== 'check-tasks' || step.status !== 'error' || !hasPendingTasksError) {
@@ -448,7 +374,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
             step.data?.operations && Array.isArray(step.data.operations) ? (
               <VStack align="stretch" gap={3}>
                 {step.data.operations.map((operation: any, index: number) => (
-                  <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg={cardBg}>
+                  <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg={cardBg} maxW="100%" minW={0}>
                     <VStack align="stretch" gap={2}>
                       <HStack justify="space-between" align="start">
                         <Text fontSize="sm" fontWeight="bold" color="blue.600" flex="1">
@@ -478,14 +404,14 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                       )}
                       
                       {operation.console && operation.console.trim() && (
-                        <Collapsible.Root>
+                        <Collapsible.Root maxW="100%" width="100%">
                           <Collapsible.Trigger asChild>
                             <Button variant="outline" size="xs" width="fit-content">
                               <ChevronDown size={12} /> View Console Output
                             </Button>
                           </Collapsible.Trigger>
-                          <Collapsible.Content>
-                            <Box mt={2}>
+                          <Collapsible.Content maxW="100%" overflow="hidden">
+                            <Box mt={2} maxW="100%" overflowX="hidden">
                               <Code 
                                 fontSize="xs" 
                                 p={3} 
@@ -495,6 +421,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                                 color="white"
                                 borderRadius="md"
                                 maxH="300px"
+                                width="100%"
                                 overflowY="auto"
                                 overflowX="auto"
                                 fontFamily="mono"
@@ -536,7 +463,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
   };
 
   const renderMigrationConfirmation = (step: WorkflowStep) => {
-    if (step.id !== 'check-migrations-loop' || !hasPendingMigrations) {
+    if (!step.id.startsWith('check-migrations-loop') || !hasPendingMigrations) {
       return null;
     }
 
@@ -558,126 +485,54 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
           </Box>
         </Alert.Root>
         
-        <VStack align="stretch" gap={3}>
-          {summary && (
-            <Box p={3} bg={configBg} borderRadius="md">
-              <Text fontSize="sm" fontWeight="semibold" mb={3}>Current Migration Summary:</Text>
-              <VStack align="stretch" gap={2}>
-                <HStack justify="space-between">
-                  <Text fontSize="sm">Migration Type:</Text>
-                  <Badge colorPalette="blue" size="sm">{summary.migrationType}</Badge>
+        {summary && (
+          <Box p={3} bg={configBg} borderRadius="md">
+            <Text fontSize="sm" fontWeight="semibold" mb={2}>Migration Summary:</Text>
+            <VStack align="stretch" gap={2}>
+              <HStack justify="space-between">
+                <Text fontSize="sm">Type:</Text>
+                <Badge colorPalette="blue" size="sm">{summary.migrationType}</Badge>
+              </HStack>
+              <HStack justify="space-between">
+                <Text fontSize="sm">Operations:</Text>
+                <Text fontSize="sm" fontWeight="semibold">{summary.totalOperations}</Text>
+              </HStack>
+              
+              {summary.operationBreakdown.length > 0 && (
+                <HStack gap={2} flexWrap="wrap">
+                  {summary.operationBreakdown.map(({ operation, count }: { operation: string; count: number }) => (
+                    <Badge 
+                      key={operation}
+                      colorPalette={
+                        operation === 'DROP' ? 'red' :
+                        operation === 'CREATE' ? 'green' :
+                        operation === 'ALTER' ? 'orange' :
+                        'gray'
+                      }
+                      size="sm"
+                    >
+                      {operation}: {count}
+                    </Badge>
+                  ))}
                 </HStack>
-                <HStack justify="space-between">
-                  <Text fontSize="sm">Total Operations:</Text>
-                  <Text fontSize="sm" fontWeight="semibold">{summary.totalOperations}</Text>
-                </HStack>
-                
-                {summary.operationBreakdown.length > 0 && (
-                  <>
-                    <Text fontSize="sm" fontWeight="semibold" mt={2}>Operations by Type:</Text>
-                    <VStack align="stretch" gap={1}>
-                      {summary.operationBreakdown.map(({ operation, count }: { operation: string; count: number }) => (
-                        <HStack key={operation} justify="space-between">
-                          <Text fontSize="sm">{operation}:</Text>
-                          <Badge 
-                            colorPalette={
-                              operation === 'DROP' ? 'red' :
-                              operation === 'CREATE' ? 'green' :
-                              operation === 'ALTER' ? 'orange' :
-                              'gray'
-                            }
-                            size="sm"
-                          >
-                            {count}
-                          </Badge>
-                        </HStack>
-                      ))}
-                    </VStack>
-                  </>
-                )}
-                
-                {summary.migrationHash && (
-                  <HStack justify="space-between" mt={2}>
-                    <Text fontSize="xs">Hash:</Text>
-                    <Code fontSize="xs">{summary.migrationHash.substring(0, 12)}...</Code>
-                  </HStack>
-                )}
-              </VStack>
-            </Box>
-          )}
-          
-          {step.migrationHistory && step.migrationHistory.length > 0 && (
-            <Box p={3} bg={configBg} borderRadius="md">
-              <Text fontSize="sm" fontWeight="semibold" mb={2}>
-                Previous Migration Cycles ({step.migrationHistory.length}):
-              </Text>
-              <VStack align="stretch" gap={2}>
-                {step.migrationHistory.slice(-3).map((history, index) => (
-                  <HStack key={index} justify="space-between" align="center">
-                    <HStack>
-                      <Badge 
-                        colorPalette={history.stepType === 'check' ? 'blue' : 'orange'} 
-                        size="xs"
-                      >
-                        Cycle {history.cycle}
-                      </Badge>
-                      <Text fontSize="xs">
-                        {history.stepType === 'check' ? 'Check' : 'Execute'}
-                      </Text>
-                    </HStack>
-                    <HStack>
-                      <Badge 
-                        colorPalette={
-                          history.status === 'complete' ? 'green' : 
-                          history.status === 'error' ? 'red' : 'gray'
-                        } 
-                        size="xs"
-                      >
-                        {history.status}
-                      </Badge>
-                      <Text fontSize="xs" color="gray.500">
-                        {history.timestamp.toLocaleTimeString()}
-                      </Text>
-                    </HStack>
-                  </HStack>
-                ))}
-                {step.migrationHistory.length > 3 && (
-                  <Text fontSize="xs" color="gray.500" textAlign="center">
-                    ... and {step.migrationHistory.length - 3} more cycles
-                  </Text>
-                )}
-              </VStack>
-            </Box>
-          )}
-        </VStack>
+              )}
+            </VStack>
+          </Box>
+        )}
         
-        <Box p={3} borderWidth="1px" borderRadius="md">
-          <Text fontSize="sm" fontWeight="semibold" mb={2}>Migration Settings:</Text>
-          <HStack gap={4}>
-            <Text fontSize="sm">
-              <strong>Include DROP queries:</strong> {config.withDeletes ? 'Yes' : 'No'}
-            </Text>
-          </HStack>
-          {config.withDeletes && (
-            <Alert.Root status="warning" size="sm" mt={2}>
-              <Alert.Indicator>
-                <AlertTriangle size={16} />
-              </Alert.Indicator>
-              <Alert.Description fontSize="xs">
-                DROP queries will be executed, which may remove data or database structures.
-              </Alert.Description>
-            </Alert.Root>
-          )}
-        </Box>
+        {config.withDeletes && (
+          <Alert.Root status="warning" size="sm">
+            <Alert.Indicator>
+              <AlertTriangle size={16} />
+            </Alert.Indicator>
+            <Alert.Description fontSize="sm">
+              DROP queries enabled - may remove data or database structures.
+            </Alert.Description>
+          </Alert.Root>
+        )}
         
         <Text fontSize="sm">
-          <strong>Important:</strong> Database migrations will modify your database structure. 
-          It's recommended to have a backup before proceeding.
-        </Text>
-        
-        <Text fontSize="sm">
-          You can either proceed with the migrations now, or skip them and run them manually later 
-          through the Expert functions.
+          Proceed with migrations, skip them, or cancel the workflow.
         </Text>
 
         <HStack gap={3}>
@@ -746,16 +601,19 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
         </Text>
         
         <Text fontSize="sm" color="gray.600">
-          You can continue with the update or stop the workflow here. If you stop, 
-          you can restart the workflow later from the beginning.
+          You can continue with the composer update, skip it and proceed to database migrations, 
+          or cancel the entire workflow.
         </Text>
 
         <HStack gap={3}>
-          <Button variant="ghost" onClick={onStopWorkflow}>
-            Stop Workflow
+          <Button variant="ghost" onClick={onCancelWorkflow}>
+            Cancel Workflow
+          </Button>
+          <Button variant="outline" onClick={onSkipComposerUpdate}>
+            Skip Composer Update
           </Button>
           <Button colorPalette="blue" onClick={onContinueUpdate}>
-            Continue Update
+            Run Composer Update
           </Button>
         </HStack>
       </VStack>
@@ -839,9 +697,6 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
               </Box>
             </Collapsible.Content>
           </Collapsible.Root>
-          
-          {/* Show migration history for migration steps */}
-          {renderMigrationHistory(step)}
         </VStack>
       );
     }
@@ -868,9 +723,6 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
               </Box>
             </Collapsible.Content>
           </Collapsible.Root>
-          
-          {/* Show migration history for any step that might have it */}
-          {renderMigrationHistory(step)}
         </VStack>
       );
     }
