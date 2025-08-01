@@ -38,7 +38,7 @@ export const LogsTab: React.FC<LogsTabProps> = ({ site }) => {
   const logsApi = useApiCall(
     () => LogsApiService.getLogs(site.url),
     {
-      onSuccess: (data) => {
+      onSuccess: (data: any) => {
         setLogs(data.logs || []);
       },
       showErrorToast: true,
@@ -48,7 +48,7 @@ export const LogsTab: React.FC<LogsTabProps> = ({ site }) => {
   const cleanupApi = useApiCall(
     () => LogsApiService.cleanupOldLogs(site.url),
     {
-      onSuccess: (data) => {
+      onSuccess: (data: any) => {
         if (data.success) {
           toast.showSuccess(TOAST_MESSAGES.LOGS_CLEANED(data.deletedCount));
           loadLogs();

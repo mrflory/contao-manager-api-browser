@@ -43,7 +43,7 @@ const SiteDetails: React.FC = () => {
   const loadConfig = useApiCall(
     () => SiteApiService.getConfig(),
     {
-      onSuccess: (data) => {
+      onSuccess: (data: any) => {
         setConfig(data);
       },
       showErrorToast: true,

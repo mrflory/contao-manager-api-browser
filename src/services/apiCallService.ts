@@ -70,7 +70,7 @@ export class ApiCallService {
   /**
    * Extract status code from error object
    */
-  private static extractStatusCode(error: unknown): number {
+  private static extractStatusCode(error: any): number {
     if (error?.response?.status) {
       return error.response.status;
     }

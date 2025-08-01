@@ -56,7 +56,7 @@ export interface WorkflowStep {
   startTime?: Date;
   endTime?: Date;
   error?: string;
-  data?: unknown;
+  data?: any;
   conditional?: boolean; // Whether this step can be skipped
   migrationHistory?: MigrationExecutionHistory[]; // Track migration execution cycles
 }

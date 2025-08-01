@@ -184,7 +184,7 @@ export const formatTokenInfo = (data: { success: boolean; tokenInfo: TokenInfo; 
   );
 };
 
-export const formatDatabaseBackups = (data: unknown[]) => {
+export const formatDatabaseBackups = (data: any[]) => {
   if (!Array.isArray(data) || data.length === 0) {
     return (
       <Alert.Root status="info">
@@ -246,7 +246,7 @@ export const formatDatabaseBackups = (data: unknown[]) => {
   );
 };
 
-export const formatInstalledPackages = (data: unknown) => {
+export const formatInstalledPackages = (data: any) => {
   if (!data || typeof data !== 'object') {
     return (
       <Alert.Root status="info">
@@ -279,7 +279,7 @@ export const formatInstalledPackages = (data: unknown) => {
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {packages.map(([name, pkg]: [string, unknown]) => (
+            {packages.map(([name, pkg]: [string, any]) => (
               <Table.Row key={name}>
                 <Table.Cell>
                   <Code fontSize="sm">{name}</Code>

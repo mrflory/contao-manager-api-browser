@@ -30,7 +30,7 @@ export interface FormValidators {
   minLength?: number;
   maxLength?: number;
   pattern?: RegExp;
-  custom?: (value: unknown) => ValidationResult;
+  custom?: (value: any) => ValidationResult;
 }
 
 export interface FormFieldConfig {

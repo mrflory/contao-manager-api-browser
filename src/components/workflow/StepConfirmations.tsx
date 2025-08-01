@@ -129,7 +129,7 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
             ) : 
             step.data?.operations && Array.isArray(step.data.operations) ? (
               <VStack align="stretch" gap={3}>
-                {step.data.operations.map((operation: unknown, index: number) => (
+                {step.data.operations.map((operation: any, index: number) => (
                   <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg={cardBg} maxW="100%" minW={0}>
                     <VStack align="stretch" gap={2}>
                       <HStack justify="space-between" align="start">
@@ -335,7 +335,7 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
             <Text fontSize="sm" fontWeight="semibold" mb={2}>Dry-run summary:</Text>
             {step.data.operations && Array.isArray(step.data.operations) ? (
               <VStack align="stretch" gap={2}>
-                {step.data.operations.map((operation: unknown, index: number) => (
+                {step.data.operations.map((operation: any, index: number) => (
                   <HStack key={index} justify="space-between" align="center">
                     <Text fontSize="sm" flex="1">
                       {operation.summary}
