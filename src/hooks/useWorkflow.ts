@@ -778,9 +778,18 @@ export const useWorkflow = () => {
       
       // If current step is a check step, find and skip the corresponding execute step
       if (currentStep?.id.startsWith('check-migrations-loop')) {
-        const currentCycle = currentStep.id.includes('-') ? 
-          currentStep.id.split('-').pop() : '1';
-        const executeStepId = currentCycle === '1' ? 'execute-migrations' : `execute-migrations-${currentCycle}`;
+        // Handle both 'check-migrations-loop' (cycle 1) and 'check-migrations-loop-2', 'check-migrations-loop-3', etc.
+        let executeStepId: string;
+        if (currentStep.id === 'check-migrations-loop') {
+          // First cycle
+          executeStepId = 'execute-migrations';
+        } else {
+          // Extract cycle number from something like 'check-migrations-loop-2'
+          const cycleMatch = currentStep.id.match(/check-migrations-loop-(\d+)$/);
+          const cycle = cycleMatch ? cycleMatch[1] : '2';
+          executeStepId = `execute-migrations-${cycle}`;
+        }
+        
         const executeStepIndex = prev.steps.findIndex(step => step.id === executeStepId);
         
         if (executeStepIndex !== -1) {
