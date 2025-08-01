@@ -3,13 +3,13 @@ import { ApiCallService } from '../services/apiCallService';
 import { useToastNotifications } from './useToastNotifications';
 import { ApiCallState, ApiCallOptions, ApiFunction } from '../types/apiTypes';
 
-export interface UseApiCallResult<T = any> {
+export interface UseApiCallResult<T = unknown> {
   state: ApiCallState<T>;
-  execute: (params?: any) => Promise<T | undefined>;
+  execute: (params?: unknown) => Promise<T | undefined>;
   reset: () => void;
 }
 
-export const useApiCall = <T = any, P = any>(
+export const useApiCall = <T = unknown, P = unknown>(
   apiFunction: ApiFunction<T, P>,
   options: ApiCallOptions = {}
 ): UseApiCallResult<T> => {

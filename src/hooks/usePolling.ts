@@ -8,9 +8,9 @@ interface UsePollingOptions {
 }
 
 export const usePolling = (
-  pollFunction: () => Promise<any>,
-  shouldContinue: (result: any) => boolean,
-  onResult: (result: any) => void,
+  pollFunction: () => Promise<unknown>,
+  shouldContinue: (result: unknown) => boolean,
+  onResult: (result: unknown) => void,
   options: UsePollingOptions = {}
 ) => {
   const {

@@ -4,7 +4,6 @@ import {
   HStack,
   Button,
   Heading,
-  Separator,
   Box,
   Text,
 } from '@chakra-ui/react';
@@ -68,7 +67,8 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
   };
 
   const handleReauthSubmit = async () => {
-    await authActions.initiateReauth(site.url, reauthScope);
+    authActions.setScope(reauthScope);
+    await authActions.initiateReauth(site.url);
   };
 
   const handleRemoveSite = async () => {

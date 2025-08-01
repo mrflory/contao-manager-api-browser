@@ -18,7 +18,7 @@ export interface Config {
   activeSite?: string;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -56,7 +56,7 @@ export interface WorkflowStep {
   startTime?: Date;
   endTime?: Date;
   error?: string;
-  data?: any;
+  data?: unknown;
   conditional?: boolean; // Whether this step can be skipped
   migrationHistory?: MigrationExecutionHistory[]; // Track migration execution cycles
 }

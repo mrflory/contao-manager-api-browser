@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
-  Heading,
   Button,
   Box,
   Flex,
@@ -52,8 +51,10 @@ const SiteDetails: React.FC = () => {
   );
 
   const updateSiteName = useApiCall(
-    ({ siteUrl, newName }: { siteUrl: string; newName: string }) => 
-      SiteApiService.updateSiteName(siteUrl, newName),
+    (params?: { siteUrl: string; newName: string }) => {
+      if (!params) throw new Error('Parameters required for updateSiteName');
+      return SiteApiService.updateSiteName(params.siteUrl, params.newName);
+    },
     {
       onSuccess: () => {
         toast.showSuccess(TOAST_MESSAGES.SITE_NAME_UPDATED);

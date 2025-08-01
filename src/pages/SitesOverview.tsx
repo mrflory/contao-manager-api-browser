@@ -31,7 +31,10 @@ const SitesOverview: React.FC = () => {
   );
 
   const setActiveSiteApi = useApiCall(
-    (url: string) => SiteApiService.setActiveSite(url),
+    (url?: string) => {
+      if (!url) throw new Error('URL is required for setActiveSite');
+      return SiteApiService.setActiveSite(url);
+    },
     {
       showErrorToast: true,
     }

@@ -3,7 +3,7 @@ import { ValidationResult, FormValidators } from '../types/formTypes';
 /**
  * Validates required fields
  */
-export const validateRequired = (value: any): ValidationResult => {
+export const validateRequired = (value: unknown): ValidationResult => {
   if (value === null || value === undefined || value === '') {
     return { isValid: false, error: 'This field is required' };
   }
@@ -81,7 +81,7 @@ export const validateScope = (scope: string): ValidationResult => {
 /**
  * Generic field validator that applies multiple validation rules
  */
-export const validateField = (value: any, validators: FormValidators): ValidationResult => {
+export const validateField = (value: unknown, validators: FormValidators): ValidationResult => {
   // Required validation
   if (validators.required) {
     const requiredResult = validateRequired(value);

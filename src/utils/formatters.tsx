@@ -1,7 +1,5 @@
-import React from 'react';
 import {
   VStack,
-  HStack,
   Box,
   Text,
   Badge,
@@ -186,7 +184,7 @@ export const formatTokenInfo = (data: { success: boolean; tokenInfo: TokenInfo; 
   );
 };
 
-export const formatDatabaseBackups = (data: any[]) => {
+export const formatDatabaseBackups = (data: unknown[]) => {
   if (!Array.isArray(data) || data.length === 0) {
     return (
       <Alert.Root status="info">
@@ -248,7 +246,7 @@ export const formatDatabaseBackups = (data: any[]) => {
   );
 };
 
-export const formatInstalledPackages = (data: any) => {
+export const formatInstalledPackages = (data: unknown) => {
   if (!data || typeof data !== 'object') {
     return (
       <Alert.Root status="info">
@@ -281,7 +279,7 @@ export const formatInstalledPackages = (data: any) => {
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {packages.map(([name, pkg]: [string, any]) => (
+            {packages.map(([name, pkg]: [string, unknown]) => (
               <Table.Row key={name}>
                 <Table.Cell>
                   <Code fontSize="sm">{name}</Code>

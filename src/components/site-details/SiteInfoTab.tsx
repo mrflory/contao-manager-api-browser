@@ -10,7 +10,6 @@ import {
   GridItem,
 } from '@chakra-ui/react';
 import { Site } from '../../types';
-import { VersionBadges } from '../display/VersionBadges';
 import { formatDateTime } from '../../utils/dateUtils';
 
 export interface SiteInfoTabProps {

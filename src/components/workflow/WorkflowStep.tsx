@@ -17,8 +17,8 @@ import { StepConfirmations } from './StepConfirmations';
 
 export interface WorkflowStepProps {
   step: WorkflowStepType;
-  config: any;
-  createMigrationSummary: (data: any) => any;
+  config: unknown;
+  createMigrationSummary: (data: unknown) => unknown;
   hasPendingTasksError: boolean;
   hasPendingMigrations: boolean;
   hasDryRunComplete: boolean;

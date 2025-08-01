@@ -1,11 +1,11 @@
 import { api } from '../utils/api';
-import { ApiCallResult, ApiFunction, StandardApiResponse } from '../types/apiTypes';
+import { ApiCallResult, ApiFunction } from '../types/apiTypes';
 
 export class ApiCallService {
   /**
    * Generic API call wrapper with standardized error handling
    */
-  static async executeApiCall<T = any, P = any>(
+  static async executeApiCall<T = unknown, P = unknown>(
     apiFunction: ApiFunction<T, P>,
     params?: P,
     context?: string
@@ -33,7 +33,7 @@ export class ApiCallService {
   /**
    * Execute API call with automatic loading state management
    */
-  static async executeWithLoading<T = any, P = any>(
+  static async executeWithLoading<T = unknown, P = unknown>(
     apiFunction: ApiFunction<T, P>,
     params?: P,
     options?: {
@@ -55,7 +55,7 @@ export class ApiCallService {
   /**
    * Format API response for display in modals
    */
-  static formatApiResponse<T = any>(
+  static formatApiResponse<T = unknown>(
     data: T,
     formatFunction?: (data: T) => React.ReactNode
   ): React.ReactNode {
@@ -70,7 +70,7 @@ export class ApiCallService {
   /**
    * Extract status code from error object
    */
-  private static extractStatusCode(error: any): number {
+  private static extractStatusCode(error: unknown): number {
     if (error?.response?.status) {
       return error.response.status;
     }
@@ -108,57 +108,27 @@ export class SiteApiService {
   /**
    * Save authentication token for a site
    */
-  static async saveToken(token: string, siteUrl: string): Promise<ApiCallResult> {
-    return ApiCallService.executeApiCall(
-      () => api.saveToken(token, siteUrl),
-      undefined,
-      'Saving authentication token'
-    );
-  }
+  static saveToken = api.saveToken;
 
   /**
    * Remove site from configuration
    */
-  static async removeSite(siteUrl: string): Promise<ApiCallResult> {
-    return ApiCallService.executeApiCall(
-      () => api.removeSite(siteUrl),
-      undefined,
-      'Removing site'
-    );
-  }
+  static removeSite = api.removeSite;
 
   /**
    * Update site name
    */
-  static async updateSiteName(siteUrl: string, newName: string): Promise<ApiCallResult> {
-    return ApiCallService.executeApiCall(
-      () => api.updateSiteName(siteUrl, newName),
-      undefined,
-      'Updating site name'
-    );
-  }
+  static updateSiteName = api.updateSiteName;
 
   /**
    * Set active site
    */
-  static async setActiveSite(siteUrl: string): Promise<ApiCallResult> {
-    return ApiCallService.executeApiCall(
-      () => api.setActiveSite(siteUrl),
-      undefined,
-      'Setting active site'
-    );
-  }
+  static setActiveSite = api.setActiveSite;
 
   /**
    * Update version information for current site
    */
-  static async updateVersionInfo(): Promise<ApiCallResult> {
-    return ApiCallService.executeApiCall(
-      () => api.updateVersionInfo(),
-      undefined,
-      'Updating version information'
-    );
-  }
+  static updateVersionInfo = api.updateVersionInfo;
 }
 
 /**

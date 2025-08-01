@@ -1,11 +1,11 @@
-export interface ApiCallState<T = any> {
+export interface ApiCallState<T = unknown> {
   data?: T;
   loading: boolean;
   error?: string;
 }
 
 export interface ApiCallOptions {
-  onSuccess?: (data: any) => void;
+  onSuccess?: (data: unknown) => void;
   onError?: (error: string) => void;
   showSuccessToast?: boolean;
   showErrorToast?: boolean;
@@ -13,13 +13,13 @@ export interface ApiCallOptions {
   errorMessage?: string;
 }
 
-export interface StandardApiResponse<T = any> {
+export interface StandardApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
 }
 
-export interface ApiCallResult<T = any> {
+export interface ApiCallResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -36,4 +36,4 @@ export interface ApiEndpoint {
   requiresAuth?: boolean;
 }
 
-export type ApiFunction<T = any, P = any> = (params?: P) => Promise<T>;
+export type ApiFunction<T = unknown, P = unknown> = (params?: P) => Promise<T>;

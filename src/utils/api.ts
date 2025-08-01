@@ -3,7 +3,7 @@ import { Config, UpdateStatus, TokenInfo, ApiResponse, Site } from '../types';
 const API_BASE = '/api';
 
 // Helper function for API calls with better error handling
-async function makeApiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
+async function makeApiCall(endpoint: string, options: RequestInit = {}): Promise<unknown> {
   console.log(`[CLIENT] Making API call to: ${endpoint}`);
   console.log(`[CLIENT] Request options:`, options);
   

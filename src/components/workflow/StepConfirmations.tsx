@@ -1,14 +1,14 @@
 import React from 'react';
 import { VStack, HStack, Box, Text, Badge, Button, Alert, Link, Collapsible, Code } from '@chakra-ui/react';
-import { LuInfo as Info, LuTriangleAlert as AlertTriangle, LuCircleCheck as CheckCircle, LuChevronDown as ChevronDown, LuExternalLink as ExternalLink } from 'react-icons/lu';
+import { LuInfo as Info, LuTriangleAlert as AlertTriangle, LuCircleCheck as CheckCircle, LuChevronDown as ChevronDown } from 'react-icons/lu';
 import { WorkflowStep } from '../../types';
 import { useColorModeValue } from '../ui/color-mode';
 import { getOperationBadgeColor, getOperationBadgeText, addLineNumbers } from '../../utils/workflowUtils';
 
 export interface StepConfirmationsProps {
   step: WorkflowStep;
-  config: any;
-  createMigrationSummary: (data: any) => any;
+  config: unknown;
+  createMigrationSummary: (data: unknown) => unknown;
   hasPendingTasksError: boolean;
   hasPendingMigrations: boolean;
   hasDryRunComplete: boolean;
@@ -129,7 +129,7 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
             ) : 
             step.data?.operations && Array.isArray(step.data.operations) ? (
               <VStack align="stretch" gap={3}>
-                {step.data.operations.map((operation: any, index: number) => (
+                {step.data.operations.map((operation: unknown, index: number) => (
                   <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg={cardBg} maxW="100%" minW={0}>
                     <VStack align="stretch" gap={2}>
                       <HStack justify="space-between" align="start">
@@ -320,7 +320,7 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
             <Text fontSize="sm" fontWeight="semibold" mb={2}>Dry-run summary:</Text>
             {step.data.operations && Array.isArray(step.data.operations) ? (
               <VStack align="stretch" gap={2}>
-                {step.data.operations.map((operation: any, index: number) => (
+                {step.data.operations.map((operation: unknown, index: number) => (
                   <HStack key={index} justify="space-between" align="center">
                     <Text fontSize="sm" flex="1">
                       {operation.summary}

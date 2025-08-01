@@ -25,7 +25,7 @@ export const extractDomain = (url: string): string => {
     return urlObj.hostname;
   } catch {
     // Fallback if URL parsing fails
-    const match = url.match(/(?:https?:\/\/)?([^\/]+)/);
+    const match = url.match(/(?:https?:\/\/)?([^/]+)/);
     return match ? match[1] : url;
   }
 };
