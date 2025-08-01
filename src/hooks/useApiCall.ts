@@ -5,7 +5,7 @@ import { ApiCallState, ApiCallOptions, ApiFunction } from '../types/apiTypes';
 
 export interface UseApiCallResult<T = unknown> {
   state: ApiCallState<T>;
-  execute: (params?: unknown) => Promise<T | undefined>;
+  execute: (params?: any) => Promise<T | undefined>;
   reset: () => void;
 }
 

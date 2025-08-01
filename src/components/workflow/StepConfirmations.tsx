@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { VStack, HStack, Box, Text, Badge, Button, Alert, Link, Collapsible, Code } from '@chakra-ui/react';
+import { Checkbox } from '../ui/checkbox';
 import { LuInfo as Info, LuTriangleAlert as AlertTriangle, LuCircleCheck as CheckCircle, LuChevronDown as ChevronDown } from 'react-icons/lu';
 import { WorkflowStep } from '../../types';
 import { useColorModeValue } from '../ui/color-mode';
@@ -7,14 +8,13 @@ import { getOperationBadgeColor, getOperationBadgeText, addLineNumbers } from '.
 
 export interface StepConfirmationsProps {
   step: WorkflowStep;
-  config: unknown;
-  createMigrationSummary: (data: unknown) => unknown;
+  createMigrationSummary: (data: any) => any;
   hasPendingTasksError: boolean;
   hasPendingMigrations: boolean;
   hasDryRunComplete: boolean;
   onClearTasks: () => Promise<void>;
   onCancelPendingTasks: () => void;
-  onConfirmMigrations: () => void;
+  onConfirmMigrations: (withDeletes?: boolean) => void;
   onSkipMigrations: () => void;
   onCancelMigrations: () => void;
   onContinueUpdate: () => void;
@@ -25,7 +25,6 @@ export interface StepConfirmationsProps {
 
 export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
   step,
-  config,
   createMigrationSummary,
   hasPendingTasksError,
   hasPendingMigrations,
@@ -40,6 +39,7 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
   onCancelWorkflow,
   configBg,
 }) => {
+  const [withDeletes, setWithDeletes] = useState(false);
   const mutedColor = useColorModeValue('gray.500', 'gray.400');
   const cardBg = useColorModeValue('white', 'gray.800');
 
@@ -266,7 +266,22 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
           </Box>
         )}
         
-        {config.withDeletes && (
+        <Box p={3} bg={configBg} borderRadius="md">
+          <Text fontSize="sm" fontWeight="semibold" mb={3}>Migration Options:</Text>
+          <VStack align="start" gap={2}>
+            <Checkbox
+              checked={withDeletes}
+              onCheckedChange={(checked) => setWithDeletes(!!checked.checked)}
+            >
+              Execute migrations including DROP queries
+            </Checkbox>
+            <Text fontSize="xs" color="gray.600">
+              Warning: DROP queries may remove data or database structures.
+            </Text>
+          </VStack>
+        </Box>
+        
+        {withDeletes && (
           <Alert.Root status="warning" size="sm">
             <Alert.Indicator>
               <AlertTriangle size={16} />
@@ -288,7 +303,7 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
           <Button variant="outline" onClick={onSkipMigrations}>
             Skip Migrations
           </Button>
-          <Button colorPalette="blue" onClick={onConfirmMigrations}>
+          <Button colorPalette="blue" onClick={() => onConfirmMigrations(withDeletes)}>
             Run Migrations
           </Button>
         </HStack>

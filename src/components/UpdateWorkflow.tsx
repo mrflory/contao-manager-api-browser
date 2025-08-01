@@ -64,9 +64,7 @@ const createMigrationSummary = (migrationData: any) => {
 
 export const UpdateWorkflow: React.FC = () => {
   const [config, setConfig] = useState<WorkflowConfig>({ 
-    performDryRun: true,
-    withDeletes: false,
-    skipComposer: false
+    performDryRun: true
   });
   
   const configBg = useColorModeValue('gray.50', 'gray.700');
@@ -132,8 +130,8 @@ export const UpdateWorkflow: React.FC = () => {
     });
   };
 
-  const handleConfirmMigrations = () => {
-    confirmMigrations();
+  const handleConfirmMigrations = (withDeletes?: boolean) => {
+    confirmMigrations(withDeletes);
     toast.showInfo(TOAST_MESSAGES.MIGRATIONS_CONFIRMED);
   };
 
@@ -191,9 +189,6 @@ export const UpdateWorkflow: React.FC = () => {
   };
 
   const getEstimatedTime = () => {
-    if (config.skipComposer) {
-      return "2-3 minutes"; // Only manager updates and migrations
-    }
     const baseTime = 5; // Base 5 minutes
     const dryRunTime = config.performDryRun ? 3 : 0;
     return `${baseTime + dryRunTime}-${baseTime + dryRunTime + 5} minutes`;
@@ -270,18 +265,6 @@ export const UpdateWorkflow: React.FC = () => {
                   onCheckedChange={(checked) => setConfig(prev => ({ ...prev, performDryRun: !checked.checked }))}
                 >
                   Skip composer dry-run
-                </Checkbox>
-                <Checkbox
-                  checked={config.withDeletes}
-                  onCheckedChange={(checked) => setConfig(prev => ({ ...prev, withDeletes: !!checked.checked }))}
-                >
-                  Execute migrations including DROP queries
-                </Checkbox>
-                <Checkbox
-                  checked={config.skipComposer}
-                  onCheckedChange={(checked) => setConfig(prev => ({ ...prev, skipComposer: !!checked.checked }))}
-                >
-                  Skip composer steps (testing mode)
                 </Checkbox>
                 <Text fontSize="sm" color="gray.600">
                   <strong>Estimated time:</strong> {getEstimatedTime()}
@@ -378,7 +361,6 @@ export const UpdateWorkflow: React.FC = () => {
           <WorkflowTimeline 
             steps={state.steps} 
             currentStep={state.currentStep}
-            config={config}
             createMigrationSummary={createMigrationSummary}
             hasPendingTasksError={!!hasPendingTasksError}
             hasPendingMigrations={!!hasPendingMigrations}

@@ -1,20 +1,19 @@
 import React, { useEffect, useRef } from 'react';
 import { TimelineRoot } from './ui/timeline';
-import { WorkflowStep, WorkflowConfig } from '../types';
+import { WorkflowStep } from '../types';
 import { useToastNotifications } from '../hooks/useToastNotifications';
 import { WorkflowStepComponent } from './workflow/WorkflowStep';
 
 interface WorkflowTimelineProps {
   steps: WorkflowStep[];
   currentStep: number;
-  config: WorkflowConfig;
   createMigrationSummary: (migrationData: any) => any;
   hasPendingTasksError: boolean;
   hasPendingMigrations: boolean;
   hasDryRunComplete: boolean;
   onClearTasks: () => Promise<void>;
   onCancelPendingTasks: () => void;
-  onConfirmMigrations: () => void;
+  onConfirmMigrations: (withDeletes?: boolean) => void;
   onSkipMigrations: () => void;
   onCancelMigrations: () => void;
   onContinueUpdate: () => void;
@@ -26,7 +25,6 @@ interface WorkflowTimelineProps {
 
 export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({ 
   steps, 
-  config,
   createMigrationSummary,
   hasPendingTasksError,
   hasPendingMigrations,
@@ -85,7 +83,6 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
         <WorkflowStepComponent
           key={step.id}
           step={step}
-          config={config}
           createMigrationSummary={createMigrationSummary}
           hasPendingTasksError={hasPendingTasksError}
           hasPendingMigrations={hasPendingMigrations}

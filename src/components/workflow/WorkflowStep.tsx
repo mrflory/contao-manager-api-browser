@@ -17,14 +17,13 @@ import { StepConfirmations } from './StepConfirmations';
 
 export interface WorkflowStepProps {
   step: WorkflowStepType;
-  config: unknown;
-  createMigrationSummary: (data: unknown) => unknown;
+  createMigrationSummary: (data: any) => any;
   hasPendingTasksError: boolean;
   hasPendingMigrations: boolean;
   hasDryRunComplete: boolean;
   onClearTasks: () => Promise<void>;
   onCancelPendingTasks: () => void;
-  onConfirmMigrations: () => void;
+  onConfirmMigrations: (withDeletes?: boolean) => void;
   onSkipMigrations: () => void;
   onCancelMigrations: () => void;
   onContinueUpdate: () => void;
@@ -35,7 +34,6 @@ export interface WorkflowStepProps {
 
 export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
   step,
-  config,
   createMigrationSummary,
   hasPendingTasksError,
   hasPendingMigrations,
@@ -122,7 +120,6 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
                   
                   <StepConfirmations
                     step={step}
-                    config={config}
                     createMigrationSummary={createMigrationSummary}
                     hasPendingTasksError={hasPendingTasksError}
                     hasPendingMigrations={hasPendingMigrations}

@@ -63,8 +63,6 @@ export interface WorkflowStep {
 
 export interface WorkflowConfig {
   performDryRun: boolean;
-  withDeletes?: boolean; // Execute migrations including DROP queries
-  skipComposer?: boolean; // Skip composer dry-run and update steps (for testing)
 }
 
 export interface WorkflowState {

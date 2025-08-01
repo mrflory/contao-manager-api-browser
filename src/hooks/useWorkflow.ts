@@ -26,23 +26,21 @@ const createInitialSteps = (config: WorkflowConfig): WorkflowStep[] => {
     }
   ];
 
-  if (!config.skipComposer) {
-    if (config.performDryRun) {
-      steps.push({
-        id: 'composer-dry-run',
-        title: 'Composer Dry Run',
-        description: 'Test composer update without making changes',
-        status: 'pending'
-      });
-    }
-
+  if (config.performDryRun) {
     steps.push({
-      id: 'composer-update',
-      title: 'Composer Update',
-      description: 'Update all Composer packages',
+      id: 'composer-dry-run',
+      title: 'Composer Dry Run',
+      description: 'Test composer update without making changes',
       status: 'pending'
     });
   }
+
+  steps.push({
+    id: 'composer-update',
+    title: 'Composer Update',
+    description: 'Update all Composer packages',
+    status: 'pending'
+  });
 
   steps.push(
     {
@@ -607,8 +605,9 @@ export const useWorkflow = () => {
       return;
     }
     
-    // Get withDeletes setting from workflow config
-    const withDeletes = state.config.withDeletes || false;
+    // Get withDeletes setting from the check-migrations step data
+    const checkStep = state.steps.find(step => step.id.startsWith('check-migrations-loop'));
+    const withDeletes = checkStep?.data?.withDeletes || false;
     
     // Run the actual migration with the hash and withDeletes option
     await api.startDatabaseMigration({ 
@@ -616,7 +615,7 @@ export const useWorkflow = () => {
       withDeletes: withDeletes
     });
     migrationPolling.startPolling();
-  }, [migrationPolling, state.steps, state.currentStep, state.config.withDeletes, markCurrentStepError]);
+  }, [migrationPolling, state.steps, state.currentStep, markCurrentStepError]);
 
   const executeUpdateVersions = useCallback(async () => {
     const result = await api.updateVersionInfo();
@@ -760,7 +759,17 @@ export const useWorkflow = () => {
     }
   }, [markCurrentStepError, updateState, state.steps, state.currentStep]);
 
-  const confirmMigrations = useCallback(() => {
+  const confirmMigrations = useCallback((withDeletes: boolean = false) => {
+    // Store withDeletes setting in the current step data for use during execution
+    updateState(prev => {
+      const updatedSteps = [...prev.steps];
+      const currentStep = updatedSteps[prev.currentStep];
+      if (currentStep) {
+        currentStep.data = { ...currentStep.data, withDeletes };
+      }
+      return { ...prev, steps: updatedSteps };
+    });
+    
     // Move to the run-migrations step and resume workflow
     moveToNextStep();
     updateState(prev => ({
