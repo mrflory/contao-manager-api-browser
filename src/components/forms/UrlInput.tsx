@@ -1,7 +1,6 @@
 import React from 'react';
 import { Input } from '@chakra-ui/react';
 import { Field } from '../ui/field';
-import { ValidationResult } from '../../types/formTypes';
 import { validateContaoManagerUrl } from '../../utils/urlUtils';
 
 export interface UrlInputProps {
@@ -48,7 +47,7 @@ export const UrlInput: React.FC<UrlInputProps> = ({
     <Field 
       label={label}
       required={required}
-      helpText={helpText}
+      helperText={helpText}
       invalid={!!displayError}
       errorText={displayError}
     >

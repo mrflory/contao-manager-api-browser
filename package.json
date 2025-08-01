@@ -16,8 +16,6 @@
     "dev": "nodemon --ignore data/config.json server.js",
     "dev:react": "vite",
     "dev:full": "concurrently \"npm run dev\" \"npm run dev:react\"",
-    "dev:refactored": "node scripts/dev-refactored.js && npm run dev:full",
-    "dev:original": "node scripts/dev-original.js && npm run dev:full",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",

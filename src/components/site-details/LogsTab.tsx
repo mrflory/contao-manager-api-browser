@@ -30,7 +30,6 @@ export interface LogsTabProps {
 
 export const LogsTab: React.FC<LogsTabProps> = ({ site }) => {
   const [logs, setLogs] = useState<any[]>([]);
-  const [logsTotal, setLogsTotal] = useState(0);
 
   const cardBg = useColorModeValue('white', 'gray.800');
   const toast = useToastNotifications();
@@ -41,7 +40,6 @@ export const LogsTab: React.FC<LogsTabProps> = ({ site }) => {
     {
       onSuccess: (data) => {
         setLogs(data.logs || []);
-        setLogsTotal(data.total || 0);
       },
       showErrorToast: true,
     }

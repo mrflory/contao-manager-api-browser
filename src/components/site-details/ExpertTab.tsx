@@ -9,7 +9,7 @@ import {
   GridItem,
 } from '@chakra-ui/react';
 import { LuSettings as Settings } from 'react-icons/lu';
-import { useApiCall, useLoadingStates } from '../../hooks/useApiCall';
+import { useLoadingStates } from '../../hooks/useApiCall';
 import { useModalState } from '../../hooks/useModalState';
 import { ExpertApiService, TaskApiService } from '../../services/apiCallService';
 import { ApiResultModal } from '../modals/ApiResultModal';

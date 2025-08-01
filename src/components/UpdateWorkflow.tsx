@@ -6,14 +6,13 @@ import {
   Button,
   Text,
   Heading,
-  Badge
+  Alert,
 } from '@chakra-ui/react';
 import { ProgressRoot, ProgressBar } from './ui/progress';
 import { Checkbox } from './ui/checkbox';
-import { Alert } from '@chakra-ui/react';
 import { LuPlay as Play, LuPause as Pause, LuRefreshCw as RefreshCw, LuCircleCheck as CheckCircle } from 'react-icons/lu';
 import { useColorModeValue } from './ui/color-mode';
-import { toaster } from './ui/toaster';
+import { useToastNotifications, TOAST_MESSAGES } from '../hooks/useToastNotifications';
 import { WorkflowTimeline } from './WorkflowTimeline';
 import { useWorkflow } from '../hooks/useWorkflow';
 import { WorkflowConfig } from '../types';
@@ -69,7 +68,9 @@ export const UpdateWorkflow: React.FC = () => {
     withDeletes: false,
     skipComposer: false
   });
+  
   const configBg = useColorModeValue('gray.50', 'gray.700');
+  const toast = useToastNotifications();
   
   const {
     state,
@@ -103,35 +104,19 @@ export const UpdateWorkflow: React.FC = () => {
                            state.isPaused && 
                            currentStep?.id === 'composer-update';
 
-
   const handleStartWorkflow = () => {
     startWorkflow();
-    toaster.create({
-      title: 'Workflow Started',
-      description: 'Contao update workflow has begun',
-      type: 'info',
-      duration: 3000,
-    });
+    toast.showInfo(TOAST_MESSAGES.WORKFLOW_STARTED);
   };
 
   const handleStop = () => {
     stopWorkflow();
-    toaster.create({
-      title: 'Workflow Stopped',
-      description: 'Update workflow has been paused',
-      type: 'warning',
-      duration: 3000,
-    });
+    toast.showWarning(TOAST_MESSAGES.WORKFLOW_STOPPED);
   };
 
   const handleResume = () => {
     resumeWorkflow();
-    toaster.create({
-      title: 'Workflow Resumed',
-      description: 'Update workflow is continuing',
-      type: 'info',
-      duration: 3000,
-    });
+    toast.showInfo(TOAST_MESSAGES.WORKFLOW_RESUMED);
   };
 
   const handleClearTasks = async () => {
@@ -139,96 +124,63 @@ export const UpdateWorkflow: React.FC = () => {
   };
 
   const handleCancelPendingTasks = () => {
-    // Reset the workflow to allow the dialog to appear again on next start
     initializeWorkflow(config);
-    toaster.create({
+    toast.showWarning({
       title: 'Workflow Cancelled',
       description: 'Please resolve pending tasks manually before starting the workflow again.',
-      type: 'warning',
       duration: 5000,
     });
   };
 
   const handleConfirmMigrations = () => {
     confirmMigrations();
-    toaster.create({
-      title: 'Migrations Confirmed',
-      description: 'Database migrations will now be executed',
-      type: 'info',
-      duration: 3000,
-    });
+    toast.showInfo(TOAST_MESSAGES.MIGRATIONS_CONFIRMED);
   };
 
   const handleSkipMigrations = () => {
     skipMigrations();
-    toaster.create({
-      title: 'Migrations Skipped',
-      description: 'Database migrations were skipped. You can run them manually later.',
-      type: 'warning',
-      duration: 5000,
-    });
+    toast.showWarning(TOAST_MESSAGES.MIGRATIONS_SKIPPED);
   };
 
   const handleCancelMigrations = () => {
-    // Reset the workflow to allow the dialog to appear again on next start
     initializeWorkflow(config);
-    toaster.create({
+    toast.showWarning({
       title: 'Workflow Cancelled',
       description: 'Database migrations cancelled. You can resolve them manually and restart the workflow.',
-      type: 'warning',
       duration: 5000,
     });
   };
 
   const handleContinueUpdate = () => {
     resumeWorkflow();
-    toaster.create({
+    toast.showInfo({
       title: 'Update Continuing',
       description: 'Proceeding with composer update',
-      type: 'info',
-      duration: 3000,
     });
   };
 
   const handleSkipComposerUpdate = () => {
     skipComposerUpdate();
-    toaster.create({
+    toast.showWarning({
       title: 'Composer Update Skipped',
       description: 'Skipping composer update and proceeding to database migrations',
-      type: 'warning',
       duration: 5000,
     });
   };
 
   const handleCancelWorkflow = () => {
-    // Reset the workflow to allow the dialog to appear again on next start
     initializeWorkflow(config);
-    toaster.create({
-      title: 'Workflow Cancelled',
-      description: 'Update workflow has been cancelled',
-      type: 'warning',
-      duration: 3000,
-    });
+    toast.showWarning(TOAST_MESSAGES.WORKFLOW_CANCELLED);
   };
 
   const handleStartFromDryRun = () => {
     startWorkflowFromStep('composer-dry-run');
-    toaster.create({
-      title: 'Debug Mode',
-      description: 'Starting workflow from composer dry-run step',
-      type: 'info',
-      duration: 3000,
-    });
+    toast.showInfo(TOAST_MESSAGES.DEBUG_MODE('Starting workflow from composer dry-run step'));
   };
 
   const handleStartFromMigrations = () => {
     startWorkflowFromStep('check-migrations-loop');
-    toaster.create({
-      title: 'Debug Mode', 
-      description: 'Starting workflow from database migration check step',
-      type: 'info',
-      duration: 3000,
-    });
+    toast.showInfo(TOAST_MESSAGES.DEBUG_MODE('Starting workflow from database migration check step'));
   };
 
   const getWorkflowProgress = () => {
@@ -257,18 +209,27 @@ export const UpdateWorkflow: React.FC = () => {
 
   const getStatusBadge = () => {
     const status = getWorkflowStatus();
-    switch (status) {
-      case 'complete':
-        return <Badge colorPalette="green" size="lg">Complete</Badge>;
-      case 'error':
-        return <Badge colorPalette="red" size="lg">Error</Badge>;
-      case 'running':
-        return <Badge colorPalette="blue" size="lg">Running</Badge>;
-      case 'paused':
-        return <Badge colorPalette="orange" size="lg">Paused</Badge>;
-      default:
-        return <Badge colorPalette="gray" size="lg">Ready</Badge>;
-    }
+    const colorMap = {
+      complete: 'green',
+      error: 'red',
+      running: 'blue',
+      paused: 'orange',
+      ready: 'gray'
+    };
+    
+    const textMap = {
+      complete: 'Complete',
+      error: 'Error',
+      running: 'Running',
+      paused: 'Paused',
+      ready: 'Ready'
+    };
+
+    return (
+      <Text color={`${colorMap[status as keyof typeof colorMap]}.500`} fontWeight="semibold">
+        {textMap[status as keyof typeof textMap]}
+      </Text>
+    );
   };
 
   const canStart = !state.isRunning && !isComplete && state.steps.length > 0;
@@ -393,7 +354,6 @@ export const UpdateWorkflow: React.FC = () => {
             )}
           </VStack>
 
-
           {/* Success Alert */}
           {isComplete && !state.error && (
             <Alert.Root status="success">
@@ -410,7 +370,6 @@ export const UpdateWorkflow: React.FC = () => {
           )}
         </VStack>
       </Box>
-
 
       {/* Timeline */}
       {state.steps.length > 0 && (
@@ -437,10 +396,6 @@ export const UpdateWorkflow: React.FC = () => {
           />
         </Box>
       )}
-
-
-
-
     </VStack>
   );
 };

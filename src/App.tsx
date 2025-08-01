@@ -5,10 +5,10 @@ import { Provider } from './components/ui/provider';
 import { Toaster } from './components/ui/toaster';
 import Header from './components/Header';
 
-// Import refactored components
-import SitesOverviewRefactored from './pages/SitesOverviewRefactored';
-import SiteDetailsRefactored from './pages/SiteDetailsRefactored';
-import AddSiteRefactored from './pages/AddSiteRefactored';
+// Import components
+import SitesOverview from './pages/SitesOverview';
+import SiteDetails from './pages/SiteDetails';
+import AddSite from './pages/AddSite';
 
 const App: React.FC = () => {
   return (
@@ -17,9 +17,9 @@ const App: React.FC = () => {
         <Header />
         <Box pt={8}>
           <Routes>
-            <Route path="/" element={<SitesOverviewRefactored />} />
-            <Route path="/site/:siteUrl" element={<SiteDetailsRefactored />} />
-            <Route path="/add-site" element={<AddSiteRefactored />} />
+            <Route path="/" element={<SitesOverview />} />
+            <Route path="/site/:siteUrl" element={<SiteDetails />} />
+            <Route path="/add-site" element={<AddSite />} />
           </Routes>
         </Box>
       </Router>

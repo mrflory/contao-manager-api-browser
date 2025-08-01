@@ -1,77 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Heading,
   Button,
   Text,
-  Box,
   Flex,
-  Spinner,
-  Center,
-  VStack,
-  HStack,
-  Badge,
   Table,
+  Box,
 } from '@chakra-ui/react';
 import { LuPlus as Plus } from 'react-icons/lu';
 import { Tooltip } from "../components/ui/tooltip";
 import { Config } from '../types';
-import { api } from '../utils/api';
+import { useApiCall } from '../hooks/useApiCall';
+import { SiteApiService } from '../services/apiCallService';
+import { LoadingState } from '../components/display/LoadingState';
+import { EmptyState } from '../components/display/EmptyState';
+import { VersionBadges } from '../components/display/VersionBadges';
+import { extractDomain, encodeUrlParam } from '../utils/urlUtils';
+import { formatDateTime } from '../utils/dateUtils';
 
 const SitesOverview: React.FC = () => {
-  const [config, setConfig] = useState<Config | null>(null);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-
-  const extractDomain = (url: string): string => {
-    try {
-      const urlObj = new URL(url);
-      return urlObj.hostname;
-    } catch {
-      // Fallback if URL parsing fails
-      const match = url.match(/(?:https?:\/\/)?([^\/]+)/);
-      return match ? match[1] : url;
+  const configApi = useApiCall(
+    () => SiteApiService.getConfig(),
+    {
+      showErrorToast: true,
     }
-  };
+  );
+
+  const setActiveSiteApi = useApiCall(
+    (url: string) => SiteApiService.setActiveSite(url),
+    {
+      showErrorToast: true,
+    }
+  );
 
   useEffect(() => {
-    loadConfig();
+    configApi.execute();
   }, []);
 
-  const loadConfig = async () => {
-    try {
-      const configData = await api.getConfig();
-      setConfig(configData);
-    } catch (error) {
-      console.error('Error loading config:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSiteClick = async (url: string) => {
-    try {
-      await api.setActiveSite(url);
-      navigate(`/site/${encodeURIComponent(url)}`);
-    } catch (error) {
-      console.error('Error selecting site:', error);
-    }
+    await setActiveSiteApi.execute(url);
+    navigate(`/site/${encodeUrlParam(url)}`);
   };
 
   const handleAddSite = () => {
     navigate('/add-site');
   };
 
-  if (loading) {
+  if (configApi.state.loading) {
     return (
-      <Center h="200px">
-        <Spinner size="xl" color="brand.500" />
-      </Center>
+      <Container maxW="6xl">
+        <LoadingState message="Loading sites..." height="200px" />
+      </Container>
     );
   }
 
+  const config = configApi.state.data as Config | undefined;
   const sites = config?.sites ? Object.values(config.sites) : [];
 
   return (
@@ -87,20 +74,13 @@ const SitesOverview: React.FC = () => {
       </Flex>
 
       {sites.length === 0 ? (
-        <Box
-          borderWidth="1px"
-          borderRadius="lg"
-          p={12}
-        >
-          <VStack gap={4}>
-            <Text fontSize="lg" color="gray.500">
-              No sites configured yet
-            </Text>
-            <Text color="gray.500">
-              Click "Add New Site" to get started
-            </Text>
-          </VStack>
-        </Box>
+        <EmptyState
+          title="No sites configured yet"
+          description="Click 'Add New Site' to get started"
+          actionLabel="Add New Site"
+          onAction={handleAddSite}
+          icon="🌐"
+        />
       ) : (
         <Box
           borderWidth="1px"
@@ -129,37 +109,19 @@ const SitesOverview: React.FC = () => {
                     </Table.Cell>
                     <Table.Cell>
                       <Tooltip content={site.url}>
-                          <Text fontFamily="mono" fontSize="sm" color="gray.600" cursor="help">
-                            {extractDomain(site.url)}
-                          </Text>
+                        <Text fontFamily="mono" fontSize="sm" color="gray.600" cursor="help">
+                          {extractDomain(site.url)}
+                        </Text>
                       </Tooltip>
                     </Table.Cell>
                     <Table.Cell>
                       {site.versionInfo ? (
-                        <VStack gap={1} align="start">
-                          <HStack gap={2} wrap="wrap">
-                            {site.versionInfo.contaoManagerVersion && (
-                              <Badge colorPalette="blue" fontSize="xs">
-                                Manager: {site.versionInfo.contaoManagerVersion}
-                              </Badge>
-                            )}
-                            {site.versionInfo.phpVersion && (
-                              <Badge colorPalette="green" fontSize="xs">
-                                PHP: {site.versionInfo.phpVersion}
-                              </Badge>
-                            )}
-                            {site.versionInfo.contaoVersion && (
-                              <Badge colorPalette="orange" fontSize="xs">
-                                Contao: {site.versionInfo.contaoVersion}
-                              </Badge>
-                            )}
-                          </HStack>
-                          {site.versionInfo.lastUpdated && (
-                            <Text fontSize="xs" color="gray.500">
-                              Updated: {new Date(site.versionInfo.lastUpdated).toLocaleDateString()}
-                            </Text>
-                          )}
-                        </VStack>
+                        <VersionBadges 
+                          versionInfo={site.versionInfo}
+                          layout="vertical"
+                          showLastUpdated={true}
+                          size="xs"
+                        />
                       ) : (
                         <Text fontSize="sm" color="gray.400">
                           No version info
@@ -168,7 +130,7 @@ const SitesOverview: React.FC = () => {
                     </Table.Cell>
                     <Table.Cell>
                       <Text color="gray.600">
-                        {new Date(site.lastUsed).toLocaleDateString()} {new Date(site.lastUsed).toLocaleTimeString()}
+                        {formatDateTime(site.lastUsed)}
                       </Text>
                     </Table.Cell>
                   </Table.Row>

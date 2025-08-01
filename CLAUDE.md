@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a Node.js proxy application that provides a web interface for interacting with Contao Manager APIs. The application consists of three main components:
+This is a Node.js proxy application that provides a modern web interface for interacting with Contao Manager APIs. The application uses a modular, service-oriented architecture with three main layers:
 
 ### Server Layer (`server.js`)
 - **Express.js server** serving both API endpoints and static files
@@ -26,19 +26,28 @@ This is a Node.js proxy application that provides a web interface for interactin
   - `POST /api/update-status` - Fetches composer and self-update status using token authentication
 
 ### Frontend (React Application)
-- **React v19 single-page application** with TypeScript
+- **React v19 single-page application** with TypeScript and modular architecture
 - **Chakra UI v3** for component library and theming
-- **Multi-page interface**:
-  - Sites overview table with all configured sites
-  - Site details page with function buttons
-  - Add site page for OAuth flow
+- **Service Layer Architecture**:
+  - Centralized API management with `apiCallService`
+  - Authentication service for OAuth flows
+  - Specialized services (Expert, Task, Logs) with proper error handling
+- **Custom Hooks**:
+  - `useApiCall` for consistent API state management
+  - `useAuth` for authentication flows
+  - `useModalState` for dialog management
+  - `useToastNotifications` for user feedback
+- **Modular Components**:
+  - **Pages**: Sites overview, site details, add site
+  - **Display**: Loading states, empty states, version badges
+  - **Forms**: URL input, scope selector with validation
+  - **Modals**: API result display, confirmation dialogs
+  - **Site Details**: Dedicated tabs (Info, Expert, Logs, Management)
+  - **Workflow**: Step components, confirmations, operations
 - **Routing** - React Router v7 for navigation between pages
-- **Dialog interface** - API call results displayed in Chakra UI v3 Dialog components (replaced Modal)
-- **Custom UI components** - Located in `src/components/ui/` following Chakra UI v3 patterns
 - **OAuth redirect flow** - redirects to Contao Manager for token generation
 - **Token extraction** - parses access token from URL fragment after OAuth redirect
 - **Server-side token storage** - tokens stored in `data/config.json` file on server
-- **Temporary client storage** - localStorage used only during OAuth redirect flows
 - **Theme support** - Dark/light mode toggle using next-themes integration
 
 ### Authentication Flow (OAuth Token-based)
