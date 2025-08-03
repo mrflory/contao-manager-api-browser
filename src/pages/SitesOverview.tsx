@@ -7,9 +7,13 @@ import {
   Text,
   Flex,
   Table,
-  Box,
+  VStack,
+  Menu,
+  ButtonGroup,
+  IconButton,
+  Portal,
 } from '@chakra-ui/react';
-import { LuPlus as Plus } from 'react-icons/lu';
+import { LuPlus as Plus, LuChevronRight as ChevronRight, LuChevronDown as ChevronDown, LuRefreshCw as RefreshCw } from 'react-icons/lu';
 import { Tooltip } from "../components/ui/tooltip";
 import { Config } from '../types';
 import { useApiCall } from '../hooks/useApiCall';
@@ -18,7 +22,6 @@ import { LoadingState } from '../components/display/LoadingState';
 import { EmptyState } from '../components/display/EmptyState';
 import { VersionBadges } from '../components/display/VersionBadges';
 import { extractDomain, encodeUrlParam } from '../utils/urlUtils';
-import { formatDateTime } from '../utils/dateUtils';
 
 const SitesOverview: React.FC = () => {
   const navigate = useNavigate();
@@ -85,43 +88,36 @@ const SitesOverview: React.FC = () => {
           icon="🌐"
         />
       ) : (
-        <Box
-          borderWidth="1px"
-          borderRadius="lg"
-          overflow="hidden"
-        >
-          <Box overflowX="auto">
-            <Table.Root interactive>
+        <Table.ScrollArea borderWidth="1px" borderRadius="lg">
+          <Table.Root interactive>
               <Table.Header>
                 <Table.Row>
-                  <Table.ColumnHeader>Site Name</Table.ColumnHeader>
-                  <Table.ColumnHeader>URL</Table.ColumnHeader>
-                  <Table.ColumnHeader>Version Info</Table.ColumnHeader>
-                  <Table.ColumnHeader>Last Used</Table.ColumnHeader>
+                  <Table.ColumnHeader>Site</Table.ColumnHeader>
+                  <Table.ColumnHeader>Version & Status</Table.ColumnHeader>
+                  <Table.ColumnHeader textAlign="end">Actions</Table.ColumnHeader>
                 </Table.Row>
               </Table.Header>
               <Table.Body>
                 {sites.map((site) => (
-                  <Table.Row
-                    key={site.url}
-                    onClick={() => handleSiteClick(site.url)}
-                    cursor="pointer"
-                  >
+                  <Table.Row key={site.url}>
+                    {/* Column 1: Site Information */}
                     <Table.Cell>
-                      <Text fontWeight="bold">{site.name}</Text>
+                      <VStack gap={1} align="start">
+                        <Text fontWeight="bold">{site.name}</Text>
+                        <Tooltip content={site.url}>
+                          <Text fontFamily="mono" fontSize="sm" color="gray.600" cursor="help">
+                            {extractDomain(site.url)}
+                          </Text>
+                        </Tooltip>
+                      </VStack>
                     </Table.Cell>
-                    <Table.Cell>
-                      <Tooltip content={site.url}>
-                        <Text fontFamily="mono" fontSize="sm" color="gray.600" cursor="help">
-                          {extractDomain(site.url)}
-                        </Text>
-                      </Tooltip>
-                    </Table.Cell>
+                    
+                    {/* Column 2: Version & Status */}
                     <Table.Cell>
                       {site.versionInfo ? (
                         <VersionBadges 
                           versionInfo={site.versionInfo}
-                          layout="vertical"
+                          layout="horizontal"
                           showLastUpdated={true}
                           size="xs"
                         />
@@ -131,17 +127,43 @@ const SitesOverview: React.FC = () => {
                         </Text>
                       )}
                     </Table.Cell>
+                    
+                    {/* Column 3: Actions */}
                     <Table.Cell>
-                      <Text color="gray.600">
-                        {formatDateTime(site.lastUsed)}
-                      </Text>
+                      <Flex justify="end">
+                        <ButtonGroup size="sm" variant="outline" attached>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleSiteClick(site.url)}
+                          >
+                            <ChevronRight size={16} />
+                            View
+                          </Button>
+                          <Menu.Root>
+                            <Menu.Trigger asChild>
+                              <IconButton variant="outline">
+                                <ChevronDown size={16} />
+                              </IconButton>
+                            </Menu.Trigger>
+                            <Portal>
+                              <Menu.Positioner>
+                                <Menu.Content>
+                                  <Menu.Item value="update-version">
+                                    <RefreshCw size={16} />
+                                    Update Version Info
+                                  </Menu.Item>
+                                </Menu.Content>
+                              </Menu.Positioner>
+                            </Portal>
+                          </Menu.Root>
+                        </ButtonGroup>
+                      </Flex>
                     </Table.Cell>
                   </Table.Row>
                 ))}
               </Table.Body>
-            </Table.Root>
-          </Box>
-        </Box>
+          </Table.Root>
+        </Table.ScrollArea>
       )}
     </Container>
   );
