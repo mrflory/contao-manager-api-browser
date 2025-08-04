@@ -87,15 +87,30 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
   const getStepIcon = () => {
     switch (step.status) {
       case 'active':
-        return <Spinner size="sm" />;
+        return <Spinner size="lg" />;
       case 'complete':
-        return <Check color="white" size={12} />;
+        return <Check color="white" size={24} />;
       case 'error':
-        return <X color="white" size={12} />;
+        return <X color="white" size={24} />;
       case 'skipped':
-        return <Minus color="white" size={12} />;
+        return <Minus color="white" size={24} />;
       default:
-        return <Circle color="white" size={12} />;
+        return <Circle color="white" size={24} />;
+    }
+  };
+
+  const getIndicatorColor = () => {
+    switch (step.status) {
+      case 'active':
+        return 'blue.300'; // Light blue for running
+      case 'complete':
+        return 'green.500'; // Green for finished
+      case 'error':
+        return 'red.500'; // Red for error
+      case 'skipped':
+        return 'blue.800'; // Dark blue for skipped
+      default:
+        return 'blue.500'; // Default blue for pending
     }
   };
 
@@ -109,7 +124,7 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
 
   return (
     <TimelineItem opacity={step.status === 'skipped' ? 0.6 : 1}>
-      <TimelineConnector>
+      <TimelineConnector bg={getIndicatorColor()}>
         {getStepIcon()}
       </TimelineConnector>
       

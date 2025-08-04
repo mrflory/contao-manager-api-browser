@@ -77,7 +77,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
   }, [steps, hasPendingTasksError, toast]);
 
   return (
-    <TimelineRoot>
+    <TimelineRoot size="xl">
       {steps.map((step) => (
         <WorkflowStepComponent
           key={step.id}
