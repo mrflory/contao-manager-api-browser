@@ -1,6 +1,6 @@
-import React from 'react';
-import { Badge, HStack, VStack, Text, Card, Collapsible, Spinner } from '@chakra-ui/react';
-import { LuCheck as Check, LuX as X, LuMinus as Minus, LuCircle as Circle } from 'react-icons/lu';
+import React, { useState, useEffect } from 'react';
+import { Badge, HStack, VStack, Text, Collapsible, Spinner, IconButton } from '@chakra-ui/react';
+import { LuCheck as Check, LuX as X, LuMinus as Minus, LuCircle as Circle, LuChevronDown as ChevronDown, LuChevronUp as ChevronUp } from 'react-icons/lu';
 import {
   TimelineItem,
   TimelineConnector,
@@ -49,6 +49,40 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
   configBg,
 }) => {
   const mutedColor = useColorModeValue('gray.500', 'gray.400');
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Check if step needs confirmation (has pending user actions)
+  const needsConfirmation = () => {
+    // Check for specific steps that might need confirmation
+    if (step.id === 'check-tasks' && hasPendingTasksError) return true;
+    if (step.id === 'check-migrations-loop' && hasPendingMigrations) return true;
+    if (step.id === 'composer-dry-run' && hasDryRunComplete) return true;
+    
+    // Check if step is complete but waiting for user input
+    // This happens when a step has completed its API call but workflow is paused
+    if (step.status === 'complete' && (hasPendingTasksError || hasPendingMigrations || hasDryRunComplete)) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Smart auto-expand/collapse logic
+  useEffect(() => {
+    if (step.status === 'active') {
+      // Auto-expand when step becomes active
+      setIsExpanded(true);
+    } else if (step.status === 'complete' && isExpanded && !needsConfirmation()) {
+      // Auto-collapse when step completes, but only if it was expanded and doesn't need confirmation
+      setIsExpanded(false);
+    } else if (step.status === 'error' || needsConfirmation()) {
+      // Always expand and keep expanded for errors or pending confirmations
+      setIsExpanded(true);
+    }
+  }, [step.status, hasPendingTasksError, hasPendingMigrations, hasDryRunComplete]);
+
+  // Determine if content should be shown (expanded or has important content)
+  const shouldShowContent = isExpanded || step.status === 'error' || step.status === 'active' || needsConfirmation();
 
   const getStepIcon = () => {
     switch (step.status) {
@@ -79,66 +113,78 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
         {getStepIcon()}
       </TimelineConnector>
       
-      <TimelineContent>
-        <TimelineTitle fontSize="md"> 
-          <HStack justify="space-between">
-            {step.title}
-            {getStatusBadge()}
+      <TimelineContent width="100%">
+        <TimelineTitle fontSize="md" width="100%"> 
+          <HStack justify="space-between" align="center" width="100%">
+            <Text>{step.title}</Text>
+            <HStack align="center" gap={2}>
+              {getStatusBadge()}
+              {/* Manual toggle arrow */}
+              <IconButton
+                size="xs"
+                variant="ghost"
+                onClick={() => setIsExpanded(!isExpanded)}
+                aria-label={isExpanded ? "Collapse step details" : "Expand step details"}
+              >
+                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </IconButton>
+            </HStack>
           </HStack>
         </TimelineTitle>
-          
-        <TimelineDescription fontSize="sm" color={mutedColor}>
-          {step.description}
-        </TimelineDescription>
 
-        <Card.Root>
-          <Card.Body>
-            {(step.startTime || step.endTime) && (
-              <HStack gap={4} fontSize="xs" color={mutedColor} mb={2}>
-                {step.startTime && (
-                  <Text>Started: {formatTime(step.startTime)}</Text>
-                )}
-                {step.endTime && (
-                  <Text>Ended: {formatTime(step.endTime)}</Text>
-                )}
-                {step.startTime && (
-                  <Text>Duration: {getDuration(step.startTime, step.endTime)}</Text>
-                )}
-              </HStack>
-            )}
+        {/* Collapsible content area */}
+        <Collapsible.Root open={shouldShowContent}>
+          <Collapsible.Content>
+            <VStack align="stretch" gap={3} mt={3}>
+              {/* Step description moved inside */}
+              <TimelineDescription fontSize="sm" color={mutedColor}>
+                {step.description}
+              </TimelineDescription>
 
-            <Collapsible.Root open={!!step.error || !!step.data}>
-              <Collapsible.Content>
-                <VStack align="stretch" gap={2} mt={2}>
-                  {step.error && (
-                    <Text fontSize="sm" color="red.500" p={2} bg="red.50" borderRadius="md">
-                      ⚠️ {step.error}
-                    </Text>
+              {/* Timestamps */}
+              {(step.startTime || step.endTime) && (
+                <HStack gap={4} fontSize="xs" color={mutedColor}>
+                  {step.startTime && (
+                    <Text>Started: {formatTime(step.startTime)}</Text>
                   )}
-                  
-                  <StepDataRenderer step={step} />
-                  
-                  <StepConfirmations
-                    step={step}
-                    createMigrationSummary={createMigrationSummary}
-                    hasPendingTasksError={hasPendingTasksError}
-                    hasPendingMigrations={hasPendingMigrations}
-                    hasDryRunComplete={hasDryRunComplete}
-                    onClearTasks={onClearTasks}
-                    onCancelPendingTasks={onCancelPendingTasks}
-                    onConfirmMigrations={onConfirmMigrations}
-                    onSkipMigrations={onSkipMigrations}
-                    onCancelMigrations={onCancelMigrations}
-                    onContinueUpdate={onContinueUpdate}
-                    onSkipComposerUpdate={onSkipComposerUpdate}
-                    onCancelWorkflow={onCancelWorkflow}
-                    configBg={configBg}
-                  />
-                </VStack>
-              </Collapsible.Content>
-            </Collapsible.Root>
-          </Card.Body>
-        </Card.Root>
+                  {step.endTime && (
+                    <Text>Ended: {formatTime(step.endTime)}</Text>
+                  )}
+                  {step.startTime && (
+                    <Text>Duration: {getDuration(step.startTime, step.endTime)}</Text>
+                  )}
+                </HStack>
+              )}
+
+              {/* Error display */}
+              {step.error && (
+                <Text fontSize="sm" color="red.500" p={3} bg="red.50" borderRadius="md" borderLeft="4px solid" borderColor="red.500">
+                  ⚠️ {step.error}
+                </Text>
+              )}
+              
+              {/* Step data and confirmations */}
+              <StepDataRenderer step={step} />
+              
+              <StepConfirmations
+                step={step}
+                createMigrationSummary={createMigrationSummary}
+                hasPendingTasksError={hasPendingTasksError}
+                hasPendingMigrations={hasPendingMigrations}
+                hasDryRunComplete={hasDryRunComplete}
+                onClearTasks={onClearTasks}
+                onCancelPendingTasks={onCancelPendingTasks}
+                onConfirmMigrations={onConfirmMigrations}
+                onSkipMigrations={onSkipMigrations}
+                onCancelMigrations={onCancelMigrations}
+                onContinueUpdate={onContinueUpdate}
+                onSkipComposerUpdate={onSkipComposerUpdate}
+                onCancelWorkflow={onCancelWorkflow}
+                configBg={configBg}
+              />
+            </VStack>
+          </Collapsible.Content>
+        </Collapsible.Root>
       </TimelineContent>
     </TimelineItem>
   );

@@ -203,8 +203,9 @@ export const useWorkflow = () => {
       if (result.status === 'pending') {
         if (currentStepId.startsWith('check-migrations-loop')) {
           // Checking migrations step
-          if (!result.hash || result.hash === '') {
+          if (!result.hash || result.hash === '' || result.hash === null) {
             // No migrations needed - skip all remaining migration steps and continue to next workflow step
+            console.log('No migrations found, skipping execute-migrations step');
             markCurrentStepComplete(result);
             api.deleteDatabaseMigrationTask().then(() => {
               updateState(prev => {
@@ -212,6 +213,8 @@ export const useWorkflow = () => {
                   currentStepId.split('-').pop() : '1';
                 const executeStepId = currentCycle === '1' ? 'execute-migrations' : `execute-migrations-${currentCycle}`;
                 const executeStepIndex = prev.steps.findIndex(step => step.id === executeStepId);
+                
+                console.log(`Looking for execute step: ${executeStepId}, found at index: ${executeStepIndex}`);
                 
                 if (executeStepIndex !== -1) {
                   const newSteps = [...prev.steps];
@@ -230,6 +233,8 @@ export const useWorkflow = () => {
                     nextStepIndex++;
                   }
                   
+                  console.log(`Moving from step ${prev.currentStep} to step ${nextStepIndex}`);
+                  
                   return {
                     ...prev,
                     currentStep: nextStepIndex,
@@ -237,6 +242,7 @@ export const useWorkflow = () => {
                   };
                 }
                 
+                console.log(`Execute step not found, moving to next step: ${prev.currentStep + 1}`);
                 return {
                   ...prev,
                   currentStep: prev.currentStep + 1
@@ -591,17 +597,13 @@ export const useWorkflow = () => {
     const checkMigrationsStep = state.steps.find(step => step.id === checkStepId);
     const migrationHash = checkMigrationsStep?.data?.hash;
     
-    if (!migrationHash) {
-      const debugInfo = {
-        currentExecuteStepId: currentExecuteStep?.id,
-        currentCycle,
-        checkStepId,
-        checkStepFound: !!checkMigrationsStep,
-        checkStepData: checkMigrationsStep?.data,
-        allStepIds: state.steps.map(s => s.id)
-      };
-      console.error('Migration hash debug info:', debugInfo);
-      markCurrentStepError(`No migration hash found from step ${checkStepId}. Debug: ${JSON.stringify(debugInfo)}`);
+    if (!migrationHash || migrationHash === null) {
+      // No migrations to execute - this step should have been skipped but wasn't
+      // Handle gracefully by marking this step as skipped and moving to next step
+      console.log('No migration hash found, skipping execute-migrations step');
+      updateCurrentStep({ status: 'skipped' });
+      moveToNextStep();
+      setTimeout(() => executeCurrentStepRef.current?.(), 100);
       return;
     }
     

@@ -20,7 +20,6 @@ interface WorkflowTimelineProps {
   onSkipComposerUpdate: () => void;
   onCancelWorkflow: () => void;
   configBg: string;
-  getEstimatedTime: () => string;
 }
 
 export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({ 

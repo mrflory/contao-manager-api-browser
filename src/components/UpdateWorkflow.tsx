@@ -188,11 +188,6 @@ export const UpdateWorkflow: React.FC = () => {
     return (completedSteps / state.steps.length) * 100;
   };
 
-  const getEstimatedTime = () => {
-    const baseTime = 5; // Base 5 minutes
-    const dryRunTime = config.performDryRun ? 3 : 0;
-    return `${baseTime + dryRunTime}-${baseTime + dryRunTime + 5} minutes`;
-  };
 
   const getWorkflowStatus = () => {
     if (isComplete) return 'complete';
@@ -266,9 +261,6 @@ export const UpdateWorkflow: React.FC = () => {
                 >
                   Skip composer dry-run
                 </Checkbox>
-                <Text fontSize="sm" color="gray.600">
-                  <strong>Estimated time:</strong> {getEstimatedTime()}
-                </Text>
               </VStack>
             </Box>
           )}
@@ -374,7 +366,6 @@ export const UpdateWorkflow: React.FC = () => {
             onSkipComposerUpdate={handleSkipComposerUpdate}
             onCancelWorkflow={handleCancelWorkflow}
             configBg={configBg}
-            getEstimatedTime={getEstimatedTime}
           />
         </Box>
       )}
