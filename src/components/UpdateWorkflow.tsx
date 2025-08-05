@@ -10,7 +10,7 @@ import {
 } from '@chakra-ui/react';
 import { ProgressRoot, ProgressBar } from './ui/progress';
 import { Checkbox } from './ui/checkbox';
-import { LuPlay as Play, LuPause as Pause, LuRefreshCw as RefreshCw, LuCircleCheck as CheckCircle } from 'react-icons/lu';
+import { LuPlay as Play, LuPause as Pause, LuRefreshCw as RefreshCw } from 'react-icons/lu';
 import { useColorModeValue } from './ui/color-mode';
 import { useToastNotifications, TOAST_MESSAGES } from '../hooks/useToastNotifications';
 import { WorkflowTimeline } from './WorkflowTimeline';
@@ -332,15 +332,13 @@ export const UpdateWorkflow: React.FC = () => {
           {/* Success Alert */}
           {isComplete && !state.error && (
             <Alert.Root status="success">
-              <Alert.Indicator>
-                <CheckCircle size={20} />
-              </Alert.Indicator>
-              <Box>
+              <Alert.Indicator />
+              <Alert.Content>
                 <Alert.Title>Update Complete!</Alert.Title>
                 <Alert.Description>
                   Your Contao installation has been successfully updated. All components are now up to date.
                 </Alert.Description>
-              </Box>
+              </Alert.Content>
             </Alert.Root>
           )}
         </VStack>

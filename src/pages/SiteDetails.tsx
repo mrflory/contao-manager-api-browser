@@ -13,7 +13,7 @@ import {
   IconButton,
   Link,
 } from '@chakra-ui/react';
-import { LuArrowLeft as ArrowLeft, LuPencil as Edit, LuCheck as Check, LuX as X, LuCircleX as XCircle } from 'react-icons/lu';
+import { LuArrowLeft as ArrowLeft, LuPencil as Edit, LuCheck as Check, LuX as X } from 'react-icons/lu';
 import { Config } from '../types';
 import { useApiCall } from '../hooks/useApiCall';
 import { useAuth } from '../hooks/useAuth';
@@ -102,17 +102,15 @@ const SiteDetails: React.FC = () => {
         <Center h="400px">
           <VStack gap={6}>
             <Alert.Root status="error" borderRadius="lg" p={6} maxW="md">
-              <Alert.Indicator>
-                <XCircle size={40} style={{ marginRight: '16px' }} />
-              </Alert.Indicator>
-              <Box>
+              <Alert.Indicator />
+              <Alert.Content>
                 <Alert.Title fontSize="xl" mb={2}>
                   Site Not Found
                 </Alert.Title>
                 <Alert.Description fontSize="md">
                   The requested site could not be found. It may have been removed or the URL is incorrect.
                 </Alert.Description>
-              </Box>
+              </Alert.Content>
             </Alert.Root>
             <Button 
               colorPalette="blue"

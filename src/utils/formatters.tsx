@@ -14,7 +14,6 @@ import {
   AccordionItemTrigger,
   AccordionItemContent,
 } from '../components/ui/accordion';
-import { LuCircleX as XCircle, LuInfo as Info } from 'react-icons/lu';
 import { UpdateStatus, TokenInfo } from '../types';
 
 export const formatUpdateStatus = (data: UpdateStatus) => {
@@ -84,10 +83,8 @@ export const formatUpdateStatus = (data: UpdateStatus) => {
 
       {data.errors && Object.keys(data.errors).length > 0 && (
         <Alert.Root status="error">
-          <Alert.Indicator>
-            <XCircle size={20} />
-          </Alert.Indicator>
-          <Box>
+          <Alert.Indicator />
+          <Alert.Content>
             <Alert.Title>Errors!</Alert.Title>
             <Alert.Description>
               {data.errors.composer && (
@@ -97,7 +94,7 @@ export const formatUpdateStatus = (data: UpdateStatus) => {
                 <Text><strong>Self-Update:</strong> {data.errors.selfUpdate}</Text>
               )}
             </Alert.Description>
-          </Box>
+          </Alert.Content>
         </Alert.Root>
       )}
     </VStack>
@@ -108,13 +105,13 @@ export const formatTokenInfo = (data: { success: boolean; tokenInfo: TokenInfo; 
   if (!data.success) {
     return (
       <Alert.Root status="error">
-        <Alert.Indicator>
-          <Info size={20} />
-        </Alert.Indicator>
-        <Alert.Title>Error!</Alert.Title>
-        <Alert.Description>
-          {data.error || 'Failed to get token info'}
-        </Alert.Description>
+        <Alert.Indicator />
+        <Alert.Content>
+          <Alert.Title>Error!</Alert.Title>
+          <Alert.Description>
+            {data.error || 'Failed to get token info'}
+          </Alert.Description>
+        </Alert.Content>
       </Alert.Root>
     );
   }
@@ -166,10 +163,8 @@ export const formatTokenInfo = (data: { success: boolean; tokenInfo: TokenInfo; 
 
       {currentLevel >= 0 && (
         <Alert.Root status="info">
-          <Alert.Indicator>
-            <Info size={20} />
-          </Alert.Indicator>
-          <Box>
+          <Alert.Indicator />
+          <Alert.Content>
             <Alert.Title>Analysis: Your "{tokenInfo.scope}" scope allows:</Alert.Title>
             <VStack gap={1} align="start" mt={2}>
               <Text>{currentLevel >= 0 ? '✅' : '❌'} Read operations</Text>
@@ -177,7 +172,7 @@ export const formatTokenInfo = (data: { success: boolean; tokenInfo: TokenInfo; 
               <Text>{currentLevel >= 2 ? '✅' : '❌'} Install operations</Text>
               <Text>{currentLevel >= 3 ? '✅' : '❌'} Admin operations</Text>
             </VStack>
-          </Box>
+          </Alert.Content>
         </Alert.Root>
       )}
     </VStack>
@@ -188,13 +183,13 @@ export const formatDatabaseBackups = (data: any[]) => {
   if (!Array.isArray(data) || data.length === 0) {
     return (
       <Alert.Root status="info">
-        <Alert.Indicator>
-          <Info size={20} />
-        </Alert.Indicator>
-        <Alert.Title>No backups found</Alert.Title>
-        <Alert.Description>
-          No database backups are available on this server.
-        </Alert.Description>
+        <Alert.Indicator />
+        <Alert.Content>
+          <Alert.Title>No backups found</Alert.Title>
+          <Alert.Description>
+            No database backups are available on this server.
+          </Alert.Description>
+        </Alert.Content>
       </Alert.Root>
     );
   }
@@ -250,13 +245,13 @@ export const formatInstalledPackages = (data: any) => {
   if (!data || typeof data !== 'object') {
     return (
       <Alert.Root status="info">
-        <Alert.Indicator>
-          <Info size={20} />
-        </Alert.Indicator>
-        <Alert.Title>No packages found</Alert.Title>
-        <Alert.Description>
-          No installed packages data available.
-        </Alert.Description>
+        <Alert.Indicator />
+        <Alert.Content>
+          <Alert.Title>No packages found</Alert.Title>
+          <Alert.Description>
+            No installed packages data available.
+          </Alert.Description>
+        </Alert.Content>
       </Alert.Root>
     );
   }

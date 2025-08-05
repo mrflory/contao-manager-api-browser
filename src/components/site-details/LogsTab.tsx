@@ -14,7 +14,7 @@ import {
   Table,
   Alert,
 } from '@chakra-ui/react';
-import { LuTrash2 as Trash2, LuRefreshCcw, LuCircleX as XCircle } from 'react-icons/lu';
+import { LuTrash2 as Trash2, LuRefreshCcw } from 'react-icons/lu';
 import { Site } from '../../types';
 import { useApiCall } from '../../hooks/useApiCall';
 import { useModalState } from '../../hooks/useModalState';
@@ -139,13 +139,13 @@ export const LogsTab: React.FC<LogsTabProps> = ({ site }) => {
           </Center>
         ) : logs.length === 0 ? (
           <Alert.Root status="info">
-            <Alert.Indicator>
-              <XCircle size={20} />
-            </Alert.Indicator>
-            <Alert.Title>No logs found</Alert.Title>
-            <Alert.Description>
-              No API call logs are available for this site yet. Make some API calls from the Expert tab to see logs here.
-            </Alert.Description>
+            <Alert.Indicator />
+            <Alert.Content>
+              <Alert.Title>No logs found</Alert.Title>
+              <Alert.Description>
+                No API call logs are available for this site yet. Make some API calls from the Expert tab to see logs here.
+              </Alert.Description>
+            </Alert.Content>
           </Alert.Root>
         ) : (
           <Box>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { VStack, HStack, Box, Text, Badge, Button, Alert, Link, Collapsible, Code } from '@chakra-ui/react';
 import { Checkbox } from '../ui/checkbox';
-import { LuInfo as Info, LuTriangleAlert as AlertTriangle, LuCircleCheck as CheckCircle, LuChevronDown as ChevronDown } from 'react-icons/lu';
+import { LuChevronDown as ChevronDown } from 'react-icons/lu';
 import { WorkflowStep } from '../../types';
 import { useColorModeValue } from '../ui/color-mode';
 import { getOperationBadgeColor, getOperationBadgeText, addLineNumbers } from '../../utils/workflowUtils';
@@ -219,16 +219,14 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
     return (
       <VStack gap={3} align="stretch" mt={3}>
         <Alert.Root status="info">
-          <Alert.Indicator>
-            <Info size={20} />
-          </Alert.Indicator>
-          <Box>
+          <Alert.Indicator />
+          <Alert.Content>
             <Alert.Title>Pending database migrations detected</Alert.Title>
             <Alert.Description>
               The system has detected pending database migrations that need to be executed 
               to complete the update process.
             </Alert.Description>
-          </Box>
+          </Alert.Content>
         </Alert.Root>
         
         {summary && (
@@ -283,12 +281,12 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
         
         {withDeletes && (
           <Alert.Root status="warning" size="sm">
-            <Alert.Indicator>
-              <AlertTriangle size={16} />
-            </Alert.Indicator>
-            <Alert.Description fontSize="sm">
-              DROP queries enabled - may remove data or database structures.
-            </Alert.Description>
+            <Alert.Indicator />
+            <Alert.Content>
+              <Alert.Description fontSize="sm">
+                DROP queries enabled - may remove data or database structures.
+              </Alert.Description>
+            </Alert.Content>
           </Alert.Root>
         )}
         
@@ -319,15 +317,13 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
     return (
       <VStack gap={3} align="stretch" mt={3}>
         <Alert.Root status="success">
-          <Alert.Indicator>
-            <CheckCircle size={20} />
-          </Alert.Indicator>
-          <Box>
+          <Alert.Indicator />
+          <Alert.Content>
             <Alert.Title>Dry-run completed successfully!</Alert.Title>
             <Alert.Description>
               The composer dry-run has finished. You can review the results above to see what changes would be made.
             </Alert.Description>
-          </Box>
+          </Alert.Content>
         </Alert.Root>
         
         {step.data && (
