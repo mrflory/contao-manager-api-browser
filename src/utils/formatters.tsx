@@ -241,6 +241,18 @@ export const formatDatabaseBackups = (data: any[]) => {
   );
 };
 
+const sortPackageEntries = (packages: [string, any][], priorityPrefix = 'contao') => {
+  return packages.sort(([nameA], [nameB]) => {
+    const aHasPriority = nameA.startsWith(priorityPrefix);
+    const bHasPriority = nameB.startsWith(priorityPrefix);
+    
+    if (aHasPriority && !bHasPriority) return -1;
+    if (!aHasPriority && bHasPriority) return 1;
+    
+    return nameA.localeCompare(nameB);
+  });
+};
+
 export const formatInstalledPackages = (data: any) => {
   if (!data || typeof data !== 'object') {
     return (
@@ -310,6 +322,65 @@ export const formatInstalledPackages = (data: any) => {
             </AccordionItemContent>
           </AccordionItem>
         </AccordionRoot>
+      </Box>
+    </VStack>
+  );
+};
+
+export const formatSortedPackages = (data: any, options?: { priorityPrefix?: string; sectionTitle?: string }) => {
+  if (!data || typeof data !== 'object') {
+    return (
+      <Alert.Root status="info">
+        <Alert.Indicator />
+        <Alert.Content>
+          <Alert.Title>No packages found</Alert.Title>
+          <Alert.Description>
+            No packages data available.
+          </Alert.Description>
+        </Alert.Content>
+      </Alert.Root>
+    );
+  }
+
+  const packages = sortPackageEntries(Object.entries(data), options?.priorityPrefix);
+  const sectionTitle = options?.sectionTitle || 'packages';
+  
+  return (
+    <VStack gap={4} align="stretch">
+      <Text fontSize="md" color="gray.600">
+        Found {packages.length} {sectionTitle}{packages.length !== 1 ? 's' : ''}:
+      </Text>
+      <Box maxH="400px" overflowY="auto">
+        <Table.Root variant="outline" size="sm">
+          <Table.Header position="sticky" top={0}>
+            <Table.Row>
+              <Table.ColumnHeader>Package Name</Table.ColumnHeader>
+              <Table.ColumnHeader>Version</Table.ColumnHeader>
+              <Table.ColumnHeader>Type</Table.ColumnHeader>
+              <Table.ColumnHeader>Description</Table.ColumnHeader>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {packages.map(([name, pkg]: [string, any]) => (
+              <Table.Row key={name}>
+                <Table.Cell>
+                  <Code fontSize="sm">{name}</Code>
+                </Table.Cell>
+                <Table.Cell>
+                  <Badge colorPalette="blue" fontSize="xs">{pkg.version || 'N/A'}</Badge>
+                </Table.Cell>
+                <Table.Cell>
+                  <Badge colorPalette="green" fontSize="xs">{pkg.type || 'library'}</Badge>
+                </Table.Cell>
+                <Table.Cell>
+                  <Text fontSize="xs" lineClamp={2}>
+                    {pkg.description || 'No description available'}
+                  </Text>
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
       </Box>
     </VStack>
   );

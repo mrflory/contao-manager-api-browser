@@ -209,6 +209,10 @@ export const api = {
     return makeApiCall('/packages/local/');
   },
 
+  async getLocalPackageDetails(name: string): Promise<any> {
+    return makeApiCall(`/packages/local/${encodeURIComponent(name)}`);
+  },
+
   // Logs endpoint
   async getLogs(siteUrl: string): Promise<{ logs: any[]; total: number; siteUrl: string; hostname: string; message?: string }> {
     return makeApiCall(`/logs/${encodeURIComponent(siteUrl)}`);

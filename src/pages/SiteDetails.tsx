@@ -23,6 +23,7 @@ import { SiteInfoTab } from '../components/site-details/SiteInfoTab';
 import { SiteManagement } from '../components/site-details/SiteManagement';
 import { ExpertTab } from '../components/site-details/ExpertTab';
 import { LogsTab } from '../components/site-details/LogsTab';
+import { PackagesTab } from '../components/site-details/PackagesTab';
 import { UpdateWorkflow } from '../components/UpdateWorkflow';
 import { decodeUrlParam } from '../utils/urlUtils';
 import { useToastNotifications, TOAST_MESSAGES } from '../hooks/useToastNotifications';
@@ -180,6 +181,7 @@ const SiteDetails: React.FC = () => {
         <Tabs.Root colorPalette="blue" variant="line" defaultValue="site-info">
           <Tabs.List>
             <Tabs.Trigger value="site-info">Site Info</Tabs.Trigger>
+            <Tabs.Trigger value="packages">Packages</Tabs.Trigger>
             <Tabs.Trigger value="update">Update</Tabs.Trigger>
             <Tabs.Trigger value="expert">Expert</Tabs.Trigger>
             <Tabs.Trigger value="logs">Logs</Tabs.Trigger>
@@ -200,19 +202,24 @@ const SiteDetails: React.FC = () => {
             </VStack>
           </Tabs.Content>
 
-          {/* Tab 2: Update */}
+          {/* Tab 2: Packages */}
+          <Tabs.Content value="packages">
+            <PackagesTab />
+          </Tabs.Content>
+
+          {/* Tab 3: Update */}
           <Tabs.Content value="update">
             <VStack gap={6} align="stretch">
               <UpdateWorkflow />
             </VStack>
           </Tabs.Content>
 
-          {/* Tab 3: Expert */}
+          {/* Tab 4: Expert */}
           <Tabs.Content value="expert">
             <ExpertTab />
           </Tabs.Content>
 
-          {/* Tab 4: Logs */}
+          {/* Tab 5: Logs */}
           <Tabs.Content value="logs">
             <LogsTab site={site} />
           </Tabs.Content>

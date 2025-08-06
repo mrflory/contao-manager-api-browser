@@ -179,6 +179,11 @@ export class ExpertApiService {
    * Get root package details
    */
   static getRootPackageDetails = api.getRootPackageDetails;
+
+  /**
+   * Get specific local package details
+   */
+  static getLocalPackageDetails = api.getLocalPackageDetails;
 }
 
 /**
