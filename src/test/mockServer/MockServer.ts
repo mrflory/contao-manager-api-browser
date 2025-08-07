@@ -14,6 +14,7 @@ export class MockServer {
   private server: Server | null = null;
   private state: MockState;
   private connections: Set<any> = new Set();
+  private port: number = 3001;
 
   constructor() {
     this.app = express();
@@ -42,6 +43,8 @@ export class MockServer {
     router.get('/server/config', serverHandlers.getConfig(() => this.state));
     router.get('/server/php-web', serverHandlers.getPhpWeb(() => this.state));
     router.get('/server/contao', serverHandlers.getContao(() => this.state));
+    router.get('/server/composer', serverHandlers.getComposer(() => this.state));
+    router.get('/server/phpinfo', serverHandlers.getPhpInfo(() => this.state));
 
     // Task endpoints
     router.get('/task', taskHandlers.getTask(() => this.state));
@@ -115,6 +118,7 @@ export class MockServer {
   }
 
   async start(port: number = 3001): Promise<void> {
+    this.port = port;
     return new Promise((resolve, reject) => {
       try {
         this.server = this.app.listen(port, () => {
@@ -173,6 +177,10 @@ export class MockServer {
 
   setState(newState: Partial<MockState>): void {
     this.state = { ...this.state, ...newState };
+  }
+
+  getPort(): number {
+    return this.port;
   }
 
   reset(): void {

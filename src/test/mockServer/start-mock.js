@@ -93,6 +93,85 @@ class SimpleMockServer {
       res.json(this.state.contaoInfo);
     });
 
+    router.get('/server/composer', (req, res) => {
+      res.json({
+        json: {
+          found: true,
+          valid: true
+        },
+        lock: {
+          found: true,
+          fresh: true
+        },
+        vendor: {
+          found: true
+        }
+      });
+    });
+
+    router.get('/server/phpinfo', (req, res) => {
+      res.json({
+        version: this.state.phpWeb.version,
+        version_id: this.state.phpWeb.version_id,
+        platform: this.state.phpWeb.platform || 'Linux',
+        extensions: {
+          core: true,
+          date: true,
+          libxml: true,
+          openssl: true,
+          pcre: true,
+          sqlite3: true,
+          zlib: true,
+          ctype: true,
+          curl: true,
+          dom: true,
+          fileinfo: true,
+          filter: true,
+          ftp: true,
+          hash: true,
+          iconv: true,
+          json: true,
+          mbstring: true,
+          mysqlnd: true,
+          mysqli: true,
+          pdo: true,
+          pdo_mysql: true,
+          pdo_sqlite: true,
+          phar: true,
+          posix: true,
+          readline: true,
+          reflection: true,
+          session: true,
+          simplexml: true,
+          spl: true,
+          standard: true,
+          tokenizer: true,
+          xml: true,
+          xmlreader: true,
+          xmlwriter: true,
+          zip: true,
+          // Contao-specific extensions
+          gd: true,
+          imagick: true,
+          intl: true,
+          tidy: true,
+          xsl: true
+        },
+        settings: {
+          memory_limit: '512M',
+          max_execution_time: '30',
+          upload_max_filesize: '64M',
+          post_max_size: '64M',
+          opcache_enabled: true,
+          opcache_memory_consumption: '128',
+          date_default_timezone: 'UTC'
+        },
+        sapi_name: 'fpm-fcgi',
+        system: 'Linux localhost 5.15.0-88-generic #98-Ubuntu SMP Mon Oct 2 15:18:56 UTC 2023 x86_64',
+        build_date: 'Dec 21 2023 15:37:27'
+      });
+    });
+
     // Task endpoints
     router.get('/task', (req, res) => {
       if (!this.state.currentTask) {
@@ -235,12 +314,25 @@ class SimpleMockServer {
     <div class="endpoints">
         <h2>🔗 API Endpoints</h2>
         <p>All Contao Manager API endpoints are available under <code>/api</code>:</p>
+        <h3>Server Configuration</h3>
         <ul>
             <li><code>GET /api/server/self-update</code> - Self-update information</li>
+            <li><code>GET /api/server/config</code> - Server configuration</li>
+            <li><code>GET /api/server/php-web</code> - PHP web version info</li>
+            <li><code>GET /api/server/contao</code> - Contao installation info</li>
+            <li><code>GET /api/server/composer</code> - Composer configuration status</li>
+            <li><code>GET /api/server/phpinfo</code> - Detailed PHP information</li>
+        </ul>
+        <h3>Tasks & Workflows</h3>
+        <ul>
             <li><code>GET /api/task</code> - Current task status</li>
             <li><code>PUT /api/task</code> - Create new task</li>
             <li><code>GET /api/contao/database-migration</code> - Migration status</li>
+        </ul>
+        <h3>Packages</h3>
+        <ul>
             <li><code>GET /api/packages/root</code> - Root package info</li>
+            <li><code>GET /api/packages/local</code> - Local packages</li>
         </ul>
     </div>
     
