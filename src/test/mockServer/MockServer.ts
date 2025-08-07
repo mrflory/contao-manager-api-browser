@@ -82,6 +82,7 @@ export class MockServer {
     });
 
     this.app.use('/api', router);
+    this.app.use('/contao-manager.phar.php/api', router);
 
     // OAuth endpoints (for frontend integration)
     this.app.get('/oauth2/authorize', (req: Request, res: Response) => {

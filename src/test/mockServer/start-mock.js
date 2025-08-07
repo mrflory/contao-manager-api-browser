@@ -313,7 +313,11 @@ class SimpleMockServer {
     
     <div class="endpoints">
         <h2>🔗 API Endpoints</h2>
-        <p>All Contao Manager API endpoints are available under <code>/api</code>:</p>
+        <p>All Contao Manager API endpoints are available under both paths:</p>
+        <ul>
+            <li><code>/api/*</code> - Direct API access</li>
+            <li><code>/contao-manager.phar.php/api/*</code> - Contao Manager-style access (for UI compatibility)</li>
+        </ul>
         <h3>Server Configuration</h3>
         <ul>
             <li><code>GET /api/server/self-update</code> - Self-update information</li>
@@ -506,74 +510,9 @@ class SimpleMockServer {
 
     this.app.use('/api', router);
     
-    // IMPORTANT: Also add session endpoint under /contao-manager.phar.php/api/session
+    // IMPORTANT: Also mount ALL API routes under /contao-manager.phar.php/api/*
     // This handles cases where the manager URL includes the .phar.php file
-    this.app.get('/contao-manager.phar.php/api/session', (req, res) => {
-      console.log('[SESSION] ===========================================');
-      console.log('[SESSION] Session validation request received (via phar.php path)');
-      console.log('[SESSION] Request headers:', JSON.stringify({
-        'authorization': req.headers.authorization,
-        'contao-manager-auth': req.headers['contao-manager-auth'],
-        'user-agent': req.headers['user-agent'],
-        'host': req.headers.host
-      }, null, 2));
-      
-      // Check for authentication error scenario
-      if (this.state.scenarios?.authErrors) {
-        console.log('[SESSION] Rejecting due to auth error scenario');
-        return res.status(401).json({
-          title: 'Unauthorized',
-          detail: 'Authentication failed due to invalid credentials'
-        });
-      }
-      
-      // Handle both Authorization header formats
-      const authHeader = req.headers.authorization;
-      const contaoAuth = req.headers['contao-manager-auth'];
-      
-      let token = null;
-      
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        token = authHeader.substring(7);
-        console.log('[SESSION] Using Authorization Bearer header');
-      } else if (contaoAuth) {
-        token = contaoAuth;
-        console.log('[SESSION] Using Contao-Manager-Auth header');
-      } else {
-        console.log('[SESSION] No valid auth header found');
-        console.log('[SESSION] Available headers:', Object.keys(req.headers));
-        return res.status(401).json({
-          title: 'Unauthorized',
-          detail: 'No valid authorization header provided'
-        });
-      }
-      
-      // Check for valid mock token format
-      if (!token.startsWith('mock_')) {
-        console.log('[SESSION] Invalid token format:', token.substring(0, 20) + '...');
-        return res.status(401).json({
-          title: 'Invalid token',
-          detail: 'Token format is not valid'
-        });
-      }
-      
-      console.log(`[SESSION] ✅ Token validation SUCCESSFUL for: ${token.substring(0, 20)}...`);
-      
-      const sessionResponse = {
-        username: 'mock-user',
-        name: 'Mock Test User',
-        session: token.substring(5, 15),
-        iat: Math.floor(Date.now() / 1000) - 300,
-        exp: Math.floor(Date.now() / 1000) + 3600,
-        scopes: ['admin']
-      };
-      
-      console.log('[SESSION] Sending response:', JSON.stringify(sessionResponse, null, 2));
-      console.log('[SESSION] ===========================================');
-      
-      res.json(sessionResponse);
-    });
-
+    this.app.use('/contao-manager.phar.php/api', router);
     // Add the Contao Manager main file endpoint
     this.app.get('/contao-manager.phar.php', (req, res) => {
       // This mimics the real Contao Manager entry point

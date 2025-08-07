@@ -81,6 +81,21 @@ describe('New Server Endpoints', () => {
     });
   });
 
+  describe('Server endpoints with contao-manager.phar.php path', () => {
+    it('should work with /contao-manager.phar.php/api/* path pattern', async () => {
+      const endpoints = ['contao', 'composer', 'phpinfo'];
+      
+      for (const endpoint of endpoints) {
+        const response = await fetch(`${baseUrl}/contao-manager.phar.php/api/server/${endpoint}`);
+        expect(response.status).toBe(200);
+        
+        const data = await response.json();
+        expect(data).toBeDefined();
+        expect(typeof data).toBe('object');
+      }
+    });
+  });
+
   describe('Server endpoints with authentication scenarios', () => {
     it('should handle auth error scenario for all new endpoints', async () => {
       // Set auth error scenario
