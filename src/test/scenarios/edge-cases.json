@@ -1,0 +1,190 @@
+{
+  "name": "Edge Case Scenarios",
+  "description": "Unusual conditions and edge cases to test robustness", 
+  "scenarios": [
+    {
+      "name": "multiple-migration-cycles",
+      "description": "Multiple rounds of migrations needed",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": true
+        },
+        "pendingMigrations": [
+          {
+            "name": "CREATE TABLE tl_temp_migration_1", 
+            "status": "pending",
+            "message": "First migration creates temp table"
+          },
+          {
+            "name": "MIGRATION: PopulateNewTable",
+            "status": "pending", 
+            "message": "Data migration populates new structures"
+          }
+        ],
+        "scenarios": {
+          "networkLatency": 50,
+          "multipleMigrationCycles": true
+        }
+      }
+    },
+    {
+      "name": "empty-migration-hash",
+      "description": "Migration check returns empty hash",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5", 
+          "channel": "stable",
+          "supported": true
+        },
+        "pendingMigrations": [],
+        "currentMigration": {
+          "type": "schema",
+          "status": "pending",
+          "hash": "",
+          "operations": []
+        }
+      }
+    },
+    {
+      "name": "partial-task-completion",
+      "description": "Task partially completes then gets interrupted", 
+      "state": {
+        "currentTask": {
+          "id": "partial-task-456",
+          "title": "Composer Update",
+          "status": "complete",
+          "console": "Partially completed update...\nSome packages updated successfully\nInterrupted at package 5 of 10",
+          "cancellable": false,
+          "autoclose": true,
+          "audit": true,
+          "operations": [
+            {
+              "summary": "Updated symfony/console",
+              "details": "Successfully updated to v6.4.2", 
+              "console": "Updated symfony/console",
+              "status": "complete"
+            },
+            {
+              "summary": "Updating contao/core",
+              "details": "Failed to update due to memory limit",
+              "console": "PHP Fatal error: Allowed memory size exhausted", 
+              "status": "error"
+            }
+          ]
+        },
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": true
+        }
+      }
+    },
+    {
+      "name": "manager-not-supported",
+      "description": "Manager version doesn't support self-update",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.8.0", 
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": false,
+          "error": "This manager version cannot be updated automatically"
+        }
+      }
+    },
+    {
+      "name": "dev-channel-manager",
+      "description": "Manager is on development channel",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.10.0-dev",
+          "latest_version": "1.10.0-dev",
+          "channel": "dev", 
+          "supported": true
+        },
+        "scenarios": {
+          "networkLatency": 30
+        }
+      }
+    },
+    {
+      "name": "maintenance-mode-enabled", 
+      "description": "Site is in maintenance mode during update",
+      "state": {
+        "maintenanceMode": {
+          "enabled": true
+        },
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": true
+        }
+      }
+    },
+    {
+      "name": "large-migration-set",
+      "description": "Very large number of pending migrations", 
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": true
+        },
+        "pendingMigrations": [
+          { "name": "CREATE TABLE tl_feature_1", "status": "pending", "message": "Feature 1 table" },
+          { "name": "CREATE TABLE tl_feature_2", "status": "pending", "message": "Feature 2 table" },
+          { "name": "CREATE TABLE tl_feature_3", "status": "pending", "message": "Feature 3 table" },
+          { "name": "ALTER TABLE tl_content ADD feature_1_field", "status": "pending", "message": "Feature 1 content field" },
+          { "name": "ALTER TABLE tl_content ADD feature_2_field", "status": "pending", "message": "Feature 2 content field" },
+          { "name": "CREATE INDEX idx_feature_1 ON tl_content", "status": "pending", "message": "Feature 1 index" },
+          { "name": "CREATE INDEX idx_feature_2 ON tl_content", "status": "pending", "message": "Feature 2 index" },
+          { "name": "INSERT INTO tl_version VALUES", "status": "pending", "message": "Version entry 1" },
+          { "name": "INSERT INTO tl_version VALUES", "status": "pending", "message": "Version entry 2" },
+          { "name": "UPDATE tl_settings SET value", "status": "pending", "message": "Settings update" }
+        ],
+        "scenarios": {
+          "networkLatency": 75
+        }
+      }
+    },
+    {
+      "name": "mixed-package-states",
+      "description": "Some packages outdated, some current, some broken",
+      "state": {
+        "localPackages": {
+          "contao/core": {
+            "name": "contao/core", 
+            "version": "5.1.9",
+            "type": "library",
+            "description": "Contao Core Bundle - Outdated"
+          },
+          "symfony/framework-bundle": {
+            "name": "symfony/framework-bundle",
+            "version": "6.4.2", 
+            "type": "symfony-bundle",
+            "description": "Symfony FrameworkBundle - Current"
+          },
+          "broken/package": {
+            "name": "broken/package",
+            "version": "dev-broken",
+            "type": "library",
+            "description": "Package with broken dependencies"
+          }
+        },
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": true
+        }
+      }
+    }
+  ]
+}

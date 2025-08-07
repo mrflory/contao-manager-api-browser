@@ -1,0 +1,149 @@
+{
+  "name": "Error Scenarios", 
+  "description": "Various error conditions and failure modes",
+  "scenarios": [
+    {
+      "name": "composer-update-failure",
+      "description": "Composer update task fails with dependency conflicts",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5",
+          "channel": "stable", 
+          "supported": true
+        },
+        "scenarios": {
+          "taskFailures": {
+            "composer/update": "Your requirements could not be resolved to an installable set of packages.\n\nProblem 1\n- contao/core 5.3.0 requires php ^8.2 but your php version (8.1.15) does not satisfy that requirement."
+          },
+          "networkLatency": 100
+        }
+      }
+    },
+    {
+      "name": "migration-failure", 
+      "description": "Database migration fails due to constraint violation",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": true
+        },
+        "pendingMigrations": [
+          {
+            "name": "ALTER TABLE tl_member ADD CONSTRAINT unique_email",
+            "status": "pending",
+            "message": "Adding unique constraint to email field"
+          }
+        ],
+        "scenarios": {
+          "migrationFailures": true,
+          "networkLatency": 75
+        }
+      }
+    },
+    {
+      "name": "manager-update-failure",
+      "description": "Manager self-update fails due to permission issues",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.4", 
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": true
+        },
+        "scenarios": {
+          "taskFailures": {
+            "manager/self-update": "Permission denied: Cannot write to /usr/local/bin/contao-manager.phar.php"
+          },
+          "networkLatency": 60
+        }
+      }
+    },
+    {
+      "name": "authentication-error",
+      "description": "API authentication fails",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5", 
+          "channel": "stable",
+          "supported": true
+        },
+        "scenarios": {
+          "authErrors": true,
+          "networkLatency": 40
+        }
+      }
+    },
+    {
+      "name": "pending-tasks-blocking",
+      "description": "Existing tasks prevent workflow from starting",
+      "state": {
+        "currentTask": {
+          "id": "existing-task-123",
+          "title": "Manual Package Installation",
+          "status": "active",
+          "console": "Installing packages manually...\nDownloading symfony/console...",
+          "cancellable": true,
+          "autoclose": false,
+          "audit": false,
+          "operations": [
+            {
+              "summary": "Installing symfony/console", 
+              "details": "Downloading from packagist",
+              "console": "Downloading...",
+              "status": "active"
+            }
+          ]
+        },
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5",
+          "channel": "stable", 
+          "supported": true
+        }
+      }
+    },
+    {
+      "name": "pending-migration-task-blocking",
+      "description": "Existing migration task blocks workflow",
+      "state": {
+        "currentMigration": {
+          "type": "migrations",
+          "status": "active", 
+          "hash": "abc123def",
+          "operations": [
+            {
+              "name": "Running manual migration",
+              "status": "active",
+              "message": "Executing custom migration script"
+            }
+          ]
+        },
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": true
+        }
+      }
+    },
+    {
+      "name": "high-latency-network",
+      "description": "Very slow network conditions",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.5", 
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": true
+        },
+        "scenarios": {
+          "networkLatency": 2000
+        }
+      }
+    }
+  ]
+}

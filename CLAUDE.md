@@ -11,6 +11,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` - Build React application for production
 - `npm run lint` - Run ESLint to check code quality
 - `npm run preview` - Preview production build locally
+- `npm run test` - Run Jest test suite
+- `npm run test:watch` - Run Jest tests in watch mode
+- `npm run test:coverage` - Run Jest tests with coverage reporting
+- `npm run test:react19-compat` - Test React v19 compatibility
+- `npm run test:chakra-v3-compat` - Test Chakra UI v3 compatibility
 - `npm run test:build` - Build and preview to test production build
 - `node server.js` - Direct server execution
 
@@ -21,8 +26,12 @@ This is a Node.js proxy application that provides a modern web interface for int
 ### Server Layer (`server.js`)
 - **Express.js server** serving both API endpoints and static files
 - **Proxy functionality** - forwards API requests to external Contao Manager instances
-- **Two main API endpoints**:
+- **Six main API endpoints**:
+  - `POST /api/set-active-site` - Sets the active site in multi-site configuration
+  - `POST /api/update-site-name` - Updates the display name for a site
+  - `POST /api/save-token` - Saves OAuth token for a site after authentication
   - `POST /api/validate-token` - Validates API token with Contao Manager
+  - `POST /api/update-version-info` - Fetches version information for a site
   - `POST /api/update-status` - Fetches composer and self-update status using token authentication
 
 ### Frontend (React Application)
@@ -101,6 +110,7 @@ Following Chakra UI v3 patterns, custom components include:
 - `select.tsx` - Enhanced select components
 - `timeline.tsx` - Workflow timeline visualization
 - `toaster.tsx` - Toast notification system
+- `toggle-tip.tsx` - Enhanced toggle with tooltip functionality
 - `tooltip.tsx` - Enhanced tooltip components
 
 ### Development Guidelines
