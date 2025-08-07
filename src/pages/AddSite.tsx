@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -18,6 +18,7 @@ import { OAuthScope } from '../types/authTypes';
 
 const AddSite: React.FC = () => {
   const navigate = useNavigate();
+  const [url, setUrl] = useState('');
   
   const { state, actions } = useAuth({
     redirectAfterAuth: '/',
@@ -25,9 +26,6 @@ const AddSite: React.FC = () => {
 
   const handleAuthSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    const formData = new FormData(e.currentTarget);
-    const url = formData.get('url') as string;
     
     if (!url) return;
     
@@ -68,8 +66,8 @@ const AddSite: React.FC = () => {
             <VStack gap={6}>
               <UrlInput
                 label="Contao Manager URL"
-                value=""
-                onChange={() => {}} // Handled by form
+                value={url}
+                onChange={setUrl}
                 placeholder="https://example.com/contao-manager.phar.php"
                 required
                 validateOnChange
