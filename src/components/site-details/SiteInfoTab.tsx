@@ -27,9 +27,23 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({ site }) => {
             <Text fontSize="sm">
               <strong>Last Used:</strong> {formatDateTime(site.lastUsed)}
             </Text>
+            {site.authMethod === 'cookie' ? (
+              <Text fontSize="sm">
+                <strong>Authentication:</strong> Cookie-based (temporary session)
+              </Text>
+            ) : (
+              <Text fontSize="sm">
+                <strong>Token:</strong> <Code>{site.token?.substring(0, 8) || 'N/A'}...</Code>
+              </Text>
+            )}
             <Text fontSize="sm">
-              <strong>Token:</strong> <Code>{site.token.substring(0, 8)}...</Code>
+              <strong>Authentication Method:</strong> {site.authMethod === 'cookie' ? 'Cookie-based' : 'API Token'}
             </Text>
+            {site.scope && (
+              <Text fontSize="sm">
+                <strong>Permission Scope:</strong> {site.scope}
+              </Text>
+            )}
           </VStack>
           
           {site.versionInfo && (

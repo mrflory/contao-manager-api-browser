@@ -7,6 +7,7 @@ export interface ScopeSelectorProps {
   value: OAuthScope;
   onChange: (scope: OAuthScope) => void;
   size?: 'sm' | 'md' | 'lg';
+  width?: string;
   maxWidth?: string;
   placeholder?: string;
   isDisabled?: boolean;
@@ -16,6 +17,7 @@ export const ScopeSelector: React.FC<ScopeSelectorProps> = ({
   value,
   onChange,
   size = 'md',
+  width,
   maxWidth,
   placeholder = 'Select permissions',
   isDisabled = false,
@@ -32,6 +34,7 @@ export const ScopeSelector: React.FC<ScopeSelectorProps> = ({
       value={[value]} 
       onValueChange={(details) => onChange(details.value[0] as OAuthScope)}
       size={size}
+      width={width}
       maxW={maxWidth}
       collection={collection}
       disabled={isDisabled}

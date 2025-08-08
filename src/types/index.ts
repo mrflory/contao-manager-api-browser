@@ -8,7 +8,10 @@ export interface VersionInfo {
 export interface Site {
   name: string;
   url: string;
-  token: string;
+  token?: string; // Optional for cookie auth
+  user?: Record<string, unknown>; // For cookie auth
+  authMethod?: 'token' | 'cookie'; // Authentication method
+  scope?: 'read' | 'update' | 'install' | 'admin'; // Permission scope
   lastUsed: string;
   versionInfo?: VersionInfo;
 }

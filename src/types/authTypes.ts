@@ -1,4 +1,5 @@
 export type OAuthScope = 'read' | 'update' | 'install' | 'admin';
+export type AuthenticationMethod = 'token' | 'cookie';
 
 export interface OAuthConfig {
   managerUrl: string;
@@ -20,10 +21,29 @@ export interface TokenExtractionResult {
   error?: string;
 }
 
+export interface CookieAuthCredentials {
+  username: string;
+  password: string;
+  totp?: string;
+}
+
+export interface CookieAuthResult {
+  success: boolean;
+  user?: Record<string, unknown>;
+  error?: string;
+}
+
 export interface AuthenticationState {
   isAuthenticated: boolean;
   currentSite?: string;
   scope?: OAuthScope;
+  method?: AuthenticationMethod;
+}
+
+export interface AuthMethodOption {
+  label: string;
+  value: AuthenticationMethod;
+  description: string;
 }
 
 export interface ScopeOption {
@@ -56,3 +76,16 @@ export const OAUTH_SCOPES: ScopeOption[] = [
 ];
 
 export const DEFAULT_OAUTH_CLIENT_ID = 'Contao Manager API Browser';
+
+export const AUTH_METHOD_OPTIONS: AuthMethodOption[] = [
+  {
+    label: "API Token Authentication",
+    value: "token",
+    description: "Persistent authentication using API tokens (recommended for automation)"
+  },
+  {
+    label: "Cookie-Based Authentication", 
+    value: "cookie",
+    description: "Temporary authentication using HTTP-only cookies (expires when browser closes)"
+  }
+];

@@ -1,4 +1,12 @@
-import { OAuthConfig, OAuthScope, TokenExtractionResult, DEFAULT_OAUTH_CLIENT_ID } from '../types/authTypes';
+import { 
+  OAuthConfig, 
+  OAuthScope, 
+  TokenExtractionResult, 
+  CookieAuthCredentials, 
+  CookieAuthResult,
+  AuthenticationMethod,
+  DEFAULT_OAUTH_CLIENT_ID 
+} from '../types/authTypes';
 import { cleanUrl, buildRedirectUri } from '../utils/urlUtils';
 
 export class AuthService {
@@ -138,5 +146,114 @@ export class AuthService {
    */
   static validateScope(scope: string): scope is OAuthScope {
     return ['read', 'update', 'install', 'admin'].includes(scope);
+  }
+
+  /**
+   * Authenticates using cookie-based authentication
+   */
+  static async authenticateCookie(
+    managerUrl: string, 
+    credentials: CookieAuthCredentials
+  ): Promise<CookieAuthResult> {
+    try {
+      // Use our backend proxy for cookie authentication to avoid CORS issues
+      const response = await fetch('/api/cookie-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include', // Important: This enables cookie handling
+        body: JSON.stringify({
+          managerUrl,
+          credentials
+        })
+      });
+
+      const data = await response.json();
+      console.log('[COOKIE-AUTH] Backend response:', { status: response.status, data });
+
+      if (response.ok && data.success) {
+        return {
+          success: true,
+          user: data.user
+        };
+      } else {
+        return {
+          success: false,
+          error: data.error || 'Authentication failed'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error during authentication'
+      };
+    }
+  }
+
+  /**
+   * Checks session status for cookie authentication
+   */
+  static async checkCookieSession(managerUrl: string): Promise<CookieAuthResult> {
+    try {
+      // Use our backend proxy for session check to avoid CORS issues
+      const response = await fetch('/api/cookie-session-check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ managerUrl })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        return {
+          success: true,
+          user: data.user
+        };
+      } else {
+        return {
+          success: false,
+          error: data.error || 'Session check failed'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error'
+      };
+    }
+  }
+
+  /**
+   * Logs out from cookie-based authentication
+   */
+  static async logoutCookie(managerUrl: string): Promise<boolean> {
+    try {
+      // Use our backend proxy for logout to avoid CORS issues
+      const response = await fetch('/api/cookie-logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ managerUrl })
+      });
+
+      const data = await response.json();
+      return response.ok && data.success;
+    } catch (error) {
+      console.error('Logout error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Validates authentication method
+   */
+  static validateAuthMethod(method: string): method is AuthenticationMethod {
+    return ['token', 'cookie'].includes(method);
   }
 }

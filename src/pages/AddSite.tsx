@@ -12,15 +12,22 @@ import {
 import { LuArrowLeft } from 'react-icons/lu';
 import { ScopeSelector } from '../components/forms/ScopeSelector';
 import { UrlInput } from '../components/forms/UrlInput';
+import { AuthMethodSelector } from '../components/forms/AuthMethodSelector';
+import { CookieAuthForm } from '../components/forms/CookieAuthForm';
 import { Field } from '../components/ui/field';
 import { useAuth } from '../hooks/useAuth';
-import { OAuthScope } from '../types/authTypes';
+import { useToastNotifications } from '../hooks/useToastNotifications';
+import { OAuthScope, AuthenticationMethod, CookieAuthCredentials } from '../types/authTypes';
 import { AuthService } from '../services/authService';
 import { encodeUrlParam } from '../utils/urlUtils';
 
 const AddSite: React.FC = () => {
   const navigate = useNavigate();
+  const { showApiError, showApiSuccess } = useToastNotifications();
   const [url, setUrl] = useState('');
+  const [authMethod, setAuthMethod] = useState<AuthenticationMethod>('token');
+  const [cookieAuthLoading, setCookieAuthLoading] = useState(false);
+  const [cookieScope, setCookieScope] = useState<OAuthScope>('admin');
   
   // Detect reauthentication BEFORE useAuth hook processes the callback
   const [isReauthFlow] = useState(() => {
@@ -83,6 +90,62 @@ const AddSite: React.FC = () => {
     actions.setToken(e.target.value);
   };
 
+  const handleCookieAuth = async (credentials: CookieAuthCredentials) => {
+    setCookieAuthLoading(true);
+
+    try {
+      if (!url) {
+        showApiError('Please enter a Contao Manager URL first', 'Cookie Authentication');
+        return;
+      }
+
+      const result = await AuthService.authenticateCookie(url, credentials);
+      
+      if (result.success) {
+        // Authentication successful, now save site configuration
+        const response = await fetch('/api/save-site-cookie', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            managerUrl: url,
+            user: result.user,
+            authMethod: 'cookie',
+            scope: cookieScope
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showApiSuccess(
+            isReauthFlow ? 'Site reauthenticated successfully!' : 'Site added successfully!',
+            'Cookie Authentication'
+          );
+          
+          // Redirect to the site details or home page
+          if (isReauthFlow && reauthSiteUrl) {
+            navigate(`/site/${encodeUrlParam(reauthSiteUrl)}`);
+          } else {
+            navigate('/');
+          }
+        } else {
+          showApiError(data.error || 'Failed to save site configuration', 'Cookie Authentication');
+        }
+      } else {
+        showApiError(result.error || 'Authentication failed', 'Cookie Authentication');
+      }
+    } catch (error) {
+      showApiError(
+        error instanceof Error ? error.message : 'Network error during authentication',
+        'Cookie Authentication'
+      );
+    } finally {
+      setCookieAuthLoading(false);
+    }
+  };
+
   return (
     <Container maxW="2xl">
       <Flex justify="space-between" align="center" mb={8}>
@@ -101,44 +164,72 @@ const AddSite: React.FC = () => {
         p={8}
       >
         {!state.showTokenForm ? (
-          <form onSubmit={handleAuthSubmit}>
-            <VStack gap={6}>
-              <UrlInput
-                label="Contao Manager URL"
-                value={url}
-                onChange={setUrl}
-                placeholder="https://example.com/contao-manager.phar.php"
-                required
-                validateOnChange
-              />
-              
-              <Field required label="Required Permissions">
-                <ScopeSelector 
-                  value={state.scope}
-                  onChange={handleScopeChange}
+          <VStack gap={6} width="full">
+            <UrlInput
+              label="Contao Manager URL"
+              value={url}
+              onChange={setUrl}
+              placeholder="https://example.com/contao-manager.phar.php"
+              required
+              validateOnChange
+              width="full"
+            />
+            
+            <AuthMethodSelector
+              value={authMethod}
+              onChange={setAuthMethod}
+              width="full"
+            />
+
+            {authMethod === 'token' ? (
+              <form onSubmit={handleAuthSubmit} style={{ width: '100%' }}>
+                <VStack gap={4} width="full">
+                  <Field required label="Required Permissions" width="full">
+                    <ScopeSelector 
+                      value={state.scope}
+                      onChange={handleScopeChange}
+                      width="full"
+                    />
+                  </Field>
+                  
+                  <Button
+                    type="submit"
+                    colorPalette="blue"
+                    size="lg"
+                    loading={state.isAuthenticating}
+                    loadingText="Redirecting..."
+                    width="full"
+                  >
+                    Generate API Token
+                  </Button>
+                </VStack>
+              </form>
+            ) : (
+              <VStack gap={4} width="full">
+                <Field required label="Required Permissions" width="full">
+                  <ScopeSelector 
+                    value={cookieScope}
+                    onChange={setCookieScope}
+                    width="full"
+                  />
+                </Field>
+                
+                <CookieAuthForm
+                  onSubmit={handleCookieAuth}
+                  loading={cookieAuthLoading}
                 />
-              </Field>
-              
-              <Button
-                type="submit"
-                colorPalette="blue"
-                size="lg"
-                loading={state.isAuthenticating}
-                loadingText="Redirecting..."
-                width="full"
-              >
-                Generate API Token
-              </Button>
-            </VStack>
-          </form>
+              </VStack>
+            )}
+          </VStack>
         ) : (
-          <VStack gap={6}>
-            <Field required label="API Token (paste from redirect URL)">
+          <VStack gap={6} width="full">
+            <Field required label="API Token (paste from redirect URL)" width="full">
               <Input
                 value={state.token}
                 onChange={handleTokenChange}
                 placeholder="Enter your API token here"
                 fontFamily="mono"
+                width="full"
               />
             </Field>
             

@@ -4,19 +4,14 @@ import {
   HStack,
   Button,
   Heading,
-  Box,
-  Text,
 } from '@chakra-ui/react';
 import { LuSettings as Settings, LuRefreshCw as RefreshCw, LuTrash2 as Trash2 } from 'react-icons/lu';
 import { Site } from '../../types';
-import { ScopeSelector } from '../forms/ScopeSelector';
-import { Field } from '../ui/field';
+import { ReauthenticationForm } from '../forms/ReauthenticationForm';
 import { ConfirmationDialog } from '../modals/ConfirmationDialog';
 import { useToastNotifications, TOAST_MESSAGES } from '../../hooks/useToastNotifications';
-import { useAuth } from '../../hooks/useAuth';
 import { useApiCall } from '../../hooks/useApiCall';
 import { SiteApiService } from '../../services/apiCallService';
-import { OAuthScope } from '../../types/authTypes';
 
 export interface SiteManagementProps {
   site: Site;
@@ -30,17 +25,9 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
   onSiteRemoved,
 }) => {
   const [showReauthForm, setShowReauthForm] = useState(false);
-  const [reauthScope, setReauthScope] = useState<OAuthScope>('admin');
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
 
   const toast = useToastNotifications();
-
-  const { actions: authActions } = useAuth({
-    onAuthSuccess: () => {
-      setShowReauthForm(false);
-      onSiteUpdated();
-    },
-  });
 
   const updateVersionInfo = useApiCall(
     () => SiteApiService.updateVersionInfo(),
@@ -66,9 +53,13 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
     setShowReauthForm(true);
   };
 
-  const handleReauthSubmit = async () => {
-    authActions.setScope(reauthScope);
-    await authActions.initiateReauth(site.url);
+  const handleReauthSuccess = () => {
+    setShowReauthForm(false);
+    onSiteUpdated();
+  };
+
+  const handleReauthCancel = () => {
+    setShowReauthForm(false);
   };
 
   const handleRemoveSite = async () => {
@@ -104,40 +95,11 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
             </Button>
           </HStack>
         ) : (
-          <Box p={4} borderWidth="1px" borderRadius="md" width="100%">
-            <VStack gap={4} align="stretch">
-              <Text fontSize="md" fontWeight="semibold">
-                Reauthenticate with {site.name}
-              </Text>
-              <Text fontSize="sm" color="gray.600">
-                Select new permissions and generate a new API token. This will replace your current token.
-              </Text>
-              <Field required label="Required Permissions">
-                <ScopeSelector 
-                  value={reauthScope}
-                  onChange={setReauthScope}
-                  size="sm"
-                  maxWidth="300px"
-                />
-              </Field>
-              <HStack gap={3}>
-                <Button
-                  colorPalette="orange"
-                  onClick={handleReauthSubmit}
-                  loading={updateVersionInfo.state.loading}
-                  loadingText="Redirecting..."
-                >
-                  Generate New Token
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowReauthForm(false)}
-                >
-                  Cancel
-                </Button>
-              </HStack>
-            </VStack>
-          </Box>
+          <ReauthenticationForm
+            site={site}
+            onSuccess={handleReauthSuccess}
+            onCancel={handleReauthCancel}
+          />
         )}
       </VStack>
 

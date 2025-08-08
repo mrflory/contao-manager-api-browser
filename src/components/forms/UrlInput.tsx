@@ -1,9 +1,9 @@
 import React from 'react';
-import { Input } from '@chakra-ui/react';
+import { Input, BoxProps } from '@chakra-ui/react';
 import { Field } from '../ui/field';
 import { validateContaoManagerUrl } from '../../utils/urlUtils';
 
-export interface UrlInputProps {
+export interface UrlInputProps extends Pick<BoxProps, 'width' | 'maxWidth' | 'minWidth'> {
   label?: string;
   value: string;
   onChange: (value: string) => void;
@@ -25,6 +25,9 @@ export const UrlInput: React.FC<UrlInputProps> = ({
   error,
   helpText,
   isDisabled = false,
+  width,
+  maxWidth,
+  minWidth,
 }) => {
   const [validationError, setValidationError] = React.useState<string>();
 
@@ -50,6 +53,9 @@ export const UrlInput: React.FC<UrlInputProps> = ({
       helperText={helpText}
       invalid={!!displayError}
       errorText={displayError}
+      width={width}
+      maxWidth={maxWidth}
+      minWidth={minWidth}
     >
       <Input
         type="url"
@@ -57,6 +63,7 @@ export const UrlInput: React.FC<UrlInputProps> = ({
         onChange={handleChange}
         placeholder={placeholder}
         disabled={isDisabled}
+        width="full"
       />
     </Field>
   );
