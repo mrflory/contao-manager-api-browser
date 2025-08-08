@@ -67,7 +67,7 @@ export const LogsTab: React.FC<LogsTabProps> = ({ site }) => {
 
   useEffect(() => {
     loadLogs();
-  }, [site.url]);
+  }, [site.url]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showLogDetails = (log: any) => {
     const logDetails = (

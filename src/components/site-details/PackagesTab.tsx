@@ -62,7 +62,7 @@ export const PackagesTab: React.FC = () => {
     return installedPackages;
   };
 
-  // Load data on component mount
+  // Load data on component mount (now only happens when tab is active due to lazyMount)
   useEffect(() => {
     loadInstalledPackages.execute();
     loadAllPackages.execute();

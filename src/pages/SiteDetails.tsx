@@ -169,7 +169,7 @@ const SiteDetails: React.FC = () => {
       </Flex>
 
       <Box borderWidth="1px" borderRadius="lg" p={8}>
-        <Tabs.Root colorPalette="blue" variant="line" defaultValue="site-info">
+        <Tabs.Root colorPalette="blue" variant="line" defaultValue="site-info" lazyMount>
           <Tabs.List>
             <Tabs.Trigger value="site-info">Site Info</Tabs.Trigger>
             <Tabs.Trigger value="packages">Packages</Tabs.Trigger>
