@@ -941,7 +941,8 @@ function checkScopePermission(scope, method, endpoint) {
         '/api/contao/database-migration': method === 'GET' ? 'read' : 'install',
         
         // Admin endpoints
-        '/api/users/*': 'admin' // User management
+        '/api/users/*': 'admin', // User management
+        '/api/files/*': 'admin' // File access requires admin permissions
     };
     
     // Find required permission for this endpoint
@@ -1320,6 +1321,87 @@ app.delete('/api/task', async (req, res) => {
         console.error('[TASK-DELETE] Error:', error.message);
         console.error('[TASK-DELETE] Full error:', error);
         res.status(500).json({ error: 'Failed to delete task data: ' + error.message });
+    }
+});
+
+// Files endpoints
+app.get('/api/files', async (req, res) => {
+    try {
+        const file = req.query.file;
+        
+        // Validate file parameter - only allow composer.json or composer.lock
+        if (!file || (file !== 'composer.json' && file !== 'composer.lock')) {
+            console.log(`[FILES-QUERY] Invalid file parameter: ${file}`);
+            return res.status(403).json({ error: 'Invalid file parameter. Only composer.json and composer.lock are allowed.' });
+        }
+
+        console.log(`[FILES-QUERY] Starting request for file: ${file}`);
+        const response = await proxyToContaoManager(`/api/files/${file}`, 'GET', null, req);
+        
+        console.log(`[FILES-QUERY] Response status: ${response.status}`);
+        
+        // Handle the response - for files endpoint we return text/plain content directly
+        if (response.status === 200) {
+            // Set appropriate content type for file content
+            res.set('Content-Type', 'text/plain');
+            res.status(response.status).send(response.data);
+        } else if (response.status === 403) {
+            res.status(403).json({ error: 'Access denied or invalid file parameter' });
+        } else {
+            res.status(response.status).json({ error: `Failed to get file content: HTTP ${response.status}` });
+        }
+    } catch (error) {
+        console.error('[FILES-QUERY] Error:', error.message);
+        console.error('[FILES-QUERY] Full error:', error);
+        
+        // Handle specific error cases
+        if (error.response?.status === 403) {
+            res.status(403).json({ error: 'Access denied - admin permissions required' });
+        } else if (error.response?.status === 404) {
+            res.status(404).json({ error: 'File not found' });
+        } else {
+            res.status(500).json({ error: 'Failed to get file content: ' + error.message });
+        }
+    }
+});
+
+app.get('/api/files/:file', async (req, res) => {
+    try {
+        const file = req.params.file;
+        
+        // Validate file parameter - only allow composer.json or composer.lock
+        if (!file || (file !== 'composer.json' && file !== 'composer.lock')) {
+            console.log(`[FILES] Invalid file parameter: ${file}`);
+            return res.status(403).json({ error: 'Invalid file parameter. Only composer.json and composer.lock are allowed.' });
+        }
+
+        console.log(`[FILES] Starting request for file: ${file}`);
+        const response = await proxyToContaoManager(`/api/files/${file}`, 'GET', null, req);
+        
+        console.log(`[FILES] Response status: ${response.status}`);
+        
+        // Handle the response - for files endpoint we return text/plain content directly
+        if (response.status === 200) {
+            // Set appropriate content type for file content
+            res.set('Content-Type', 'text/plain');
+            res.status(response.status).send(response.data);
+        } else if (response.status === 403) {
+            res.status(403).json({ error: 'Access denied or invalid file parameter' });
+        } else {
+            res.status(response.status).json({ error: `Failed to get file content: HTTP ${response.status}` });
+        }
+    } catch (error) {
+        console.error('[FILES] Error:', error.message);
+        console.error('[FILES] Full error:', error);
+        
+        // Handle specific error cases
+        if (error.response?.status === 403) {
+            res.status(403).json({ error: 'Access denied - admin permissions required' });
+        } else if (error.response?.status === 404) {
+            res.status(404).json({ error: 'File not found' });
+        } else {
+            res.status(500).json({ error: 'Failed to get file content: ' + error.message });
+        }
     }
 });
 

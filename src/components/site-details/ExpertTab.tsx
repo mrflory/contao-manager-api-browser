@@ -7,7 +7,16 @@ import {
   Box,
   Grid,
   GridItem,
+  createListCollection,
 } from '@chakra-ui/react';
+import {
+  SelectRoot,
+  SelectTrigger,
+  SelectValueText,
+  SelectContent,
+  SelectItem,
+  SelectItemText,
+} from '../ui/select';
 import { LuSettings as Settings } from 'react-icons/lu';
 import { useLoadingStates } from '../../hooks/useApiCall';
 import { useModalState } from '../../hooks/useModalState';
@@ -22,6 +31,14 @@ export const ExpertTab: React.FC = () => {
   const { isLoading, setLoading } = useLoadingStates();
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<'composer.json' | 'composer.lock'>('composer.json');
+
+  const fileOptions = createListCollection({
+    items: [
+      { label: 'composer.json', value: 'composer.json' },
+      { label: 'composer.lock', value: 'composer.lock' }
+    ]
+  });
 
   // Generic API call handler with modal display
   const handleApiCallWithModal = async (
@@ -56,6 +73,32 @@ export const ExpertTab: React.FC = () => {
     if (formData.withDeletes) payload.withDeletes = formData.withDeletes;
     
     await handleApiCallWithModal('start-migration', () => TaskApiService.startDatabaseMigration(payload), 'Start Database Migration');
+  };
+
+  // File content formatter - displays raw content as code
+  const formatFileContent = (content: string) => (
+    <pre style={{ 
+      whiteSpace: 'pre-wrap',
+      fontFamily: 'monospace',
+      fontSize: '0.9em',
+      lineHeight: '1.4',
+      maxHeight: '60vh',
+      overflow: 'auto',
+      padding: '1rem',
+      backgroundColor: 'var(--chakra-colors-bg-muted)',
+      borderRadius: '6px'
+    }}>
+      {content}
+    </pre>
+  );
+
+  const handleGetFiles = async () => {
+    await handleApiCallWithModal(
+      'get-files',
+      () => ExpertApiService.getFiles(selectedFile),
+      `${selectedFile} Content`,
+      formatFileContent
+    );
   };
 
   return (
@@ -361,6 +404,42 @@ export const ExpertTab: React.FC = () => {
               </Button>
             </GridItem>
           </Grid>
+        </Box>
+
+        {/* Files Section */}
+        <Box>
+          <Heading size="md" color="teal.500" mb={4}>📄 Files</Heading>
+          <VStack gap={4} align="stretch">
+            <HStack gap={4}>
+              <Box flex="1">
+                <SelectRoot
+                  value={[selectedFile]}
+                  onValueChange={(details) => setSelectedFile(details.value[0] as 'composer.json' | 'composer.lock')}
+                  collection={fileOptions}
+                >
+                  <SelectTrigger>
+                    <SelectValueText placeholder="Select a file..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem item="composer.json">
+                      <SelectItemText>composer.json</SelectItemText>
+                    </SelectItem>
+                    <SelectItem item="composer.lock">
+                      <SelectItemText>composer.lock</SelectItemText>
+                    </SelectItem>
+                  </SelectContent>
+                </SelectRoot>
+              </Box>
+              <Button
+                colorPalette="teal"
+                onClick={handleGetFiles}
+                loading={isLoading('get-files')}
+                minWidth="150px"
+              >
+                Get File Content
+              </Button>
+            </HStack>
+          </VStack>
         </Box>
       </VStack>
 

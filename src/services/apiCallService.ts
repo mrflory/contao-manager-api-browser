@@ -184,6 +184,11 @@ export class ExpertApiService {
    * Get specific local package details
    */
   static getLocalPackageDetails = api.getLocalPackageDetails;
+
+  /**
+   * Get file contents (composer.json or composer.lock)
+   */
+  static getFiles = api.getFiles;
 }
 
 /**

@@ -237,5 +237,10 @@ export const api = {
   async getServerSelfUpdateStatus(): Promise<any> {
     const updateStatus = await this.getUpdateStatus();
     return updateStatus.selfUpdate;
+  },
+
+  // Files endpoint
+  async getFiles(file: 'composer.json' | 'composer.lock'): Promise<string> {
+    return makeApiCall(`/files?file=${encodeURIComponent(file)}`);
   }
 };
