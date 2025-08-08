@@ -103,18 +103,34 @@ function logApiCall(siteUrl, method, endpoint, statusCode, requestData = null, r
 
 function addSite(url, token, name = null) {
     const config = loadConfig();
-    const siteName = name || extractSiteName(url);
     
-    config.sites[url] = {
-        name: siteName,
-        url: url,
-        token: token,
-        lastUsed: new Date().toISOString()
-    };
-    
-    // Set as active site if it's the first one or no active site
-    if (!config.activeSite || Object.keys(config.sites).length === 1) {
+    // Check if site already exists to preserve its data
+    if (config.sites[url]) {
+        // Site exists - preserve existing data, only update token and lastUsed
+        config.sites[url].token = token;
+        config.sites[url].lastUsed = new Date().toISOString();
+        
+        // Only update name if explicitly provided
+        if (name) {
+            config.sites[url].name = name;
+        }
+        
+        // Set as active site when updating token (reauthentication)
         config.activeSite = url;
+    } else {
+        // New site - create complete entry
+        const siteName = name || extractSiteName(url);
+        config.sites[url] = {
+            name: siteName,
+            url: url,
+            token: token,
+            lastUsed: new Date().toISOString()
+        };
+        
+        // Set as active site if it's the first one or no active site
+        if (!config.activeSite || Object.keys(config.sites).length === 1) {
+            config.activeSite = url;
+        }
     }
     
     return saveConfig(config);

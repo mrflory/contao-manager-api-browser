@@ -63,7 +63,7 @@ export class AuthService {
    * Builds OAuth redirect URI for reauthentication
    */
   static buildReauthRedirectUri(): string {
-    return buildRedirectUri(window.location.pathname, 'reauth=true&token');
+    return buildRedirectUri('/add-site', 'reauth=true&token');
   }
 
   /**

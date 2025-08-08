@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -15,14 +15,53 @@ import { UrlInput } from '../components/forms/UrlInput';
 import { Field } from '../components/ui/field';
 import { useAuth } from '../hooks/useAuth';
 import { OAuthScope } from '../types/authTypes';
+import { AuthService } from '../services/authService';
+import { encodeUrlParam } from '../utils/urlUtils';
 
 const AddSite: React.FC = () => {
   const navigate = useNavigate();
   const [url, setUrl] = useState('');
   
-  const { state, actions } = useAuth({
-    redirectAfterAuth: '/',
+  // Detect reauthentication BEFORE useAuth hook processes the callback
+  const [isReauthFlow] = useState(() => {
+    return AuthService.isReauthCallback();
   });
+
+  // Extract site URL from hash during component initialization (before hash is cleared)
+  const [reauthSiteUrl] = useState(() => {
+    if (window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const endpoint = hashParams.get('endpoint');
+      if (endpoint) {
+        let siteUrl = decodeURIComponent(endpoint);
+        // Remove trailing slash to match stored URL format
+        siteUrl = siteUrl.replace(/\/$/, '');
+        return siteUrl;
+      }
+    }
+    return null;
+  });
+  
+  const { state, actions } = useAuth({
+    redirectAfterAuth: isReauthFlow ? undefined : '/', // Don't auto-redirect for reauthentication
+    onAuthSuccess: () => {
+      // For reauthentication, redirect back to the site details page
+      if (isReauthFlow) {        
+        if (reauthSiteUrl) {
+          navigate(`/site/${encodeUrlParam(reauthSiteUrl)}`);
+        } else {
+          navigate('/');
+        }
+      }
+    },
+  });
+
+  // Handle reauthentication callback if detected
+  useEffect(() => {
+    if (isReauthFlow) {
+      actions.handleReauthCallback();
+    }
+  }, [isReauthFlow, actions]);
 
   const handleAuthSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -47,7 +86,7 @@ const AddSite: React.FC = () => {
   return (
     <Container maxW="2xl">
       <Flex justify="space-between" align="center" mb={8}>
-        <Heading size="xl">Add New Site</Heading>
+        <Heading size="xl">{isReauthFlow ? 'Reauthenticating Site' : 'Add New Site'}</Heading>
         <Button
           variant="ghost"
           onClick={() => navigate('/')}

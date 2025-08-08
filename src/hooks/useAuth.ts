@@ -160,7 +160,7 @@ export const useAuth = (options: UseAuthOptions = {}) => {
         
         options.onAuthSuccess?.(state.token);
         
-        if (options.redirectAfterAuth) {
+        if (options.redirectAfterAuth && options.redirectAfterAuth !== undefined) {
           setTimeout(() => {
             navigate(options.redirectAfterAuth!);
           }, 1500);
@@ -193,10 +193,15 @@ export const useAuth = (options: UseAuthOptions = {}) => {
       const result = await SiteApiService.saveToken(token, siteUrl);
       
       if (result.success) {
+        // Ensure the reauthenticated site is set as active
+        await SiteApiService.setActiveSite(siteUrl);
+        
         toast.showSuccess(TOAST_MESSAGES.REAUTHENTICATION_SUCCESS);
-        AuthService.cleanupOAuthData();
         
         options.onAuthSuccess?.(token);
+        
+        // Clean up OAuth data AFTER the success callback has used it
+        AuthService.cleanupOAuthData();
       } else {
         throw new Error(result.error || 'Failed to save new token');
       }

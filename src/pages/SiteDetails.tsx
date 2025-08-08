@@ -16,7 +16,6 @@ import {
 import { LuArrowLeft as ArrowLeft, LuPencil as Edit, LuCheck as Check, LuX as X } from 'react-icons/lu';
 import { Config } from '../types';
 import { useApiCall } from '../hooks/useApiCall';
-import { useAuth } from '../hooks/useAuth';
 import { SiteApiService } from '../services/apiCallService';
 import { LoadingState } from '../components/display/LoadingState';
 import { SiteInfoTab } from '../components/site-details/SiteInfoTab';
@@ -35,11 +34,6 @@ const SiteDetails: React.FC = () => {
   
   const toast = useToastNotifications();
 
-  const { actions: authActions } = useAuth({
-    onAuthSuccess: () => {
-      loadConfig.execute();
-    },
-  });
 
   const loadConfig = useApiCall(
     () => SiteApiService.getConfig(),
@@ -68,10 +62,7 @@ const SiteDetails: React.FC = () => {
     loadConfig.execute();
   }, []);
 
-  // Handle OAuth callback for reauthentication
-  useEffect(() => {
-    authActions.handleReauthCallback();
-  }, [config]);
+  // No need to handle reauthentication callback here - it's handled by AddSite page
 
   const decodedSiteUrl = decodeUrlParam(siteUrl || '');
   const site = config?.sites?.[decodedSiteUrl];
