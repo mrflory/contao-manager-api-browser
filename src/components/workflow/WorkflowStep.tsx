@@ -87,7 +87,7 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
   const getStepIcon = () => {
     switch (step.status) {
       case 'active':
-        return <Spinner size="lg" />;
+        return <Spinner size="md" borderWidth="4px" />;
       case 'complete':
         return <Check color="white" size={24} />;
       case 'error':

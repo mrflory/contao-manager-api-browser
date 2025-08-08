@@ -65,7 +65,7 @@ const SitesOverview: React.FC = () => {
   }
 
   const config = configApi.state.data as Config | undefined;
-  const sites = config?.sites ? Object.values(config.sites) : [];
+  const sites = config?.sites ? Object.values(config.sites).sort((a, b) => a.name.localeCompare(b.name)) : [];
 
   return (
     <Container maxW="6xl">
