@@ -1,6 +1,5 @@
-import * as express from 'express';
-import { Express, Request, Response } from 'express';
-import * as cors from 'cors';
+import express, { Express, Request, Response } from 'express';
+import cors from 'cors';
 import { Server } from 'http';
 import { MockState, Scenario, TaskData, MigrationData } from './types';
 import { createDefaultState } from './state';
@@ -8,6 +7,7 @@ import { taskHandlers } from './handlers/taskHandlers';
 import { migrationHandlers } from './handlers/migrationHandlers';
 import { serverHandlers } from './handlers/serverHandlers';
 import { packageHandlers } from './handlers/packageHandlers';
+import { scenarioLoader } from './scenarioLoader';
 
 export class MockServer {
   private app: Express;
@@ -21,6 +21,17 @@ export class MockServer {
     this.state = createDefaultState();
     this.setupMiddleware();
     this.setupRoutes();
+    
+    // Initialize scenarios
+    this.initializeScenarios();
+  }
+  
+  private async initializeScenarios(): Promise<void> {
+    try {
+      await scenarioLoader.loadAllScenarios();
+    } catch (error) {
+      console.warn('[MockServer] Failed to load scenarios:', error);
+    }
   }
 
   private setupMiddleware(): void {
@@ -82,6 +93,27 @@ export class MockServer {
     });
 
     this.app.use('/api', router);
+
+    // Mock control endpoints for testing
+    this.app.post('/mock/scenario', (req: Request, res: Response) => {
+      const { scenario } = req.body;
+      if (!scenario) {
+        return res.status(400).json({ error: 'Scenario name required' });
+      }
+      
+      const scenarioData = scenarioLoader.getScenario(scenario);
+      if (!scenarioData) {
+        return res.status(404).json({ error: `Scenario '${scenario}' not found` });
+      }
+      
+      this.loadScenario(scenarioData);
+      res.json({ success: true, scenario: scenario, description: scenarioData.description });
+    });
+
+    this.app.post('/mock/reset', (req: Request, res: Response) => {
+      this.state = createDefaultState();
+      res.json({ success: true, message: 'State reset to default' });
+    });
     this.app.use('/contao-manager.phar.php/api', router);
 
     // OAuth endpoints (for frontend integration)

@@ -37,6 +37,13 @@ export const serverHandlers = {
 
   getContao: (getState: () => MockState) => (req: Request, res: Response) => {
     const state = getState();
+    // Simulate auth error if configured
+    if (state.scenarios?.authErrors) {
+      return res.status(401).json({
+        title: 'Unauthorized',
+        detail: 'Authentication failed'
+      });
+    }
     res.json(state.contaoInfo);
   },
 

@@ -1,6 +1,6 @@
 import { Scenario, ScenarioCollection } from './types';
-import * as fs from 'fs';
-import * as path from 'path';
+import fs from 'fs';
+import path from 'path';
 
 export class ScenarioLoader {
   private scenariosPath: string;

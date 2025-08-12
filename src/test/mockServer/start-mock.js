@@ -266,6 +266,31 @@ class SimpleMockServer {
       res.status(201).json(this.state.currentMigration);
     });
 
+    // DELETE migration endpoint
+    router.delete('/contao/database-migration', (req, res) => {
+      if (!this.state.currentMigration) {
+        return res.status(400).json({
+          title: 'No migration to delete',
+          detail: 'No migration task exists'
+        });
+      }
+
+      if (this.state.currentMigration.status === 'active') {
+        return res.status(400).json({
+          title: 'Cannot delete active migration',
+          detail: 'Migration is still running'
+        });
+      }
+
+      // Move to history and clear current
+      if (this.state.currentMigration) {
+        this.state.migrationHistory.push({...this.state.currentMigration});
+        this.state.currentMigration = null;
+      }
+
+      res.status(200).json({ deleted: true });
+    });
+
     // Package endpoints
     router.get('/packages/root', (req, res) => {
       res.json(this.state.rootPackage);

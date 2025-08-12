@@ -63,6 +63,7 @@ export interface MockState {
     migrationFailures?: boolean;
     networkLatency?: number;
     authErrors?: boolean;
+    malformedResponses?: boolean;
   };
 }
 

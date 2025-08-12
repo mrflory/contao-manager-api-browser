@@ -1,6 +1,21 @@
 import '@testing-library/jest-dom';
 import './utils/customMatchers';
 
+// Polyfill for structuredClone (needed for Node.js < 17)
+if (!global.structuredClone) {
+  global.structuredClone = (obj: any) => {
+    if (obj === undefined || obj === null) {
+      return obj;
+    }
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch (error) {
+      // Fallback for objects that can't be serialized
+      return obj;
+    }
+  };
+}
+
 // Mock console methods to reduce noise in tests
 global.console = {
   ...console,

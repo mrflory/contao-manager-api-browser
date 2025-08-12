@@ -1,13 +1,14 @@
 import React from 'react';
 import { render, RenderOptions } from '@testing-library/react';
-import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
+import { ChakraProvider } from '@chakra-ui/react';
 import { BrowserRouter } from 'react-router-dom';
 import { WorkflowState } from '../../types';
+import { system } from '../../theme';
 
 // Mock providers wrapper
 const TestProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <ChakraProvider value={defaultSystem}>
+    <ChakraProvider value={system}>
       <BrowserRouter>
         {children}
       </BrowserRouter>

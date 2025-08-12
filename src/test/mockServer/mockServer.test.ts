@@ -138,6 +138,42 @@ describe('Mock Server Tests', () => {
       expect(localPackages.root).toBeDefined();
       expect(Object.keys(localPackages).length).toBeGreaterThan(1);
     });
+
+    test('migration deletion works with contao-manager.phar.php path', async () => {
+      const baseUrl = `http://localhost:${testPort}`;
+      
+      // Create a migration using the contao-manager.phar.php path
+      const migrationResponse = await fetch(`${baseUrl}/contao-manager.phar.php/api/contao/database-migration`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hash: 'test456' })
+      });
+      
+      expect(migrationResponse.status).toBe(201);
+      const migrationData = await migrationResponse.json();
+      expect(migrationData.hash).toBe('test456');
+
+      // Wait for migration to complete
+      await new Promise(resolve => setTimeout(resolve, 1600));
+
+      // Verify migration completed
+      const statusResponse = await fetch(`${baseUrl}/contao-manager.phar.php/api/contao/database-migration`);
+      const statusData = await statusResponse.json();
+      expect(statusData.status).toBe('complete');
+
+      // Delete migration using contao-manager.phar.php path
+      const deleteResponse = await fetch(`${baseUrl}/contao-manager.phar.php/api/contao/database-migration`, {
+        method: 'DELETE'
+      });
+      
+      expect(deleteResponse.status).toBe(200);
+      const deleteData = await deleteResponse.json();
+      expect(deleteData.deleted).toBe(true);
+
+      // Verify migration was deleted
+      const finalResponse = await fetch(`${baseUrl}/contao-manager.phar.php/api/contao/database-migration`);
+      expect(finalResponse.status).toBe(204);
+    });
   });
 
   describe('Scenario Loading', () => {

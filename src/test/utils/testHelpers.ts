@@ -66,9 +66,18 @@ export function loadScenario(mockServer: MockServer, scenarioKey: string): void 
 export function createTestApiClient(baseURL: string) {
   const apiBase = `${baseURL}/api`;
   
+  // Store reference to real fetch to bypass Jest mocks
+  const realFetch = (() => {
+    if (typeof globalThis.fetch === 'function') {
+      return globalThis.fetch;
+    }
+    // Fallback to Node.js built-in fetch
+    return eval('globalThis.fetch');
+  })();
+  
   return {
     async get<T>(endpoint: string): Promise<T> {
-      const response = await fetch(`${apiBase}${endpoint}`);
+      const response = await realFetch(`${apiBase}${endpoint}`);
       if (!response.ok && response.status !== 204) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -76,7 +85,7 @@ export function createTestApiClient(baseURL: string) {
     },
 
     async post<T>(endpoint: string, data?: any): Promise<T> {
-      const response = await fetch(`${apiBase}${endpoint}`, {
+      const response = await realFetch(`${apiBase}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: data ? JSON.stringify(data) : undefined
@@ -88,11 +97,12 @@ export function createTestApiClient(baseURL: string) {
     },
 
     async put<T>(endpoint: string, data?: any): Promise<T> {
-      const response = await fetch(`${apiBase}${endpoint}`, {
+      const response = await realFetch(`${apiBase}${endpoint}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: data ? JSON.stringify(data) : undefined
       });
+      
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -100,7 +110,7 @@ export function createTestApiClient(baseURL: string) {
     },
 
     async patch<T>(endpoint: string, data?: any): Promise<T> {
-      const response = await fetch(`${apiBase}${endpoint}`, {
+      const response = await realFetch(`${apiBase}${endpoint}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: data ? JSON.stringify(data) : undefined
@@ -112,7 +122,7 @@ export function createTestApiClient(baseURL: string) {
     },
 
     async delete<T>(endpoint: string): Promise<T> {
-      const response = await fetch(`${apiBase}${endpoint}`, {
+      const response = await realFetch(`${apiBase}${endpoint}`, {
         method: 'DELETE'
       });
       if (!response.ok && response.status !== 204) {

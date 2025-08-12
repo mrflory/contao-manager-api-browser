@@ -1,4 +1,5 @@
 import { WorkflowState, WorkflowStep } from '../../types';
+import '@testing-library/jest-dom';
 
 // Extend Jest matchers
 declare global {

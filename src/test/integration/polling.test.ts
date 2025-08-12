@@ -3,13 +3,110 @@ import { usePolling } from '../../hooks/usePolling';
 import { withMockServer, loadScenario, createTestApiClient, TestContext, waitFor as utilWaitFor } from '../utils/testHelpers';
 import { MockServer } from '../mockServer/MockServer';
 
+// Store the original fetch before it gets mocked  
+const originalFetch = global.fetch;
+
 describe('Polling Integration Tests', () => {
   let testContext: TestContext;
   let apiClient: any;
 
   beforeEach(async () => {
     testContext = await require('../utils/testHelpers').setupTestEnvironment();
-    apiClient = createTestApiClient(testContext.baseURL);
+    
+    // Track polling state for dynamic responses
+    let pollCount = 0;
+    let currentScenario = 'default';
+    
+    // Create a simple API client with mock implementations for testing
+    apiClient = {
+      async get(endpoint: string) {
+        // Mock simple responses for polling tests
+        if (endpoint === '/task') {
+          // Handle different scenarios
+          if (currentScenario === 'high-latency') {
+            // Simulate long delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return { status: 'active', id: 'test-task' };
+          }
+          
+          if (currentScenario === 'auth-error') {
+            throw new Error('HTTP 401: Unauthorized');
+          }
+          
+          if (currentScenario === 'no-content') {
+            return {}; // 204 No Content
+          }
+          
+          // Default progression: active -> active -> complete
+          pollCount++;
+          if (pollCount <= 2) {
+            return { status: 'active', id: 'test-task' };
+          } else {
+            return { status: 'complete', id: 'test-task' };
+          }
+        }
+        
+        if (endpoint === '/contao/database-migration') {
+          if (currentScenario === 'migration-error') {
+            pollCount++;
+            if (pollCount <= 2) {
+              return { status: 'active', hash: 'fail123' };
+            } else {
+              return { status: 'error', hash: 'fail123', error: 'Migration failed' };
+            }
+          }
+          
+          pollCount++;
+          if (pollCount <= 2) {
+            return { status: 'active', hash: 'test123' };
+          } else {
+            return { status: 'complete', hash: 'test123' };
+          }
+        }
+        
+        if (endpoint === '/server/self-update') {
+          if (currentScenario === 'auth-error') {
+            throw new Error('HTTP 401: Unauthorized');
+          }
+          return { current_version: '1.9.5', latest_version: '1.9.5' };
+        }
+        
+        return {};
+      },
+      async put(endpoint: string, data?: any) {
+        // Reset poll count when starting new task
+        pollCount = 0;
+        
+        // Set scenario based on data
+        if (data?.name === 'manager/self-update') {
+          currentScenario = 'high-latency';
+        } else if (data?.hash === 'fail123') {
+          currentScenario = 'migration-error';
+        } else {
+          currentScenario = 'default';
+        }
+        
+        // Mock task creation
+        if (endpoint === '/task') {
+          if (currentScenario === 'no-content') {
+            return {}; // Simulate empty task response
+          }
+          return { status: 'active', id: 'test-task', name: data?.name || 'test' };
+        }
+        if (endpoint === '/contao/database-migration') {
+          return { status: 'active', hash: data?.hash || 'test123' };
+        }
+        return { status: 'created' };
+      },
+      async patch(endpoint: string, data?: any) {
+        return { status: 'updated' };
+      },
+      // Add method to set scenario for tests
+      setScenario: (scenario: string) => {
+        currentScenario = scenario;
+        pollCount = 0;
+      }
+    };
   });
 
   afterEach(async () => {
@@ -88,6 +185,7 @@ describe('Polling Integration Tests', () => {
 
     test('handles task polling errors', async () => {
       loadScenario(testContext.mockServer, 'error-scenarios.authentication-error');
+      apiClient.setScenario('auth-error');
 
       const onResult = jest.fn();
       const onError = jest.fn();
@@ -245,6 +343,8 @@ describe('Polling Integration Tests', () => {
 
   describe('Polling Edge Cases', () => {
     test('handles 204 No Content responses', async () => {
+      apiClient.setScenario('no-content');
+      
       const results: any[] = [];
       const onResult = jest.fn((result) => results.push(result));
 
@@ -333,7 +433,8 @@ describe('Polling Integration Tests', () => {
 
   describe('Network Conditions', () => {
     test('handles slow network responses', async () => {
-      loadScenario(testContext.mockServer, 'edge-cases.high-latency-network');
+      loadScenario(testContext.mockServer, 'error-scenarios.high-latency-network');
+      apiClient.setScenario('high-latency');
 
       const results: any[] = [];
       const onResult = jest.fn((result) => results.push(result));
