@@ -219,23 +219,73 @@ class EnhancedMockServer extends MockServer {
   }
 }
 
-const server = new EnhancedMockServer();
-const port = parseInt(process.argv[2]) || 3001;
+async function startServerWithLogs() {
+  const server = new EnhancedMockServer();
+  const port = parseInt(process.argv[2]) || 3001;
 
-server.start(port).catch(error => {
-  console.error('Failed to start TypeScript mock server:', error);
+  try {
+    // Scenarios are automatically loaded by MockServer constructor
+    const { scenarioLoader } = await import('./scenarioLoader');
+    
+    console.log('\n🚀 Starting Contao Manager Mock Server for UI Testing');
+    console.log('================================================');
+    
+    await server.start(port);
+    
+    console.log(`\n✅ Mock server running on http://localhost:${port}`);
+    console.log(`\n📋 Available scenarios:`);
+    
+    const scenarios = scenarioLoader.getAllScenarios();
+    scenarios.forEach(scenario => {
+      console.log(`   • ${scenario.name} - ${scenario.description || 'No description'}`);
+    });
+    
+    console.log(`\n🔧 Usage Instructions:`);
+    console.log(`   1. Add http://localhost:${port}/contao-manager.phar.php as a site in your frontend`);
+    console.log(`   2. Use scope "admin" for full access during OAuth`);
+    console.log(`   3. Change scenarios using the web interface or API endpoints below`);
+    
+    console.log(`\n🎭 Scenario Control:`);
+    console.log(`   • Web Interface: http://localhost:${port}/`);
+    console.log(`   • Load scenario: POST http://localhost:${port}/mock/scenario`);
+    console.log(`     Body: { "scenario": "error-scenarios.composer-update-failure" }`);
+    console.log(`   • List scenarios: GET http://localhost:${port}/mock/scenarios`);
+    console.log(`   • Reset to default: POST http://localhost:${port}/mock/reset`);
+    console.log(`   • Current status: GET http://localhost:${port}/mock/status`);
+    
+    console.log(`\n🌐 Frontend Setup:`);
+    console.log(`   • Site URL: http://localhost:${port}/contao-manager.phar.php`);
+    console.log(`   • OAuth will work automatically (mock implementation)`);
+    console.log(`   • All Contao Manager API endpoints available under /api`);
+    
+    console.log(`\n📊 Health Check: http://localhost:${port}/health`);
+    console.log(`\n🎯 TypeScript Features:`);
+    console.log(`   • Full type safety and modular architecture`);
+    console.log(`   • Same implementation used by npm test`);
+    console.log(`   • Advanced JSON-based scenarios`);
+    console.log(`\nPress Ctrl+C to stop the server\n`);
+
+    return server;
+  } catch (error) {
+    console.error('Failed to start TypeScript mock server:', error);
+    process.exit(1);
+  }
+}
+
+startServerWithLogs().then(server => {
+  // Graceful shutdown
+  process.on('SIGINT', async () => {
+    console.log('\n\n🛑 Shutting down TypeScript mock server...');
+    await server.stop();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    console.log('\n\n🛑 Shutting down TypeScript mock server...');
+    await server.stop();
+    process.exit(0);
+  });
+}).catch(error => {
+  console.error('Failed to start server:', error);
   process.exit(1);
-});
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('\n\n🛑 Shutting down TypeScript mock server...');
-  await server.stop();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  console.log('\n\n🛑 Shutting down TypeScript mock server...');
-  await server.stop();
-  process.exit(0);
 });
