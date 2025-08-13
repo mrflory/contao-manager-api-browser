@@ -17,6 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test:react19-compat` - Test React v19 compatibility
 - `npm run test:chakra-v3-compat` - Test Chakra UI v3 compatibility
 - `npm run test:build` - Build and preview to test production build
+- `npm run mock:server` - Start TypeScript mock server for UI testing and development
 - `node server.js` - Direct server execution
 
 ## Architecture Overview
@@ -119,3 +120,71 @@ Following Chakra UI v3 patterns, custom components include:
 - Utilize React v19 concurrent features where appropriate
 - Implement proper error boundaries and loading states
 - Maintain responsive design across all components
+
+## Testing Infrastructure
+
+### Mock Server for Development and Testing
+The project includes a comprehensive TypeScript-based mock server that simulates the full Contao Manager API:
+
+- **Location**: `src/test/mockServer/`
+- **Command**: `npm run mock:server` (starts on http://localhost:3001)
+- **Features**:
+  - Full API coverage - all Contao Manager endpoints implemented
+  - Realistic timing and state management
+  - Scenario-based testing with 20+ predefined scenarios
+  - OAuth authentication simulation
+  - Error condition simulation
+  - Web interface for scenario control
+
+### Test Scenarios
+The mock server supports comprehensive test scenarios organized in JSON files:
+
+- **Happy Path** (`src/test/scenarios/happy-path.json`):
+  - Complete update workflows
+  - Manager-only updates
+  - Migration-only workflows
+  - No updates needed states
+
+- **Error Scenarios** (`src/test/scenarios/error-scenarios.json`):
+  - Composer update failures
+  - Migration failures  
+  - Authentication errors
+  - Network timeouts
+
+- **Edge Cases** (`src/test/scenarios/edge-cases.json`):
+  - High latency conditions
+  - Complex migration cycles
+  - Maintenance mode scenarios
+  - Resource constraints
+
+### UI Testing Workflow
+1. **Start mock server**: `npm run mock:server`
+2. **Add mock site**: Use URL `http://localhost:3001/contao-manager.phar.php`
+3. **Use OAuth scope**: `admin` recommended for full testing
+4. **Test workflows**: Complete update processes work end-to-end
+5. **Switch scenarios**: Use web interface or API calls to test error conditions
+
+### Testing Commands
+- `npm test` - Run complete Jest test suite
+- `npm run test:watch` - Run tests in watch mode for development
+- `npm run test:coverage` - Generate coverage reports
+- `npm run mock:server` - Start mock server for manual UI testing
+
+### Mock Server API Management
+Change scenarios during testing:
+```bash
+# Load error scenario
+curl -X POST http://localhost:3001/mock/scenario \
+  -H "Content-Type: application/json" \
+  -d '{"scenario": "error-scenarios.composer-update-failure"}'
+
+# Reset to default
+curl -X POST http://localhost:3001/mock/reset
+```
+
+### Testing Architecture
+- **Mock Server**: TypeScript implementation with Express.js
+- **Scenario System**: JSON-based configuration for different test conditions
+- **Integration Tests**: Full workflow testing with realistic API responses
+- **Component Tests**: React component testing with proper mocking
+- **Custom Matchers**: Workflow-specific Jest assertions
