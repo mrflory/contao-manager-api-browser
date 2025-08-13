@@ -1,0 +1,117 @@
+{
+  "name": "Happy Path Scenarios",
+  "description": "Successful workflow scenarios with no errors",
+  "scenarios": [
+    {
+      "name": "complete-update-success",
+      "description": "Complete update workflow succeeds without issues",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.4",
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": true
+        },
+        "pendingMigrations": [
+          {
+            "name": "CREATE TABLE tl_new_feature",
+            "status": "pending",
+            "message": "Adding table for new feature"
+          },
+          {
+            "name": "ALTER TABLE tl_content ADD COLUMN enhanced_field",
+            "status": "pending",
+            "message": "Adding enhanced field to content"
+          }
+        ],
+        "scenarios": {
+          "networkLatency": 50
+        }
+      }
+    },
+    {
+      "name": "no-updates-needed",
+      "description": "No manager updates or migrations needed",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": true
+        },
+        "pendingMigrations": [],
+        "scenarios": {
+          "networkLatency": 30
+        }
+      }
+    },
+    {
+      "name": "manager-update-only",
+      "description": "Only manager needs updating, no migrations",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.3",
+          "latest_version": "1.9.5", 
+          "channel": "stable",
+          "supported": true
+        },
+        "pendingMigrations": [],
+        "scenarios": {
+          "networkLatency": 40
+        }
+      }
+    },
+    {
+      "name": "migrations-only",
+      "description": "Manager is up to date, only migrations needed",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5",
+          "channel": "stable",
+          "supported": true
+        },
+        "pendingMigrations": [
+          {
+            "name": "ALTER TABLE tl_user ADD COLUMN last_login_ip",
+            "status": "pending", 
+            "message": "Adding IP tracking field"
+          }
+        ],
+        "scenarios": {
+          "networkLatency": 35
+        }
+      }
+    },
+    {
+      "name": "dry-run-success",
+      "description": "Composer dry run completes successfully",
+      "state": {
+        "selfUpdate": {
+          "current_version": "1.9.5",
+          "latest_version": "1.9.5", 
+          "channel": "stable",
+          "supported": true
+        },
+        "localPackages": {
+          "contao/core": {
+            "name": "contao/core",
+            "version": "5.2.0",
+            "type": "library",
+            "description": "Contao Core Bundle"
+          },
+          "symfony/framework-bundle": {
+            "name": "symfony/framework-bundle", 
+            "version": "6.4.1",
+            "type": "symfony-bundle",
+            "description": "Symfony FrameworkBundle"
+          }
+        },
+        "pendingMigrations": [],
+        "scenarios": {
+          "networkLatency": 25
+        }
+      }
+    }
+  ]
+}

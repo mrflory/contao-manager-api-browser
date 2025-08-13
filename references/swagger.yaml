@@ -1,0 +1,2482 @@
+
+openapi: 3.1.0
+info:
+    title: Contao Manager API
+    version: "1.9.5"
+
+paths:
+
+    ###############
+    #   Session   #
+    ###############
+
+    /api/session:
+        post:
+            summary: Create a new session (login)
+            description: If no users are defined, this will create an initial user with the given credentials.
+            tags: [Session]
+            security: []
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            oneOf:
+                                - $ref: '#/components/schemas/UserPassword'
+                                -
+                                    type: object
+                                    properties:
+                                        token:
+                                            type: string
+                                            description: A one-time login token.
+
+            responses:
+                200:
+                    description: On successful login the server will set the authentication cookies.
+                    headers:
+                        Set-Cookie:
+                            schema:
+                                type: string
+                                example: contao_manager_auth=abcde12345; Path=/contao-manager.phar.php; HttpOnly;
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/User'
+                401:
+                    description: If the authentication was not successful.
+                403:
+                    description: If the Contao Manager is locked after three unsuccessful login attempts.
+
+        get:
+            summary: Get current session status
+            description: Returns information about the current session (based on authentication)
+            tags: [Session]
+            responses:
+                200:
+                    description: If the user is authenticated
+                    content:
+                        application/json:
+                            schema:
+                                oneOf:
+                                    - $ref: '#/components/schemas/User'
+                                    - $ref: '#/components/schemas/TokenResponse'
+                204:
+                    description: If there are no records in the user database
+                401:
+                    description: If the user is not authenticated
+                403:
+                    description: If the Contao Manager is locked after three unsuccessful login attempts.
+
+        delete:
+            summary: Delete the current session (logout)
+            tags: [Session]
+            responses:
+                204:
+                    description: On successful logout.
+                401:
+                    description: If there is no active session.
+                403:
+                    description: If the Contao Manager is locked after three unsuccessful login attempts.
+
+    /api/session/options:
+        post:
+            summary: Get WebAuthn public key credential creation options
+            description: Retrieves options necessary for WebAuthn attestation ceremony (sign up with a Passkey).
+            externalDocs:
+                url: https://webauthn-doc.spomky-labs.com/webauthn-in-a-nutshell/ceremonies#attestation-ceremony
+            tags: [Session]
+            security: []
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                username:
+                                    type: string
+                                    description: Username for the new user
+            responses:
+                200:
+                    description: The WebAuthn creation options
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+
+        get:
+            summary: Get WebAuthn public key credential request options
+            description: Retrieves options necessary for WebAuthn assertion ceremony (login with a Passkey).
+            externalDocs:
+                url: https://webauthn-doc.spomky-labs.com/webauthn-in-a-nutshell/ceremonies#assertion-ceremony
+            tags: [Session]
+            security: []
+            responses:
+                200:
+                    description: The WebAuthn request options
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+
+    #############
+    #   Files   #
+    #############
+
+    /api/files/{file}:
+        parameters:
+            - name: file
+              in: path
+              description: The filename to handle.
+              required: true
+              schema:
+                  type: string
+                  enum: [composer.json, composer.lock]
+        get:
+            summary: Gets the content of a file.
+            tags: [Files]
+            security:
+                - CookieAuthentication: [ admin ]
+                - TokenAuthentication: [ admin ]
+            responses:
+                200:
+                    description: Content of the files.
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                403:
+                    description: If the file parameter is invalid.
+        put:
+            summary: Writes content of a file
+            tags: [Files]
+            security:
+                - CookieAuthentication: [ admin ]
+                - TokenAuthentication: [ admin ]
+            responses:
+                200:
+                    description: Content of the file
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                403:
+                    description: If the file parameter is invalid.
+
+
+    ##############
+    #   System   #
+    ##############
+
+    /api/server/self-update:
+        get:
+            summary: Gets update status of the Contao Manager
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: The update status.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    current_version:
+                                        type: string
+                                        description: Current version of the Contao Manager.
+                                    latest_version:
+                                        type: string
+                                        description: Latest available version of the Contao Manager.
+                                    channel:
+                                        type: string
+                                        enum: [stable, dev]
+                                    supported:
+                                        type: boolean
+                                        description: False if the current build cannot be updated.
+                                    error:
+                                        type: string
+                                        description: Error information if the request for the latest version failed.
+                501:
+                    description: If version is a development build that cannot be updated.
+
+    /api/server/config:
+        get:
+            summary: Gets server configuration
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: The configured server configuration if available, otherwise the detected values.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerConfig'
+        put:
+            summary: Sets server configuration
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                php_cli:
+                                    type: string
+                                    description: Path to the PHP command line.
+                                cloud:
+                                    type: boolean
+                                    description: Enables or disables use of the Composer Resolver Cloud.
+
+            responses:
+                200:
+                    description: If the config was successfully saved.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerConfig'
+                400:
+                    description: Error message if the PHP CLI is invalid
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+
+    /api/server/php-web:
+        get:
+            summary: Gets PHP web server configuration
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: Version of the current PHP web server. The problem key returns the first found server issue or empty if none.
+                    content:
+                        application/json:
+                            schema:
+                                properties:
+                                    version:
+                                        type: string
+                                        description: PHP version
+                                    version_id:
+                                        type: integer
+                                        description: PHP version ID
+                                    platform:
+                                        type: string
+                                        enum:
+                                            - unix
+                                            - windows
+                                    problem:
+                                        $ref: '#/components/schemas/ApiProblem'
+
+    /api/server/php-cli:
+        get:
+            summary: Gets PHP command line configuration
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: Version of the current PHP command line binary. The problem key returns the first found server issue or empty if none.
+                    content:
+                        application/json:
+                            schema:
+                                properties:
+                                    version:
+                                        type: string
+                                    version_id:
+                                        type: integer
+                                        description: PHP version ID
+                                    problem:
+                                        $ref: '#/components/schemas/ApiProblem'
+                503:
+                    description: If the command line binary cannot be found.
+
+    /api/server/phpinfo:
+        get:
+            summary: Gets PHP Information
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: Gets result of the phpinfo() function.
+
+    /api/server/opcode:
+        get:
+            summary: Gets PHP opcode cache Information
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: Status of the opcode cache.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerOpcache'
+        delete:
+            summary: Resets the opcode cache
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: Status of the opcode cache.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerOpcache'
+
+    /api/server/composer:
+        get:
+            summary: Gets Composer configuration
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: Returns information about the composer configuration.
+                    content:
+                        application/json:
+                            schema:
+                                properties:
+                                    json:
+                                        type: object
+                                        properties:
+                                            found:
+                                                type: boolean
+                                            valid:
+                                                type: boolean
+                                            error:
+                                                type: object
+                                                properties:
+                                                    message:
+                                                        type: string
+                                                    details:
+                                                        type: string
+                                    lock:
+                                        type: object
+                                        properties:
+                                            found:
+                                                type: boolean
+                                            fresh:
+                                                type: boolean
+                                    vendor:
+                                        type: object
+                                        properties:
+                                            found:
+                                                type: boolean
+                503:
+                    description: If the PHP command line binary cannot be found.
+
+    /api/server/contao:
+        get:
+            summary: Gets Contao configuration
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: Gets information about the current Contao installation.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerContao'
+                500:
+                    description: If any of the commands did not run successfully.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+                503:
+                    description: If the server config is not ready or the command line binary cannot be found.
+
+        post:
+            summary: Create the Contao directory structure.
+            description: Creates the necessary directory to install Contao. If the current directory is not empty,
+                pass a new directory name to be created. If the current directory is empty but not a web dir, pass
+                an empty directory to create the `web` directory only.
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                directory:
+                                    type: string
+                                    nullable: true
+                                    description: The directory name or null if only the `web`/`public` directory must be created.
+                                usePublicDir:
+                                    type: boolean
+                                    description: To use `public` instead of `web` directory
+            responses:
+                201:
+                    description: Operation successful
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerContao'
+                403:
+                    description: Target directory already exists.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+                501:
+                    description: Operation is not supported (e.g. not running as Phar).
+
+    /api/server/database:
+        get:
+            summary: Gets the current database status
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: The database status
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerDatabase'
+                501:
+                    description: Contao console does not support the necessary contao:migrate commands or CLI API features.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+                503:
+                    description: If the PHP command line binary cannot be found.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+
+        post:
+            summary: Configures the database URL.
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                url:
+                                    type: string
+                                    description: Database URL to be stored in the .env file.
+            responses:
+                200:
+                    description: The database status
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerDatabase'
+                400:
+                    description: If the given URL does not match the regular expression.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+                501:
+                    description: Contao console does not support the necessary contao:migrate commands or CLI API features.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+                503:
+                    description: If the PHP command line binary cannot be found.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+
+    /api/server/admin-user:
+        get:
+            summary: Gets if there is an admin user
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            responses:
+                200:
+                    description: Gets if there is an admin user
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerAdminUser'
+                501:
+                    description: Contao console does not support the necessary contao:user:list and/or contao:user:create commands/options.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+                502:
+                    description: If the command line does not work as expected.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+                503:
+                    description: If the PHP command line binary cannot be found.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+
+        post:
+            summary: Create an admin user
+            tags: [Server Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                username:
+                                    type: string
+                                name:
+                                    type: string
+                                email:
+                                    type: string
+                                password:
+                                    type: string
+                                    minLength: 8
+            responses:
+                201:
+                    description: User was created successfully.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerAdminUser'
+                405:
+                    description: An admin user already exists.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+                500:
+                    description: The user account could not be created.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+                501:
+                    description: Contao console does not support the necessary contao:user:list and/or contao:user:create commands/options.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+                503:
+                    description: If the PHP command line binary cannot be found.
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+
+
+    #############
+    #   Users   #
+    #############
+
+    /api/invitations:
+        post:
+            summary: Create invitation token for a new user.
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ admin ]
+                - TokenAuthentication: [ admin ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                scope:
+                                    type: string
+                                    enum:
+                                        - admin
+                                        - install
+                                        - update
+                                        - read
+            responses:
+                201:
+                    description: Data of the newly created invitation token.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/InvitationResponse'
+
+    /api/users:
+        get:
+            summary: User List
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ admin, user ]
+                - TokenAuthentication: [ admin, user ]
+            responses:
+                200:
+                    description: An array of users.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/User'
+        post:
+            summary: Create User
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ admin ]
+                - TokenAuthentication: [ admin ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UserPassword'
+            responses:
+                200:
+                    description: Data of the newly created user.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/User'
+
+    /api/users/{username}:
+        get:
+            summary: Get User
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ admin, user ]
+                - TokenAuthentication: [ admin, user ]
+            parameters:
+                - name: username
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                200:
+                    description: The user data
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/User'
+                404:
+                    description: User was not found.
+        put:
+            summary: Replace User
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ admin, user ]
+                - TokenAuthentication: [ admin, user ]
+            parameters:
+                - name: username
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UserPassword'
+            responses:
+                200:
+                    description: User replaced
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/User'
+        delete:
+            summary: Delete User
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ admin ]
+                - TokenAuthentication: [ admin ]
+            parameters:
+                - name: username
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                200:
+                    description: User deleted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/User'
+
+    /api/users/{username}/password:
+        put:
+            summary: Change the current user password
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ user ]
+                - TokenAuthentication: [ user ]
+            parameters:
+                - name: username
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                current_password:
+                                    type: string
+                                new_password:
+                                    type: string
+            responses:
+                200:
+                    description: The password was changed successfully.
+                400:
+                    description: Current or new password is missing.
+                403:
+                    description: If {username} is not the currently logged in user.
+                422:
+                    description: If the current password is not valid.
+                503:
+                    description: If the user is using Passkey authentication, the password cannot be changed.
+
+    /api/users/{username}/totp:
+        get:
+            summary: Get TOTP configuration
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ user ]
+                - TokenAuthentication: [ user ]
+            parameters:
+                - name: username
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                200:
+                    description: Returns the TOTP provisioning URI, if TOTP has not been configured.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    provisioning_uri:
+                                        type: string
+                400:
+                    description: Bad request if TOTP is already configured for this user.
+                403:
+                    description: For any {username} in URL but the currently logged in user (or no user is logged in).
+                503:
+                    description: If the user is using Passkey authentication, TOTP cannot be configured.
+        put:
+            summary: Configure TOTP authentication
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ user ]
+                - TokenAuthentication: [ user ]
+            parameters:
+                - name: username
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                provisioning_uri:
+                                    type: string
+                                    description: The provisioning_uri previously obtained from a GET request for this user.
+                                totp:
+                                    type: number
+                                    description: Valid TOTP code for the given provisioning_uri
+            responses:
+                201:
+                    description: When TOTP has been configured successfully.
+                400:
+                    description: If the provisioning_uri is invalid.
+                403:
+                    description: If TOTP is already configured for this user, or {username} is not the currently logged in user.
+                422:
+                    description: If the TOTP code is invalid/does not match the provisioning_uri.
+                503:
+                    description: If the user is using Passkey authentication, TOTP cannot be configured.
+        delete:
+            summary: Remove TOTP configuration for a user.
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ user ]
+                - TokenAuthentication: [ user ]
+            parameters:
+                - name: username
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                totp:
+                                    type: number
+                                    description: Valid TOTP code for the given user account.
+            responses:
+                200:
+                    description: If TOTP was removed successfully.
+                403:
+                    description: For any {username} in URL but the currently logged in user (or no user is logged in).
+                404:
+                    description: If the user is not found or TOTP is not configured.
+                422:
+                    description: If the TOTP code is invalid.
+                503:
+                    description: If the user is using Passkey authentication, TOTP cannot be configured.
+
+    /api/users/{username}/tokens:
+        get:
+            summary: Token List
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ admin, user ]
+                - TokenAuthentication: [ admin, user ]
+            parameters:
+                - name: username
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                200:
+                    description: An array of tokens.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/TokenResponse'
+        post:
+            summary: Create Token
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ admin, user ]
+                - TokenAuthentication: [ admin, user ]
+            parameters:
+                - name: username
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/TokenRequest'
+            responses:
+                200:
+                    description: Data of the newly created token.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/TokenResponse'
+
+    /api/users/{username}/tokens/{id}:
+        get:
+            summary: Get Token
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ admin, user ]
+                - TokenAuthentication: [ admin, user ]
+            parameters:
+                - name: username
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                200:
+                    description: The token data
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/TokenResponse'
+                404:
+                    description: Token was not found.
+        delete:
+            summary: Delete Token
+            tags: [Users]
+            security:
+                - CookieAuthentication: [ admin, user ]
+                - TokenAuthentication: [ admin, user ]
+            parameters:
+                - name: username
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                200:
+                    description: Token deleted
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/TokenResponse'
+
+
+    #####################
+    #   Configuration   #
+    #####################
+
+    /api/config/manager:
+        get:
+            summary: Get manager config.
+            tags: [Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            responses:
+                200:
+                    description: The manager configuration.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ConfigManager'
+        put:
+            summary: Replace manager config.
+            tags: [Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ConfigManager'
+            responses:
+                200:
+                    description: The manager configuration.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ConfigManager'
+        patch:
+            summary: Append manager config.
+            tags: [Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ConfigManager'
+            responses:
+                200:
+                    description: The manager configuration.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ConfigManager'
+
+    /api/config/auth:
+        get:
+            summary: Get Composer auth config.
+            tags: [Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            responses:
+                200:
+                    description: The Composer auth configuration.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ConfigAuth'
+        put:
+            summary: Replace Composer auth config.
+            tags: [Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ConfigAuth'
+            responses:
+                200:
+                    description: The Composer auth configuration.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ConfigAuth'
+        patch:
+            summary: Append Composer auth config.
+            tags: [Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ConfigAuth'
+            responses:
+                200:
+                    description: The Composer auth configuration.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ConfigAuth'
+
+    /api/config/auth/github-oauth:
+        put:
+            summary: Set GitHub OAuth token.
+            tags: [Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                token:
+                                    type: string
+
+            responses:
+                200:
+                    description: The Composer auth configuration.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    github.com:
+                                        type: string
+                                        description: OAuth token for github.com.
+
+    /api/config/composer:
+        get:
+            summary: Get Composer config.
+            tags: [Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            responses:
+                200:
+                    description: The Composer configuration.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ConfigComposer'
+        put:
+            summary: Replace Composer config.
+            tags: [Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ConfigComposer'
+            responses:
+                200:
+                    description: The Composer configuration.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ConfigComposer'
+        patch:
+            summary: Append Composer config.
+            tags: [Configuration]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ConfigComposer'
+            responses:
+                200:
+                    description: The Composer configuration.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ConfigComposer'
+
+
+    ##################
+    #   Contao API   #
+    ##################
+
+    /api/contao/access-key:
+        get:
+            summary: Gets the hashed access key.
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: The Contao access key
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoAccessKeyGet'
+                501:
+                    description: If the current Contao version does not support the access-key API.
+        put:
+            summary: Sets the hashed access key.
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ContaoAccessKeySet'
+            responses:
+                200:
+                    description: The access key was set.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoAccessKeyGet'
+                501:
+                    description: If the current Contao version does not support the access-key API.
+        delete:
+            summary: Removes the access key.
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: The access key was removed.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoAccessKeyGet'
+                501:
+                    description: If the current Contao version does not support the access-key API.
+
+    /api/contao/database-migration:
+        get:
+            summary: Gets the current migration task status.
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: The database migration status.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoDatabaseMigration'
+                501:
+                    description: If the current Contao version does not support the database migration API.
+        put:
+            summary: Starts a database migration task.
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                hash:
+                                    type: string
+                                    required: false
+                                    description: The migration hash to execute. If no hash is given, a --dry-run is executed to get pending migrations.
+                                type:
+                                    type: string
+                                    description: If only migrations or only schema updates should be checked.
+                                    enum:
+                                        - migrations-only
+                                        - schema-only
+                                withDeletes:
+                                    type: boolean
+                                    description: Executes migrations including DROP queries.
+            responses:
+                201:
+                    description: The database migration task was started successfully.
+                400:
+                    description: A database migration task already exists.
+                501:
+                    description: If the current Contao version does not support the database migration API.
+        delete:
+            summary: Delete the current migration task.
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: The database migration task was deleted.
+                400:
+                    description: No database migration task is found.
+                501:
+                    description: If the current Contao version does not support the database migration API.
+
+    /api/contao/backup:
+        get:
+            summary: Gets a list of database backups on the server.
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: List of database backups.
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/ContaoBackup'
+
+                501:
+                    description: If the current Contao version does not support database backups.
+
+    /api/contao/install-tool/lock:
+        get:
+            summary: Get install tool lock status
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: Get install tool lock status
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoInstallToolLock'
+                501:
+                    description: If the current Contao version does not support locking the install tool.
+        put:
+            summary: Lock the install tool
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: Lock the install tool
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoInstallToolLock'
+                501:
+                    description: If the current Contao version does not support locking the install tool.
+        delete:
+            summary: Unlock the install tool
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: Unlock the install tool
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoInstallToolLock'
+                501:
+                    description: If the current Contao version does not support locking the install tool.
+
+    /api/contao/jwt-cookie:
+        get:
+            summary: Get JWT cookie content
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: Get JWT cookie content
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoJwtCookie'
+                501:
+                    description: If the current Contao version does not support the JWT cookie.
+        put:
+            summary: Set JWT cookie
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ContaoJwtCookie'
+            responses:
+                200:
+                    description: Set JWT cookie
+                    headers:
+                        Cookie:
+                            schema:
+                                type: string
+                                description: Sets the `contao_settings` cookie
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoJwtCookie'
+                501:
+                    description: If the current Contao version does not support the JWT cookie.
+        delete:
+            summary: Delete JWT Cookie
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: Delete JWT Cookie
+                    headers:
+                        Cookie:
+                            schema:
+                                type: string
+                                description: Deletes the `contao_settings` cookie
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoJwtCookie'
+                501:
+                    description: If the current Contao version does not support the JWT cookie.
+
+    /api/contao/maintenance-mode:
+        get:
+            summary: Get maintenance mode status
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: Get maintenance mode status
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoMaintenanceMode'
+                501:
+                    description: If the current Contao version does not support maintenance mode.
+        put:
+            summary: Enable the maintenance mode
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: Enable the maintenance mode
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoMaintenanceMode'
+                501:
+                    description: If the current Contao version does not support maintenance mode.
+        delete:
+            summary: Disable the maintenance mode
+            tags: [Contao API]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: Disable the maintenance mode
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContaoMaintenanceMode'
+                501:
+                    description: If the current Contao version does not support maintenance mode.
+
+
+
+    #############
+    #   Tasks   #
+    #############
+
+    /api/task:
+        get:
+            summary: Gets task data.
+            tags: [Tasks]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: The current task data.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/TaskStatus'
+                204:
+                    description: If no task is active.
+        put:
+            summary: Sets task data.
+            tags: [Tasks]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/TaskSet'
+            responses:
+                200:
+                    description: The current task data.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/TaskStatus'
+                400:
+                    description: If a task is already running or the payload is invalid
+
+        patch:
+            summary: Starts or stops the active task.
+            tags: [Tasks]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: ["status"]
+                            properties:
+                                status:
+                                    type: string
+                                    enum:
+                                        - active
+                                        - aborting
+            responses:
+                200:
+                    description: If the status was successfully updated.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/TaskStatus'
+                400:
+                    description: If the task status is unknown.
+
+        delete:
+            summary: Deletes task data.
+            tags: [Tasks]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            responses:
+                200:
+                    description: The deleted task data.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/TaskStatus'
+                400:
+                    description: If the task cannot be deleted because it's running.
+
+
+    ################
+    #   Packages   #
+    ################
+
+    /api/packages/root:
+        get:
+            summary: Gets details of the root Composer package.
+            tags: [Packages]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: Gets details of the root Composer package.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Package'
+
+    /api/packages/local/:
+        get:
+            summary: Gets list of installed Composer packages.
+            tags: [Packages]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: Collection of installed packages. Object key equals package name, the root package is added with key "root".
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                additionalProperties:
+                                    $ref: '#/components/schemas/Package'
+
+    /api/packages/local/{name}:
+        get:
+            summary: Gets details of an installed Composer package.
+            tags: [Packages]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: Gets details of an installed Composer package.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Package'
+
+    /api/packages/cloud:
+        get:
+            summary: Gets data for a Composer Cloud job
+            tags: [Packages]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: Gets data for a Composer Cloud job
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    composerJson:
+                                        type: object
+                                    composerLock:
+                                        type: object
+                                    platform:
+                                        type: object
+                                    localPackages:
+                                        type: object
+
+        put:
+            summary: Writes `composer.lock` and optional `composer.json` and runs a `composer install`
+            tags: [Packages]
+            security:
+                - CookieAuthentication: [ install ]
+                - TokenAuthentication: [ install ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [composerLock]
+                            properties:
+                                composerLock:
+                                    type: object
+                                    description: New content of the `composer.lock` file
+                                composerJson:
+                                    type: object
+                                    description: Optional content of the `composer.json` file
+            responses:
+                200:
+                    description: Writes `composer.lock` and optional `composer.json` and runs a `composer install`
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/TaskStatus'
+
+    /api/constraint:
+        post:
+            summary: Validates a Composer version constraint
+            tags: [Packages]
+            security:
+                - CookieAuthentication: [ update ]
+                - TokenAuthentication: [ update ]
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [constraint]
+                            properties:
+                                constraint:
+                                    type: string
+                                    description: The version constraint to validate.
+            responses:
+                200:
+                    description: Validates a Composer version constraint
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ConstraintValidation'
+                400:
+                    description: If no constraint is given.
+
+    /api/logs:
+        get:
+            summary: Gets a list of files in the /var/logs directory
+            tags: [Logs]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            responses:
+                200:
+                    description: The list of log files
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/LogFile'
+
+    /api/logs/{file}:
+        get:
+            summary: Get the content of a log file
+            tags: [Logs]
+            security:
+                - CookieAuthentication: [ read ]
+                - TokenAuthentication: [ read ]
+            parameters:
+                -   name: file
+                    in: path
+                    description: The filename (without .log extension) to handle.
+                    required: true
+                    schema:
+                        type: string
+                -   name: limit
+                    in: query
+                    description: Number of lines to read from the file as JSON.
+                    required: false
+                    schema:
+                        type: integer
+                -   name: offset
+                    in: query
+                    description: Number of lines to skip when reading the file as JSON.
+                    required: false
+                    schema:
+                        type: integer
+                -   name: channels
+                    in: query
+                    description: Comma-separated list of channels to filter the JSON result against.
+                    required: false
+                    schema:
+                        type: string
+                -   name: levels
+                    in: query
+                    description: Comma-separated list of log levels to filter the JSON result against.
+                    required: false
+                    schema:
+                        type: string
+            responses:
+                200:
+                    description: The log file content
+                    content:
+                        text/plain:
+                            schema:
+                                description: The plain file content
+                        application/json:
+                            schema:
+                                allOf:
+                                    -   $ref: '#/components/schemas/LogFile'
+                                    -   type: object
+                                        properties:
+                                            content:
+                                                type: array
+                                                items:
+                                                    type: object
+                                                    oneOf:
+                                                        -   $ref: '#/components/schemas/LogRecord'
+                                                        -   type: string
+                                                            description: If the line could not be parsed, it is returned as plain text
+
+                404:
+                    description: If the file was not found
+
+        delete:
+            summary: Deletes a log file
+            tags: [ Logs ]
+            security:
+                - CookieAuthentication: [ admin ]
+                - TokenAuthentication: [ admin ]
+            responses:
+                204:
+                    description: If the log file was successfully deleted.
+                400:
+                    description: If the file name is invalid
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/ApiProblem'
+                404:
+                    description: If the log file was not found.
+
+components:
+    schemas:
+        User:
+            type: object
+            properties:
+                username:
+                    type: string
+                    description: Username of the user.
+                scope:
+                    type: string
+                    enum:
+                        - admin
+                        - install
+                        - update
+                        - read
+                totp_enabled:
+                    type: boolean
+                    description: Whether two-factor authentication is enabled/required using TOTP. Not available if Passkey is used.
+                passkey:
+                    type: boolean
+                    description: Whether this user authenticates using a Passkey.
+                limited:
+                    type: boolean
+                    description: >
+                        In case the user was authenticated with a passwordless link, the scope of the API token used for
+                        generating that link is inherited to the user session. This flag is `true` if the user would have
+                        more permissions than currently given by the passwordless link.
+
+        UserPassword:
+            allOf:
+                -   $ref: '#/components/schemas/User'
+                -   type: object
+                    required: [username, password]
+                    properties:
+                        password:
+                            type: string
+                            format: password
+                            description: Password of the user.
+
+        TokenRequest:
+            type: object
+            required: [client_id, scope]
+            properties:
+                client_id:
+                    type: string
+                    description: OAuth client ID of the token.
+                scope:
+                    type: string
+                    description: Permission scope of the token.
+                    enum:
+                        - admin
+                        - install
+                        - update
+                        - read
+                grant_type:
+                    type: string
+                    description: Use "one-time" to generate a passwordless login token that expires in 30 seconds.
+                    enum:
+                        - one-time
+
+        TokenResponse:
+            type: object
+            required: [id, token, scope]
+            properties:
+                id:
+                    type: string
+                token:
+                    type: string
+                    description: Only available if the token was freshly created.
+                username:
+                    type: string
+                    description: Username of the token.
+                client_id:
+                    type: string
+                    description: Client ID of the token.
+                scope:
+                    type: string
+                    description: Permission scope of the token.
+                    enum:
+                        - admin
+                        - install
+                        - update
+                        - read
+                grant_type:
+                    type: string
+                    description: Grant type of the token
+                    enum:
+                        - one-time
+                expires:
+                    type: integer
+                    description: Timestamp when the one-time token expires.
+                url:
+                    type: string
+                    description: Login URL for passwordless authentication tokens.
+
+        InvitationResponse:
+            type: object
+            required: [ id, token, scope ]
+            properties:
+                id:
+                    type: string
+                token:
+                    type: string
+                scope:
+                    type: string
+                    description: Permission scope of the token.
+                    enum:
+                        - admin
+                        - install
+                        - update
+                        - read
+                grant_type:
+                    type: string
+                    description: Grant type of the token
+                    enum:
+                        - invitation
+                expires:
+                    type: integer
+                    description: Timestamp when the one-time token expires.
+                url:
+                    type: string
+                    description: Registration URL to create a new user account.
+
+        ConfigManager:
+            type: object
+            properties:
+                php_cli:
+                    type: string
+                    description: Path to the PHP executable.
+
+        ConfigAuth:
+            type: object
+            properties:
+                github-oauth:
+                    type: object
+
+        ConfigComposer:
+            type: object
+
+        ServerConfig:
+            type: object
+            properties:
+                php_cli:
+                    type: string
+                    description: Path to the PHP command line.
+                cloud:
+                    type: object
+                    properties:
+                        enabled:
+                            type: boolean
+                            description: Whether the Composer Resolver Cloud is used when updating packages.
+                        issues:
+                            type: array
+                            items:
+                                type: string
+
+        ServerOpcache:
+            type: object
+            properties:
+                opcache_enabled:
+                    type: boolean
+                reset_token:
+                    type: string
+
+        ServerContao:
+            type: object
+            properties:
+                    version:
+                        description: The Contao version number.
+                        type: string
+                        nullable: true
+                    cli:
+                        type: object
+                        properties:
+                            commands:
+                                type: object
+                                additionalProperties:
+                                    type: object
+                                    properties:
+                                        arguments:
+                                            type: array
+                                        options:
+                                            type: array
+                    api:
+                        type: object
+                        properties:
+                            version:
+                                type: integer
+                                description: The Contao API version number.
+                            features:
+                                type: array
+                            commands:
+                                type: array
+                    config:
+                        type: object
+                        description: Bundle configuration of Contao. Only available for Symfony 6.3.1+ (Contao 5.1+) and if the application is working correctly.
+                    supported:
+                        type: boolean
+                    conflicts:
+                        type: array
+                        description: List of conflicting files in the project directory.
+                    project_dir:
+                        type: string
+                        description: Full path to the project directory.
+                    public_dir:
+                        type: string
+                        description: Name of the public directory ("public" or "web").
+                    directory_separator:
+                        type: string
+                        enum:
+                            - /
+                            - \
+
+        ServerDatabase:
+            type: object
+            properties:
+                url:
+                    type: string
+                    description: Current database URL (DATABASE_URL from .env file in project root).
+                pattern:
+                    type: string
+                    description: Regular expression to match a valid database URL.
+                status:
+                    type: object
+                    properties:
+                        type:
+                            type: string
+                            enum:
+                                - error
+                                - problem
+                                - migration
+                                - schema
+                                - empty
+                        total:
+                            type: number
+                            description: Number of errors/problems/migrations or schema updates (according to type).
+                        message:
+                            type: string
+                            required: false
+                            description: Contains the console output if the command fails or the first error/problem message.
+                        warnings:
+                            type: number
+                            description: Number of warnings generated by the contao:migrate command.
+
+        ServerAdminUser:
+            type: object
+            properties:
+                hasUser:
+                    type: boolean
+
+        ContaoAccessKeyGet:
+            type: object
+            properties:
+                access-key:
+                    type: string
+
+        ContaoAccessKeySet:
+            type: object
+            properties:
+                user:
+                    type: string
+                password:
+                    type: string
+
+        ContaoDatabaseMigration:
+            type: object
+            properties:
+                type:
+                    type: string
+                    enum:
+                        - schema
+                        - schema-only
+                        - migrations
+                        - migrations-only
+                status:
+                    type: string
+                    enum:
+                        - pending
+                        - active
+                        - complete
+                        - error
+                operations:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            name:
+                                type: string
+                                description: Name of the migration or SQL statement for schema update.
+                            status:
+                                type: string
+                                enum:
+                                    - pending
+                                    - active
+                                    - complete
+                                    - error
+                            message:
+                                type: string
+                                description: Result message of an executed migration or error message for failed schema updates.
+                hash:
+                    type: string
+
+        ContaoBackup:
+            type: object
+            properties:
+                name:
+                    type: string
+                    description: The backup file name (unique).
+                createdAt:
+                    type: string
+                    description: ISO 8601 date when the file was created.
+                size:
+                    type: number
+                    description: The backup file size in bytes.
+
+        ContaoInstallToolLock:
+            type: object
+            properties:
+                locked:
+                    type: boolean
+
+        ContaoJwtCookie:
+            type: object
+            properties:
+                debug:
+                    type: boolean
+
+        ContaoMaintenanceMode:
+            type: object
+            properties:
+                enabled:
+                    type: boolean
+
+        TaskGet:
+            type: object
+            properties:
+                id:
+                    type: string
+                status:
+                    type: string
+                type:
+                    type: string
+                created_at:
+                    type: string
+                    format: date-time
+                output:
+                    type: string
+
+        TaskSet:
+            type: object
+            discriminator:
+                propertyName: name
+                mapping:
+                    composer/update: '#/components/schemas/TaskPackagesUpdate'
+                    composer/install: '#/components/schemas/TaskPackagesInstall'
+                    contao/install: '#/components/schemas/TaskPackagesSetup'
+                    contao/rebuild-cache: '#/components/schemas/TaskContaoRebuildCache'
+                    contao/backup-create: '#/components/schemas/TaskContaoBackupCreate'
+                    contao/backup-restore: '#/components/schemas/TaskContaoBackupRestore'
+                    composer/clear-cache: '#/components/schemas/TaskComposerClearCache'
+                    composer/dump-autoload: '#/components/schemas/TaskComposerDumpAutoload'
+                    manager/self-update: '#/components/schemas/TaskManagerSelfUpdate'
+            properties:
+                name:
+                    type: string
+            required: [name]
+            oneOf:
+                - $ref: '#/components/schemas/TaskPackagesUpdate'
+                - $ref: '#/components/schemas/TaskPackagesInstall'
+                - $ref: '#/components/schemas/TaskPackagesSetup'
+                - $ref: '#/components/schemas/TaskContaoRebuildCache'
+                - $ref: '#/components/schemas/TaskContaoBackupCreate'
+                - $ref: '#/components/schemas/TaskContaoBackupRestore'
+                - $ref: '#/components/schemas/TaskComposerClearCache'
+                - $ref: '#/components/schemas/TaskComposerDumpAutoload'
+                - $ref: '#/components/schemas/TaskManagerSelfUpdate'
+
+        TaskComposerClearCache:
+            description: Clears the Contao (Symfony) Cache
+            type: object
+            properties:
+                name:
+                    type: string
+                    default: 'composer/clear-cache'
+                    description: Clears the Composer cache.
+
+        TaskComposerDumpAutoload:
+            type: object
+            properties:
+                name:
+                    type: string
+                    default: 'composer/dump-autoload'
+                    description: Dumps the Composer autoloader.
+
+        TaskContaoRebuildCache:
+            type: object
+            properties:
+                name:
+                    type: string
+                    default: 'contao/rebuild-cache'
+                    description: Clears the Contao/Symfony cache and optionally rebuilds it.
+                environment:
+                    type: string
+                    default: prod
+                warmup:
+                    type: boolean
+                    default: true
+
+        TaskContaoBackupCreate:
+            type: object
+            properties:
+                name:
+                    type: string
+                    default: 'contao/backup-create'
+                    description: Creates a full backup of the current database.
+
+        TaskContaoBackupRestore:
+            type: object
+            properties:
+                name:
+                    type: string
+                    default: 'contao/backup-restore'
+                    description: Restore a database backup from file.
+                file:
+                    type: string
+                    description: The database backup file name from /var/backups.
+                backup:
+                    type: boolean
+                    default: false
+                    description: Whether to create a new backup before restore (and therefore overwriting the database content).
+
+        TaskManagerSelfUpdate:
+            type: object
+            properties:
+                name:
+                    type: string
+                    default: 'manager/self-update'
+                    description: Updated the Contao Manager to the latest version.
+
+        TaskPackagesSetup:
+            type: object
+            properties:
+                name:
+                    type: string
+                    default: 'contao/install'
+                config:
+                    oneOf:
+                        -   type: object
+                            description: Creates a Contao project from an uploaded theme file.
+                            required: [upload]
+                            properties:
+                                upload:
+                                    type: string
+                                    description: ID of a theme file that was uploaded.
+                                no-update:
+                                    type: boolean
+                                    default: false
+                                    description: Only create the project files but do not run a `composer update`.
+                        -   type: object
+                            description: Installs a Contao project through Composer.
+                            required: [package]
+                            properties:
+                                package:
+                                    type: string
+                                    description: A composer package to use with `create-project` (e.g. `contao/contao-demo`).
+                                version:
+                                    type: string
+                                    description: Version of the package to install.
+                                no-update:
+                                    type: boolean
+                                    default: false
+                                    description: Only create the project files but do not run a `composer update`.
+                        -   type: object
+                            description: Creates a `composer.json` for the Contao Managed Edition.
+                            required: [version]
+                            properties:
+                                version:
+                                    type: string
+                                    enum: [4.9, 4.13, 5.2]
+                                no-update:
+                                    type: boolean
+                                    default: false
+                                    description: Only create the `composer.json` but do not run a `composer update`.
+
+        TaskPackagesInstall:
+            type: object
+            properties:
+                name:
+                    type: string
+                    default: 'composer/install'
+                    description: Installs Composer packages from lock file (`composer install`).
+                      This automatically runs an update if there is no `composer.lock` file and uses
+                      the Composer Resolver Cloud if enabled.
+                config:
+                    type: object
+                    properties:
+                        dry_run:
+                            type: boolean
+                            default: false
+                        remove-vendor:
+                            type: boolean
+                            default: false
+                            description: Removes the `vendor` folder before installation (clean install).
+
+        TaskPackagesUpdate:
+            type: object
+            properties:
+                name:
+                    type: string
+                    default: 'composer/update'
+                    description: Updates the installed Composer packages (`composer update`).
+                config:
+                    type: object
+                    properties:
+                        dry_run:
+                            type: boolean
+                            default: false
+                        uploads:
+                            type: boolean
+                            default: false
+                            description: Install uploaded packages that are in the list of packages to update
+                        require:
+                            type: object
+                            description: List of packages to require. Key is package name and value is version, which can be empty.
+                        remove:
+                            type: array
+                            description: List of packages to remove.
+                            items:
+                                type: string
+                        update:
+                            type: array
+                            description: List of package names to include in the update. If not set, all packages will be updated.
+                            items:
+                                type: string
+
+        TaskStatus:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: A unique UUIDv4 for the current task.
+                title:
+                    type: string
+                console:
+                    type: string
+                cancellable:
+                    type: boolean
+                    description: If the task can be aborted
+                autoclose:
+                    type: boolean
+                    description: If it should be possible to close the task automatically.
+                audit:
+                    type: boolean
+                    description: If a successful task might requires audit (install tool).
+                status:
+                    type: string
+                    enum: [active, complete, paused, error, aborting, stopped]
+                operations:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            summary:
+                                type: string
+                            details:
+                                type: string
+                            console:
+                                type: string
+                            status:
+                                type: string
+                                enum: [active, complete, error, stopped]
+                sponsor:
+                    type: object
+                    description: Sponsor of the current task on the Composer Cloud
+                    properties:
+                        name:
+                            type: string
+                        link:
+                            type: string
+
+        Package:
+            type: object
+            description: "A package definition according to the Composer schema: https://getcomposer.org/doc/04-schema.md"
+            properties:
+                name:
+                    type: string
+                version:
+                    type: string
+                    description: Currently installed version
+                type:
+                    type: string
+                    description: A Composer package type
+                    enum:
+                        - contao-bundle
+                        - contao-module
+                        - library
+                time:
+                    type: string
+                description:
+                    type: string
+                license:
+                    oneOf:
+                        - type: string
+                        - type: array
+                          items:
+                              type: string
+                authors:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            name:
+                                type: string
+                            email:
+                                type: string
+                            homepage:
+                                type: string
+                require:
+                    type: object
+                    description: List of dependent packages.
+                    additionalProperties:
+                        type: string
+                        description: A Composer constraint.
+                extra:
+                    type: object
+                    properties:
+                        contao-manager-plugin:
+                            oneOf:
+                                - type: string
+                                  description: Class name if this package has a Manager Plugin.
+                                - type: array
+                                  description: Array of class names if this package has multiple Manager Plugins.
+                                  items:
+                                      type: string
+                abandoned:
+                    type: boolean
+
+        LogFile:
+            type: object
+            properties:
+                name:
+                    type: string
+                    description: The file name without extension.
+                size:
+                    type: integer
+                    description: The file size in bytes
+                mtime:
+                    type: string
+                    description: Last modification date of the file
+                lines:
+                    type: integer
+                    description: Number of lines in the log file
+
+        LogRecord:
+            type: object
+            description: A monolog record if the line can be parsed (see http://seldaek.github.io/monolog/doc/message-structure.html).
+            properties:
+                datetime:
+                    type: string
+                channel:
+                    type: string
+                level:
+                    type: string
+                message:
+                    type: string
+                context:
+                    nullable: true
+                    oneOf:
+                        -   type: object
+                        -   type: array
+                extra:
+                    oneOf:
+                        -   type: object
+                        -   type: array
+
+        ConstraintValidation:
+            type: object
+            properties:
+                valid:
+                    type: boolean
+                error:
+                    type: string
+
+        ApiProblem:
+            type: object
+            properties:
+                title:
+                    type: string
+                type:
+                    type: string
+                status:
+                    type: integer
+                detail:
+                    type: string
+
+    securitySchemes:
+        CookieAuthentication:
+            type: apiKey
+            in: cookie
+            name: contao_manager_auth
+            description: Uses an authentication cookie called "contao_manager_auth". The cookie is set by the server as HTTP-only after successful login.
+            scopes:
+                read: Read packages and configuration
+                update: Update packages and execute maintenance tasks
+                install: Install new packages and change Contao configuration
+                admin: Admin access including user management
+        TokenAuthentication:
+            type: oauth2
+            description: >
+                Uses authentication with a user token. Alternatively, token authentication also works using the
+                `Authorization: Bearer …` header. The Contao Manager supports a custom header because bearer
+                authentication does not work on all server setups.
+            flows:
+                implicit:
+                    authorizationUrl: /contao-manager.phar.php/#oauth?response_type=token&scope=XXX&client_id=XXX&redirect_uri=https://your-website.com/your-script.php&state=XXX
+                    scopes:
+                        read: Read packages and configuration
+                        update: Update packages and execute maintenance tasks
+                        install: Install new packages and change Contao configuration
+                        admin: Admin access including user management
+
+security:
+    - CookieAuthentication: [ read, update, install, admin ]
+    - TokenAuthentication: [ read, update, install, admin ]

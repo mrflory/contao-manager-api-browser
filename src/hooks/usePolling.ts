@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 
 interface UsePollingOptions {
   interval?: number;
@@ -23,6 +23,7 @@ export const usePolling = (
   const intervalRef = useRef<number | undefined>(undefined);
   const startTimeRef = useRef<number | undefined>(undefined);
   const isActiveRef = useRef(false);
+  const [isPolling, setIsPolling] = useState(false);
 
   const stopPolling = useCallback(() => {
     if (intervalRef.current) {
@@ -30,6 +31,7 @@ export const usePolling = (
       intervalRef.current = undefined;
     }
     isActiveRef.current = false;
+    setIsPolling(false);
   }, []);
 
   const startPolling = useCallback(async () => {
@@ -38,6 +40,7 @@ export const usePolling = (
     }
 
     isActiveRef.current = true;
+    setIsPolling(true);
     startTimeRef.current = Date.now();
 
     const poll = async () => {
@@ -88,6 +91,6 @@ export const usePolling = (
   return {
     startPolling,
     stopPolling,
-    isPolling: isActiveRef.current
+    isPolling
   };
 };

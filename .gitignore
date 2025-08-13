@@ -1,9 +1,6 @@
 # Dependencies
 node_modules/
 
-# References
-references/
-
 # Build outputs
 dist/
 *.tsbuildinfo
