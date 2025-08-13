@@ -94,6 +94,26 @@ class SimpleMockServer {
     });
 
     router.get('/server/composer', (req, res) => {
+      // Check if composer update failure scenario is active
+      if (this.state.scenarios?.taskFailures?.['composer/update']) {
+        return res.json({
+          json: {
+            found: true,
+            valid: false,
+            problem: 'Dependency conflict detected'
+          },
+          lock: {
+            found: true,
+            fresh: false,
+            problem: 'Lock file is outdated'
+          },
+          vendor: {
+            found: true,
+            problem: 'Some packages have dependency conflicts'
+          }
+        });
+      }
+      
       res.json({
         json: {
           found: true,
@@ -208,8 +228,14 @@ class SimpleMockServer {
       const duration = config?.dry_run ? 1000 : 3000;
       setTimeout(() => {
         if (this.state.currentTask && this.state.currentTask.id === taskId) {
-          this.state.currentTask.status = 'complete';
-          this.state.currentTask.console += `\n${name} completed successfully`;
+          // Check if task should fail based on scenario
+          if (this.state.scenarios?.taskFailures?.[name]) {
+            this.state.currentTask.status = 'error';
+            this.state.currentTask.console = this.state.scenarios.taskFailures[name];
+          } else {
+            this.state.currentTask.status = 'complete';
+            this.state.currentTask.console += `\n${name} completed successfully`;
+          }
         }
       }, duration);
 

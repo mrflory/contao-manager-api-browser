@@ -15,6 +15,7 @@ export class MockServer {
   private state: MockState;
   private connections: Set<any> = new Set();
   private port: number = 3001;
+  private currentScenarioName: string | null = null;
 
   constructor() {
     this.app = express();
@@ -107,11 +108,13 @@ export class MockServer {
       }
       
       this.loadScenario(scenarioData);
+      this.currentScenarioName = scenario;
       res.json({ success: true, scenario: scenario, description: scenarioData.description });
     });
 
     this.app.post('/mock/reset', (req: Request, res: Response) => {
       this.state = createDefaultState();
+      this.currentScenarioName = null;
       res.json({ success: true, message: 'State reset to default' });
     });
     this.app.use('/contao-manager.phar.php/api', router);
@@ -147,6 +150,131 @@ export class MockServer {
     // Health check endpoint
     this.app.get('/health', (req: Request, res: Response) => {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    });
+
+    // Mock server status and control frontend
+    this.app.get('/', (req: Request, res: Response) => {
+      const availableScenarios = scenarioLoader.listScenarios();
+      const currentScenario = this.getCurrentScenarioName();
+      
+      const html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Contao Manager Mock Server</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .current-status { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .scenario-list { background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .scenario-item { margin: 10px 0; padding: 10px; background: white; border-radius: 3px; }
+        .scenario-active { background: #d4edda; border: 2px solid #28a745; }
+        button { padding: 8px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .reset-btn { background: #dc3545; }
+        .reset-btn:hover { background: #c82333; }
+        .info { color: #666; font-size: 14px; }
+        .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 3px; margin: 10px 0; }
+        .success { color: #155724; background: #d4edda; padding: 10px; border-radius: 3px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Contao Manager Mock Server</h1>
+        <p class="info">Control and monitor mock server scenarios for testing</p>
+        
+        <div class="current-status">
+            <h3>Current Status</h3>
+            <p><strong>Active Scenario:</strong> ${currentScenario || 'Default (no scenario loaded)'}</p>
+            <p><strong>Server URL:</strong> http://localhost:${this.port}/contao-manager.phar.php</p>
+            <p><strong>Health Check:</strong> <a href="/health">http://localhost:${this.port}/health</a></p>
+        </div>
+
+        <div class="scenario-list">
+            <h3>Available Scenarios</h3>
+            ${availableScenarios.map(scenario => {
+              const scenarioData = scenarioLoader.getScenario(scenario);
+              const isActive = currentScenario === scenario;
+              return `
+                <div class="scenario-item ${isActive ? 'scenario-active' : ''}">
+                    <strong>${scenario}</strong>
+                    ${isActive ? '<span style="color: #28a745; float: right;">✓ ACTIVE</span>' : ''}
+                    <br>
+                    <small class="info">${scenarioData?.description || 'No description'}</small>
+                    <br>
+                    <button onclick="loadScenario('${scenario}')">Load Scenario</button>
+                </div>
+              `;
+            }).join('')}
+        </div>
+
+        <div style="margin-top: 30px;">
+            <button class="reset-btn" onclick="resetToDefault()">Reset to Default</button>
+            <button onclick="window.location.reload()">Refresh Status</button>
+        </div>
+
+        <div id="message"></div>
+
+        <div style="margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px;">
+            <h4>Usage Instructions</h4>
+            <ol>
+                <li>Add <code>http://localhost:${this.port}/contao-manager.phar.php</code> as a site in your frontend</li>
+                <li>Use scope "admin" for full access during OAuth flow</li>
+                <li>Load different scenarios above to test various conditions</li>
+                <li>The composer error scenario will now properly block update workflows</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function showMessage(text, type = 'info') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = type;
+            messageDiv.textContent = text;
+            setTimeout(() => {
+                messageDiv.textContent = '';
+                messageDiv.className = '';
+            }, 3000);
+        }
+
+        function loadScenario(scenario) {
+            fetch('/mock/scenario', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scenario })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage(\`Loaded scenario: \${data.scenario}\`, 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    showMessage(\`Error: \${data.error}\`, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage(\`Network error: \${error.message}\`, 'error');
+            });
+        }
+
+        function resetToDefault() {
+            fetch('/mock/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                showMessage('Reset to default state', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            })
+            .catch(error => {
+                showMessage(\`Error resetting: \${error.message}\`, 'error');
+            });
+        }
+    </script>
+</body>
+</html>`;
+      
+      res.send(html);
     });
   }
 
@@ -218,7 +346,12 @@ export class MockServer {
 
   reset(): void {
     this.state = createDefaultState();
+    this.currentScenarioName = null;
     console.log('[MOCK] State reset to default');
+  }
+
+  getCurrentScenarioName(): string | null {
+    return this.currentScenarioName;
   }
 
   // Simulate task execution with realistic timing

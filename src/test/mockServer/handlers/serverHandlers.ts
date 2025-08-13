@@ -57,19 +57,41 @@ export const serverHandlers = {
   },
 
   getComposer: (getState: () => MockState) => (req: Request, res: Response) => {
-    res.json({
-      json: {
-        found: true,
-        valid: true
-      },
-      lock: {
-        found: true,
-        fresh: true
-      },
-      vendor: {
-        found: true
-      }
-    });
+    const state = getState();
+    
+    // Check if composer update failure scenario is active
+    if (state.scenarios?.taskFailures?.['composer/update']) {
+      res.json({
+        json: {
+          found: true,
+          valid: false,
+          problem: 'Dependency conflict detected'
+        },
+        lock: {
+          found: true,
+          fresh: false,
+          problem: 'Lock file is outdated'
+        },
+        vendor: {
+          found: true,
+          problem: 'Some packages have dependency conflicts'
+        }
+      });
+    } else {
+      res.json({
+        json: {
+          found: true,
+          valid: true
+        },
+        lock: {
+          found: true,
+          fresh: true
+        },
+        vendor: {
+          found: true
+        }
+      });
+    }
   },
 
   getDatabase: (getState: () => MockState) => (req: Request, res: Response) => {
