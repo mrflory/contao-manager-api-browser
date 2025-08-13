@@ -1,4 +1,4 @@
-import { MockServer } from './MockServer';
+import { MockServer } from './AdvancedMockServer';
 import { scenarioLoader } from './scenarioLoader';
 import { createTestApiClient } from '../utils/testHelpers';
 

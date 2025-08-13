@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { MockServer } from './MockServer';
+import { MockServer } from './AdvancedMockServer';
 import { scenarioLoader } from './scenarioLoader';
 
 class StandaloneMockServer {
