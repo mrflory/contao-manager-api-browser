@@ -1,5 +1,6 @@
-import express, { Express, Request, Response } from 'express';
-import cors from 'cors';
+import { Express, Request, Response } from 'express';
+const express = require('express');
+const cors = require('cors');
 import { Server } from 'http';
 import { MockState, Scenario, TaskData, MigrationData } from './types';
 import { createDefaultState } from './state';
