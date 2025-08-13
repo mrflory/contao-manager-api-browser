@@ -13,6 +13,7 @@ class SimpleMockServer {
     this.server = null;
     this.state = this.createDefaultState();
     this.connections = new Set();
+    this.currentScenarioName = null;
     
     this.setupMiddleware();
     this.setupRoutes();
@@ -360,6 +361,7 @@ class SimpleMockServer {
         <p><strong>Status:</strong> Running</p>
         <p><strong>Version:</strong> Mock 1.9.4 (simulated)</p>
         <p><strong>Available Update:</strong> 1.9.5</p>
+        <p><strong>Current Scenario:</strong> <span id="currentScenario">Loading...</span></p>
     </div>
     
     <div class="endpoints">
@@ -430,6 +432,25 @@ class SimpleMockServer {
     </div>
 
     <script>
+        async function loadCurrentScenario() {
+            try {
+                const response = await fetch('/mock/status');
+                const result = await response.json();
+                const scenarioSpan = document.getElementById('currentScenario');
+                if (scenarioSpan) {
+                    scenarioSpan.textContent = result.currentScenario || 'Default (no scenario active)';
+                    scenarioSpan.style.color = result.currentScenario ? '#28a745' : '#6c757d';
+                }
+            } catch (error) {
+                console.error('Error loading current scenario:', error);
+                const scenarioSpan = document.getElementById('currentScenario');
+                if (scenarioSpan) {
+                    scenarioSpan.textContent = 'Error loading scenario';
+                    scenarioSpan.style.color = '#dc3545';
+                }
+            }
+        }
+
         async function changeScenario(scenario) {
             try {
                 const response = await fetch('/mock/scenario', {
@@ -440,6 +461,8 @@ class SimpleMockServer {
                 const result = await response.json();
                 alert('Scenario changed to: ' + scenario);
                 console.log('Scenario change result:', result);
+                // Reload current scenario display
+                setTimeout(loadCurrentScenario, 100);
             } catch (error) {
                 alert('Error changing scenario: ' + error.message);
             }
@@ -451,10 +474,15 @@ class SimpleMockServer {
                 const result = await response.json();
                 alert('Scenario reset to default');
                 console.log('Reset result:', result);
+                // Reload current scenario display
+                setTimeout(loadCurrentScenario, 100);
             } catch (error) {
                 alert('Error resetting scenario: ' + error.message);
             }
         }
+
+        // Load current scenario when page loads
+        document.addEventListener('DOMContentLoaded', loadCurrentScenario);
     </script>
 </body>
 </html>
@@ -843,22 +871,40 @@ class SimpleMockServer {
       
       // Apply basic scenario changes
       if (scenario.includes('error') || scenario.includes('failure')) {
-        this.state.scenarios = { taskFailures: { 'composer/update': 'Update failed with errors' } };
+        if (scenario.includes('composer')) {
+          this.state.scenarios = { 
+            taskFailures: { 'composer/update': 'Your requirements could not be resolved to an installable set of packages.\n\nProblem 1\n- contao/core 5.3.0 requires php ^8.2 but your php version (8.1.15) does not satisfy that requirement.' }
+          };
+        } else if (scenario.includes('authentication')) {
+          this.state.scenarios = { authErrors: true };
+        } else {
+          this.state.scenarios = { taskFailures: { 'composer/update': 'Update failed with errors' } };
+        }
       } else {
         this.state.scenarios = null;
       }
       
+      this.currentScenarioName = scenario;
       res.json({ success: true, scenario, description: `Applied ${scenario}` });
     });
 
     this.app.post('/mock/reset', (req, res) => {
       this.state = this.createDefaultState();
+      this.currentScenarioName = null;
       console.log(`\n🔄 State reset to default`);
       res.json({ success: true, message: 'State reset to default' });
     });
 
     this.app.get('/health', (req, res) => {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    });
+
+    this.app.get('/mock/status', (req, res) => {
+      res.json({ 
+        currentScenario: this.currentScenarioName,
+        status: 'running',
+        scenarios: this.state.scenarios 
+      });
     });
   }
 
@@ -910,6 +956,7 @@ class SimpleMockServer {
         <p><strong>Status:</strong> Running</p>
         <p><strong>Version:</strong> Mock 1.9.4 (simulated)</p>
         <p><strong>Available Update:</strong> 1.9.5</p>
+        <p><strong>Current Scenario:</strong> <span id="currentScenario">Loading...</span></p>
     </div>
     
     <div class="endpoints">
@@ -940,6 +987,25 @@ class SimpleMockServer {
     </div>
 
     <script>
+        async function loadCurrentScenario() {
+            try {
+                const response = await fetch('/mock/status');
+                const result = await response.json();
+                const scenarioSpan = document.getElementById('currentScenario');
+                if (scenarioSpan) {
+                    scenarioSpan.textContent = result.currentScenario || 'Default (no scenario active)';
+                    scenarioSpan.style.color = result.currentScenario ? '#28a745' : '#6c757d';
+                }
+            } catch (error) {
+                console.error('Error loading current scenario:', error);
+                const scenarioSpan = document.getElementById('currentScenario');
+                if (scenarioSpan) {
+                    scenarioSpan.textContent = 'Error loading scenario';
+                    scenarioSpan.style.color = '#dc3545';
+                }
+            }
+        }
+
         async function changeScenario(scenario) {
             const response = await fetch('/mock/scenario', {
                 method: 'POST',
@@ -947,12 +1013,19 @@ class SimpleMockServer {
                 body: JSON.stringify({ scenario })
             });
             alert('Scenario changed to: ' + scenario);
+            // Reload current scenario display
+            setTimeout(loadCurrentScenario, 100);
         }
         
         async function resetScenario() {
             await fetch('/mock/reset', { method: 'POST' });
             alert('Scenario reset to default');
+            // Reload current scenario display
+            setTimeout(loadCurrentScenario, 100);
         }
+
+        // Load current scenario when page loads
+        document.addEventListener('DOMContentLoaded', loadCurrentScenario);
     </script>
 </body>
 </html>
