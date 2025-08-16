@@ -14,6 +14,7 @@ import {
   AccordionItemTrigger,
   AccordionItemContent,
 } from '../components/ui/accordion';
+import { CodeBlock } from '../components/ui/code-block';
 import { UpdateStatus, TokenInfo } from '../types';
 
 export const formatUpdateStatus = (data: UpdateStatus) => {
@@ -41,9 +42,9 @@ export const formatUpdateStatus = (data: UpdateStatus) => {
                 </Box>
               </AccordionItemTrigger>
               <AccordionItemContent pb={4}>
-                <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
+                <CodeBlock language="json" showLineNumbers>
                   {JSON.stringify(data.composer, null, 2)}
-                </Code>
+                </CodeBlock>
               </AccordionItemContent>
             </AccordionItem>
           </AccordionRoot>
@@ -72,9 +73,9 @@ export const formatUpdateStatus = (data: UpdateStatus) => {
                 </Box>
               </AccordionItemTrigger>
               <AccordionItemContent pb={4}>
-                <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
+                <CodeBlock language="json" showLineNumbers>
                   {JSON.stringify(data.selfUpdate, null, 2)}
-                </Code>
+                </CodeBlock>
               </AccordionItemContent>
             </AccordionItem>
           </AccordionRoot>
@@ -143,9 +144,9 @@ export const formatTokenInfo = (data: { success: boolean; tokenInfo: TokenInfo; 
               </Box>
             </AccordionItemTrigger>
             <AccordionItemContent pb={4}>
-              <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
+              <CodeBlock language="json" showLineNumbers>
                 {JSON.stringify(tokenInfo, null, 2)}
-              </Code>
+              </CodeBlock>
             </AccordionItemContent>
           </AccordionItem>
         </AccordionRoot>
@@ -230,9 +231,9 @@ export const formatDatabaseBackups = (data: any[]) => {
               </Box>
             </AccordionItemTrigger>
             <AccordionItemContent pb={4}>
-              <Code display="block" whiteSpace="pre" p={3} borderRadius="md">
+              <CodeBlock language="json" showLineNumbers>
                 {JSON.stringify(data, null, 2)}
-              </Code>
+              </CodeBlock>
             </AccordionItemContent>
           </AccordionItem>
         </AccordionRoot>
@@ -289,13 +290,13 @@ export const formatInstalledPackages = (data: any) => {
             {packages.map(([name, pkg]: [string, any]) => (
               <Table.Row key={name}>
                 <Table.Cell>
-                  <Code fontSize="sm">{name}</Code>
+                  <Text fontSize="sm" fontFamily="mono">{name}</Text>
                 </Table.Cell>
                 <Table.Cell>
                   <Badge colorPalette="blue" fontSize="xs">{pkg.version || 'N/A'}</Badge>
                 </Table.Cell>
                 <Table.Cell>
-                  <Badge colorPalette="green" fontSize="xs">{pkg.type || 'library'}</Badge>
+                  <Badge colorPalette={getTypeColorPalette(pkg.type)} fontSize="xs">{pkg.type || 'library'}</Badge>
                 </Table.Cell>
                 <Table.Cell>
                   <Text fontSize="xs" lineClamp={2}>
@@ -316,15 +317,32 @@ export const formatInstalledPackages = (data: any) => {
               </Box>
             </AccordionItemTrigger>
             <AccordionItemContent pb={4}>
-              <Code display="block" whiteSpace="pre" p={3} borderRadius="md" maxH="300px" overflowY="auto">
+              <CodeBlock language="json" showLineNumbers maxHeight="300px">
                 {JSON.stringify(data, null, 2)}
-              </Code>
+              </CodeBlock>
             </AccordionItemContent>
           </AccordionItem>
         </AccordionRoot>
       </Box>
     </VStack>
   );
+};
+
+const getTypeColorPalette = (type: string) => {
+  if (type?.startsWith('contao')) {
+    return 'orange';
+  }
+  if (type?.startsWith('symfony')) {
+    return 'blue';
+  }
+  switch (type) {
+    case 'metapackage':
+      return 'purple';
+    case 'library':
+      return 'green';
+    default:
+      return 'gray';
+  }
 };
 
 export const formatSortedPackages = (data: any, options?: { priorityPrefix?: string; sectionTitle?: string }) => {
@@ -364,13 +382,13 @@ export const formatSortedPackages = (data: any, options?: { priorityPrefix?: str
             {packages.map(([name, pkg]: [string, any]) => (
               <Table.Row key={name}>
                 <Table.Cell>
-                  <Code fontSize="sm">{name}</Code>
+                  <Text fontSize="sm" fontFamily="mono">{name}</Text>
                 </Table.Cell>
                 <Table.Cell>
                   <Badge colorPalette="blue" fontSize="xs">{pkg.version || 'N/A'}</Badge>
                 </Table.Cell>
                 <Table.Cell>
-                  <Badge colorPalette="green" fontSize="xs">{pkg.type || 'library'}</Badge>
+                  <Badge colorPalette={getTypeColorPalette(pkg.type)} fontSize="xs">{pkg.type || 'library'}</Badge>
                 </Table.Cell>
                 <Table.Cell>
                   <Text fontSize="xs" lineClamp={2}>

@@ -3,12 +3,9 @@ import {
   VStack,
   Box,
   Heading,
-  Text,
-  Code,
   Separator,
-  Grid,
-  GridItem,
 } from '@chakra-ui/react';
+import { DataListRoot, DataListItem } from '../ui/data-list';
 import { Site } from '../../types';
 import { formatDateTime } from '../../utils/dateUtils';
 
@@ -22,73 +19,72 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({ site }) => {
       <Box>
         <Heading size="lg" mb={4}>Site Information</Heading>
         
-        <VStack gap={4} align="start">
-          <VStack gap={2} align="start" width="100%">
-            <Text fontSize="sm">
-              <strong>Last Used:</strong> {formatDateTime(site.lastUsed)}
-            </Text>
-            {site.authMethod === 'cookie' ? (
-              <Text fontSize="sm">
-                <strong>Authentication:</strong> Cookie-based (temporary session)
-              </Text>
-            ) : (
-              <Text fontSize="sm">
-                <strong>Token:</strong> <Code>{site.token?.substring(0, 8) || 'N/A'}...</Code>
-              </Text>
-            )}
-            <Text fontSize="sm">
-              <strong>Authentication Method:</strong> {site.authMethod === 'cookie' ? 'Cookie-based' : 'API Token'}
-            </Text>
-            {site.scope && (
-              <Text fontSize="sm">
-                <strong>Permission Scope:</strong> {site.scope}
-              </Text>
-            )}
-          </VStack>
-          
-          {site.versionInfo && (
-            <>
-              <Separator />
-              <VStack gap={2} align="start" width="100%">
-                <Heading size="sm">Version Information</Heading>
-                <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={2} width="100%">
-                  <GridItem>
-                    <Text fontSize="sm">
-                      <strong>Contao Manager:</strong> {site.versionInfo.contaoManagerVersion || 'N/A'}
-                    </Text>
-                  </GridItem>
-                  <GridItem>
-                    <Text fontSize="sm">
-                      <strong>PHP:</strong> {site.versionInfo.phpVersion || 'N/A'}
-                    </Text>
-                  </GridItem>
-                  <GridItem>
-                    <Text fontSize="sm">
-                      <strong>Contao:</strong> {site.versionInfo.contaoVersion || 'N/A'}
-                    </Text>
-                  </GridItem>
-                </Grid>
+        <DataListRoot orientation="horizontal" size="md">
+          <DataListItem 
+            label="Last Used" 
+            value={formatDateTime(site.lastUsed)}
+          />
+          <DataListItem 
+            label="Authentication" 
+            value={site.authMethod === 'cookie' ? 'Cookie-based' : 'API Token'}
+          />
+          {site.authMethod !== 'cookie' && (
+            <DataListItem 
+              label="Token" 
+              value={site.token?.substring(0, 8) + '...' || 'N/A'}
+            />
+          )}
+          {site.scope && (
+            <DataListItem 
+              label="Permission Scope" 
+              value={site.scope}
+            />
+          )}
+        </DataListRoot>
+        
+        {site.versionInfo && (
+          <>
+            <Separator my={6} />
+            <Box>
+              <Heading size="sm" mb={4}>Version Information</Heading>
+              <DataListRoot orientation="horizontal" size="md">
+                <DataListItem 
+                  label="Contao Manager" 
+                  value={site.versionInfo.contaoManagerVersion || 'N/A'}
+                />
+                <DataListItem 
+                  label="PHP" 
+                  value={site.versionInfo.phpVersion || 'N/A'}
+                />
+                <DataListItem 
+                  label="Contao" 
+                  value={site.versionInfo.contaoVersion || 'N/A'}
+                />
                 {site.versionInfo.lastUpdated && (
-                  <Text fontSize="xs" color="gray.500">
-                    <strong>Last Updated:</strong> {formatDateTime(site.versionInfo.lastUpdated)}
-                  </Text>
+                  <DataListItem 
+                    label="Last Updated" 
+                    value={formatDateTime(site.versionInfo.lastUpdated)}
+                  />
                 )}
-              </VStack>
-            </>
-          )}
-          
-          {!site.versionInfo && (
-            <>
-              <Separator />
-              <VStack gap={2} align="start" width="100%">
-                <Heading size="sm">Version Information</Heading>
-                <Text fontSize="sm" color="gray.500">
-                  No version information available. Click "Update Version Info" to fetch current versions.
-                </Text>
-              </VStack>
-            </>
-          )}
-        </VStack>
+              </DataListRoot>
+            </Box>
+          </>
+        )}
+        
+        {!site.versionInfo && (
+          <>
+            <Separator my={6} />
+            <Box>
+              <Heading size="sm" mb={4}>Version Information</Heading>
+              <DataListRoot orientation="horizontal" size="md">
+                <DataListItem 
+                  label="Status" 
+                  value="No version information available. Click 'Update Version Info' to fetch current versions."
+                />
+              </DataListRoot>
+            </Box>
+          </>
+        )}
       </Box>
     </VStack>
   );
