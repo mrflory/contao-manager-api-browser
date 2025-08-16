@@ -1,15 +1,5 @@
 import { WorkflowStep } from '../types';
 
-/**
- * Utility function to add line numbers to console output
- */
-export const addLineNumbers = (text: string): string => {
-  if (!text) return '';
-  return text.split('\n').map((line, index) => {
-    const lineNumber = (index + 1).toString().padStart(3, ' ');
-    return `${lineNumber} | ${line}`;
-  }).join('\n');
-};
 
 /**
  * Get step icon based on status
@@ -130,15 +120,15 @@ export const getStepDataTitle = (step: WorkflowStep, isActive: boolean): string 
   if (isComposerStep(step)) {
     const isDryRun = step.id.includes('dry-run');
     return isActive 
-      ? (isDryRun ? 'Progress:' : 'Update Progress:')
-      : (isDryRun ? 'Dry-run Results:' : 'Update Progress:');
+      ? (isDryRun ? 'Analyzing changes...' : 'Updating packages...')
+      : (isDryRun ? 'Planned Changes' : 'Package Updates');
   }
   
   if (isMigrationStep(step)) {
     return isActive
       ? (step.id.includes('check') ? 'Checking migrations...' : 'Executing migrations...')
-      : (step.id.includes('check') ? 'Migration Check Results:' : 'Migration Progress:');
+      : (step.id.includes('check') ? 'Migration Summary' : 'Migration Results');
   }
   
-  return isActive ? 'Progress:' : 'Result:';
+  return isActive ? 'Processing...' : 'Completed';
 };

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { VStack, HStack, Box, Text, Badge, Button, Alert, Link, Collapsible, Code } from '@chakra-ui/react';
+import { VStack, HStack, Box, Text, Badge, Button, Alert, Link, Collapsible } from '@chakra-ui/react';
 import { Checkbox } from '../ui/checkbox';
 import { LuChevronDown as ChevronDown } from 'react-icons/lu';
 import { WorkflowStep } from '../../types';
 import { useColorModeValue } from '../ui/color-mode';
-import { getOperationBadgeColor, getOperationBadgeText, addLineNumbers } from '../../utils/workflowUtils';
+import { CodeBlock } from '../ui/code-block';
+import { getOperationBadgeColor, getOperationBadgeText } from '../../utils/workflowUtils';
 
 export interface StepConfirmationsProps {
   step: WorkflowStep;
@@ -159,22 +160,13 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
                           </Collapsible.Trigger>
                           <Collapsible.Content maxW="100%" overflow="hidden">
                             <Box mt={2} maxW="100%" overflowX="hidden">
-                              <Code 
-                                fontSize="xs" 
-                                p={3} 
-                                display="block" 
-                                whiteSpace="pre" 
-                                bg="black"
-                                color="white"
-                                borderRadius="md"
-                                maxH="300px"
-                                width="100%"
-                                overflowY="auto"
-                                overflowX="auto"
-                                fontFamily="mono"
+                              <CodeBlock 
+                                language="bash"
+                                showLineNumbers
+                                maxHeight="300px"
                               >
-                                {addLineNumbers(operation.console)}
-                              </Code>
+                                {operation.console}
+                              </CodeBlock>
                             </Box>
                           </Collapsible.Content>
                         </Collapsible.Root>
@@ -231,7 +223,6 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
         
         {summary && (
           <Box p={3} bg={configBg} borderRadius="md">
-            <Text fontSize="sm" fontWeight="semibold" mb={2}>Migration Summary:</Text>
             <VStack align="stretch" gap={2}>
               <HStack justify="space-between">
                 <Text fontSize="sm">Type:</Text>
