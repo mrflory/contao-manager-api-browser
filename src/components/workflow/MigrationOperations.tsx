@@ -296,7 +296,7 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
         <HStack>
           <Text fontSize="sm" fontWeight="semibold">Hash:</Text>
           <CodeBlock language="text" maxHeight="auto">
-            {data.hash.substring(0, 12)}...
+            {`${data.hash.substring(0, 12)}...`}
           </CodeBlock>
         </HStack>
       )}
