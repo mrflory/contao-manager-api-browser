@@ -1,5 +1,4 @@
 import React from 'react';
-import { Code } from '@chakra-ui/react';
 import {
   DialogRoot,
   DialogContent,
@@ -11,6 +10,7 @@ import {
   DialogCloseTrigger,
 } from '../ui/dialog';
 import { Button } from '@chakra-ui/react';
+import { CodeBlock } from '../ui/code-block';
 
 export interface ApiResultModalProps {
   isOpen: boolean;
@@ -74,16 +74,13 @@ export const JsonDisplayModal: React.FC<JsonDisplayModalProps> = ({
       title={title}
       size={size}
     >
-      <Code 
-        display="block" 
-        whiteSpace="pre" 
-        p={3} 
-        borderRadius="md"
-        maxH="500px"
-        overflowY="auto"
+      <CodeBlock 
+        language="json"
+        showLineNumbers
+        maxHeight="500px"
       >
         {JSON.stringify(data, null, 2)}
-      </Code>
+      </CodeBlock>
     </ApiResultModal>
   );
 };

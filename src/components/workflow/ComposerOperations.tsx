@@ -1,8 +1,9 @@
 import React from 'react';
-import { VStack, Box, HStack, Text, Badge, Button, Collapsible, Code, Link } from '@chakra-ui/react';
+import { VStack, Box, HStack, Text, Badge, Button, Collapsible, Link } from '@chakra-ui/react';
 import { LuChevronDown as ChevronDown, LuExternalLink as ExternalLink } from 'react-icons/lu';
 import { useColorModeValue } from '../ui/color-mode';
-import { getOperationBadgeColor, getOperationBadgeText, addLineNumbers } from '../../utils/workflowUtils';
+import { CodeBlock } from '../ui/code-block';
+import { getOperationBadgeColor, getOperationBadgeText } from '../../utils/workflowUtils';
 
 export interface ComposerOperationsProps {
   data: any;
@@ -70,22 +71,13 @@ export const ComposerOperations: React.FC<ComposerOperationsProps> = ({ data }) 
                 </Collapsible.Trigger>
                 <Collapsible.Content maxW="100%" overflow="hidden">
                   <Box mt={2} maxW="100%" overflowX="hidden">
-                    <Code 
-                      fontSize="xs" 
-                      p={3} 
-                      display="block" 
-                      whiteSpace="pre" 
-                      bg="black"
-                      color="white"
-                      borderRadius="md"
-                      maxH="300px"
-                      width="100%"
-                      overflowY="auto"
-                      overflowX="auto"
-                      fontFamily="mono"
+                    <CodeBlock 
+                      language="bash"
+                      showLineNumbers
+                      maxHeight="300px"
                     >
-                      {addLineNumbers(operation.console)}
-                    </Code>
+                      {operation.console}
+                    </CodeBlock>
                   </Box>
                 </Collapsible.Content>
               </Collapsible.Root>

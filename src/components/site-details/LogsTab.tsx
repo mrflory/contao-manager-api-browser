@@ -22,6 +22,7 @@ import { LogsApiService } from '../../services/apiCallService';
 import { useToastNotifications, TOAST_MESSAGES } from '../../hooks/useToastNotifications';
 import { ApiResultModal } from '../modals/ApiResultModal';
 import { useColorModeValue } from '../ui/color-mode';
+import { CodeBlock } from '../ui/code-block';
 import { formatDateTime } from '../../utils/dateUtils';
 
 export interface LogsTabProps {
@@ -86,21 +87,15 @@ export const LogsTab: React.FC<LogsTabProps> = ({ site }) => {
         </Box>
         
         {log.requestData && (
-          <Box p={4} borderWidth="1px" borderRadius="md">
-            <Heading size="sm" mb={3}>Request Data</Heading>
-            <Code display="block" whiteSpace="pre" p={3} borderRadius="md" maxH="200px" overflowY="auto">
-              {JSON.stringify(log.requestData, null, 2)}
-            </Code>
-          </Box>
+          <CodeBlock language="json" showLineNumbers maxHeight="200px" title="Request Data">
+            {JSON.stringify(log.requestData, null, 2)}
+          </CodeBlock>
         )}
         
         {log.responseData && (
-          <Box p={4} borderWidth="1px" borderRadius="md">
-            <Heading size="sm" mb={3}>Response Data</Heading>
-            <Code display="block" whiteSpace="pre" p={3} borderRadius="md" maxH="300px" overflowY="auto">
-              {JSON.stringify(log.responseData, null, 2)}
-            </Code>
-          </Box>
+          <CodeBlock language="json" showLineNumbers maxHeight="300px" title="Response Data">
+            {JSON.stringify(log.responseData, null, 2)}
+          </CodeBlock>
         )}
       </VStack>
     );

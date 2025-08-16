@@ -70,7 +70,7 @@ export const PackagesTab: React.FC = () => {
 
   return (
     <VStack gap={8} align="stretch">
-      <Heading size="lg" mb={4}>Package Management</Heading>
+      <Heading size="lg">Package Management</Heading>
       
       {/* Section 1: Installed Packages */}
       <Box>
