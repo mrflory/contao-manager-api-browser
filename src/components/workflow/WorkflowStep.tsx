@@ -17,7 +17,6 @@ import { StepConfirmations } from './StepConfirmations';
 
 export interface WorkflowStepProps {
   step: WorkflowStepType;
-  createMigrationSummary: (data: any) => any;
   hasPendingTasksError: boolean;
   hasPendingMigrations: boolean;
   hasDryRunComplete: boolean;
@@ -30,11 +29,11 @@ export interface WorkflowStepProps {
   onSkipComposerUpdate: () => void;
   onCancelWorkflow: () => void;
   configBg: string;
+  createMigrationSummary?: (migrationData: any, stepId?: string) => any;
 }
 
 export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
   step,
-  createMigrationSummary,
   hasPendingTasksError,
   hasPendingMigrations,
   hasDryRunComplete,
@@ -47,6 +46,7 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
   onSkipComposerUpdate,
   onCancelWorkflow,
   configBg,
+  createMigrationSummary,
 }) => {
   const mutedColor = useColorModeValue('gray.500', 'gray.400');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -55,7 +55,7 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
   const needsConfirmation = () => {
     // Check for specific steps that might need confirmation
     if (step.id === 'check-tasks' && hasPendingTasksError) return true;
-    if (step.id === 'check-migrations-loop' && hasPendingMigrations) return true;
+    if (step.id.startsWith('check-migrations-loop') && hasPendingMigrations) return true;
     if (step.id === 'composer-dry-run' && hasDryRunComplete) return true;
     
     // Check if step is complete but waiting for user input
@@ -72,12 +72,12 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
     if (step.status === 'active') {
       // Auto-expand when step becomes active
       setIsExpanded(true);
-    } else if (step.status === 'complete' && isExpanded && !needsConfirmation()) {
-      // Auto-collapse when step completes, but only if it was expanded and doesn't need confirmation
-      setIsExpanded(false);
     } else if (step.status === 'error' || needsConfirmation()) {
       // Always expand and keep expanded for errors or pending confirmations
       setIsExpanded(true);
+    } else if (step.status === 'complete' && !needsConfirmation()) {
+      // Auto-collapse when step completes and doesn't need confirmation
+      setIsExpanded(false);
     }
   }, [step.status, hasPendingTasksError, hasPendingMigrations, hasDryRunComplete]);
 
@@ -128,8 +128,8 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
         {getStepIcon()}
       </TimelineConnector>
       
-      <TimelineContent width="100%">
-        <TimelineTitle fontSize="md" width="100%"> 
+      <TimelineContent>
+        <TimelineTitle fontSize="md">
           <HStack justify="space-between" align="center" width="100%">
             <Text>{step.title}</Text>
             <HStack align="center" gap={2}>
@@ -179,11 +179,13 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
               )}
               
               {/* Step data and confirmations */}
-              <StepDataRenderer step={step} />
+              <StepDataRenderer 
+                step={step} 
+                migrationSummary={step.data && createMigrationSummary ? createMigrationSummary(step.data, step.id) : null}
+              />
               
               <StepConfirmations
                 step={step}
-                createMigrationSummary={createMigrationSummary}
                 hasPendingTasksError={hasPendingTasksError}
                 hasPendingMigrations={hasPendingMigrations}
                 hasDryRunComplete={hasDryRunComplete}

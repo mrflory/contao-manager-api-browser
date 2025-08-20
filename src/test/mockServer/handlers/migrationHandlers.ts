@@ -116,14 +116,30 @@ export const migrationHandlers = {
       state.migrationHistory.push({...state.currentMigration});
       state.currentMigration = null;
     }
+    
+    // For multiple migration cycles scenario, simulate having more migrations
+    if (state.scenarios?.multipleMigrationCycles) {
+      // Reduce pending migrations to simulate progress
+      if (state.pendingMigrations.length > 0) {
+        state.pendingMigrations.splice(0, 1); // Remove first migration as "completed"
+      }
+    }
 
     res.status(200).json({ deleted: true });
+  },
+
+  // Reset migration cycle counter (used by scenario loading)
+  resetMigrationCycles: () => {
+    globalCycleCounter = 1;
   }
 };
 
 function generateMigrationHash(): string {
   return uuidv4().substring(0, 8);
 }
+
+// Global counter to simulate proper migration cycles
+let globalCycleCounter = 1;
 
 function generateMigrationOperations(pendingMigrations: MigrationOperation[], withDeletes: boolean = false): MigrationOperation[] {
   // If there are predefined pending migrations, use those
@@ -134,30 +150,66 @@ function generateMigrationOperations(pendingMigrations: MigrationOperation[], wi
     }));
   }
 
-  // Generate sample migration operations
-  const operations: MigrationOperation[] = [
-    {
-      name: 'CREATE TABLE tl_test_table',
-      status: 'pending',
-      message: 'Creating new table for test functionality'
-    },
-    {
-      name: 'ALTER TABLE tl_content ADD COLUMN test_field',
-      status: 'pending', 
-      message: 'Adding test field to content table'
-    },
-    {
-      name: 'INSERT INTO tl_version',
-      status: 'pending',
-      message: 'Recording schema version'
-    }
-  ];
+  // Generate different operations based on cycle (simulate progressive migrations)
+  const cycleNumber = globalCycleCounter;
+  globalCycleCounter++; // Increment for next call
+  
+  let operations: MigrationOperation[] = [];
+  
+  if (cycleNumber === 1) {
+    operations = [
+      {
+        name: 'CREATE TABLE tl_cycle1_table',
+        status: 'pending',
+        message: 'Cycle 1: Creating initial table'
+      },
+      {
+        name: 'ALTER TABLE tl_content ADD COLUMN cycle1_field INT',
+        status: 'pending', 
+        message: 'Cycle 1: Adding cycle 1 field'
+      }
+    ];
+  } else if (cycleNumber === 2) {
+    operations = [
+      {
+        name: 'CREATE INDEX idx_cycle2 ON tl_cycle1_table (id)',
+        status: 'pending',
+        message: 'Cycle 2: Creating index for cycle 1 table'
+      },
+      {
+        name: 'ALTER TABLE tl_content ADD COLUMN cycle2_field VARCHAR(255)',
+        status: 'pending', 
+        message: 'Cycle 2: Adding cycle 2 field'
+      },
+      {
+        name: 'INSERT INTO tl_version VALUES (2)',
+        status: 'pending',
+        message: 'Cycle 2: Recording version 2'
+      }
+    ];
+  } else if (cycleNumber === 3) {
+    operations = [
+      {
+        name: 'CREATE TABLE tl_cycle3_settings',
+        status: 'pending',
+        message: 'Cycle 3: Creating settings table'
+      },
+      {
+        name: 'UPDATE tl_content SET cycle1_field = 1 WHERE cycle1_field IS NULL',
+        status: 'pending',
+        message: 'Cycle 3: Populating cycle 1 field defaults'
+      }
+    ];
+  } else {
+    // After cycle 3, no more migrations
+    return [];
+  }
 
   if (withDeletes) {
     operations.push({
-      name: 'DROP TABLE tl_old_table',
+      name: `DROP TABLE tl_temp_cycle${cycleNumber}`,
       status: 'pending',
-      message: 'Removing deprecated table'
+      message: `Cycle ${cycleNumber}: Removing temporary table`
     });
   }
 

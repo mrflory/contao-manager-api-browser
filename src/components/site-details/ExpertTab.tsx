@@ -21,10 +21,10 @@ import { LuSettings as Settings } from 'react-icons/lu';
 import { useLoadingStates } from '../../hooks/useApiCall';
 import { useModalState } from '../../hooks/useModalState';
 import { ExpertApiService, TaskApiService } from '../../services/apiCallService';
-import { ApiResultModal } from '../modals/ApiResultModal';
+import { ApiResultModal, JsonDisplayModal } from '../modals/ApiResultModal';
 import { TaskSelectionModal } from '../modals/TaskSelectionModal';
 import { MigrationConfigModal } from '../modals/MigrationConfigModal';
-import { formatDatabaseBackups, formatInstalledPackages, formatUpdateStatus, formatTokenInfo } from '../../utils/formatters';
+import { formatDatabaseBackups, formatSortedPackages, formatUpdateStatus, formatTokenInfo } from '../../utils/formatters';
 
 export const ExpertTab: React.FC = () => {
   const { modalState, openModal, closeModal } = useModalState();
@@ -32,6 +32,15 @@ export const ExpertTab: React.FC = () => {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<'composer.json' | 'composer.lock'>('composer.json');
+  const [jsonModalState, setJsonModalState] = useState<{
+    isOpen: boolean;
+    title: string;
+    data: any;
+  }>({ isOpen: false, title: '', data: null });
+
+  const closeJsonModal = () => {
+    setJsonModalState({ isOpen: false, title: '', data: null });
+  };
 
   const fileOptions = createListCollection({
     items: [
@@ -51,10 +60,18 @@ export const ExpertTab: React.FC = () => {
     
     try {
       const result = await apiCall();
-      const content = formatter ? formatter(result) : (
-        <pre>{JSON.stringify(result, null, 2)}</pre>
-      );
-      openModal(title, content);
+      if (formatter) {
+        // Use custom formatter with ApiResultModal
+        const content = formatter(result);
+        openModal(title, content);
+      } else {
+        // Use JsonDisplayModal for raw JSON data
+        setJsonModalState({
+          isOpen: true,
+          title,
+          data: result
+        });
+      }
     } catch (error) {
       console.error(`Error in ${title}:`, error);
     } finally {
@@ -75,30 +92,30 @@ export const ExpertTab: React.FC = () => {
     await handleApiCallWithModal('start-migration', () => TaskApiService.startDatabaseMigration(payload), 'Start Database Migration');
   };
 
-  // File content formatter - displays raw content as code
-  const formatFileContent = (content: string) => (
-    <pre style={{ 
-      whiteSpace: 'pre-wrap',
-      fontFamily: 'monospace',
-      fontSize: '0.9em',
-      lineHeight: '1.4',
-      maxHeight: '60vh',
-      overflow: 'auto',
-      padding: '1rem',
-      backgroundColor: 'var(--chakra-colors-bg-muted)',
-      borderRadius: '6px'
-    }}>
-      {content}
-    </pre>
-  );
-
   const handleGetFiles = async () => {
-    await handleApiCallWithModal(
-      'get-files',
-      () => ExpertApiService.getFiles(selectedFile),
-      `${selectedFile} Content`,
-      formatFileContent
-    );
+    setLoading('get-files', true);
+    
+    try {
+      const result = await ExpertApiService.getFiles(selectedFile);
+      // For file content, we'll parse it as JSON if it's a JSON file
+      let data;
+      try {
+        data = JSON.parse(result);
+      } catch {
+        // If it's not valid JSON, treat as raw text
+        data = { content: result };
+      }
+      
+      setJsonModalState({
+        isOpen: true,
+        title: `${selectedFile} Content`,
+        data
+      });
+    } catch (error) {
+      console.error(`Error getting ${selectedFile}:`, error);
+    } finally {
+      setLoading('get-files', false);
+    }
   };
 
   return (
@@ -395,7 +412,7 @@ export const ExpertTab: React.FC = () => {
                   'installed-packages',
                   ExpertApiService.getInstalledPackages,
                   'Installed Packages',
-                  formatInstalledPackages
+                  formatSortedPackages
                 )}
                 loading={isLoading('installed-packages')}
                 width="full"
@@ -462,6 +479,13 @@ export const ExpertTab: React.FC = () => {
         onClose={() => setMigrationModalOpen(false)}
         onSubmit={handleMigrationSubmit}
         loading={isLoading('start-migration')}
+      />
+
+      <JsonDisplayModal
+        isOpen={jsonModalState.isOpen}
+        onClose={closeJsonModal}
+        title={jsonModalState.title}
+        data={jsonModalState.data}
       />
     </>
   );

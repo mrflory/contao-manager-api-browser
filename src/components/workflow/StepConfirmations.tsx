@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { VStack, HStack, Box, Text, Badge, Button, Alert, Link, Collapsible } from '@chakra-ui/react';
 import { Checkbox } from '../ui/checkbox';
-import { LuChevronDown as ChevronDown } from 'react-icons/lu';
+import { LuChevronDown as ChevronDown, LuExternalLink as ExternalLink } from 'react-icons/lu';
 import { WorkflowStep } from '../../types';
 import { useColorModeValue } from '../ui/color-mode';
 import { CodeBlock } from '../ui/code-block';
@@ -9,7 +9,6 @@ import { getOperationBadgeColor, getOperationBadgeText } from '../../utils/workf
 
 export interface StepConfirmationsProps {
   step: WorkflowStep;
-  createMigrationSummary: (data: any) => any;
   hasPendingTasksError: boolean;
   hasPendingMigrations: boolean;
   hasDryRunComplete: boolean;
@@ -26,7 +25,6 @@ export interface StepConfirmationsProps {
 
 export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
   step,
-  createMigrationSummary,
   hasPendingTasksError,
   hasPendingMigrations,
   hasDryRunComplete,
@@ -84,24 +82,18 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
                 )}
                 
                 {step.data.sponsor && (
-                  <Box p={2} bg="blue.50" borderRadius="md" borderWidth="1px" borderColor="blue.200">
-                    <HStack>
-                      <Text fontSize="xs" fontWeight="semibold" color="blue.700">
-                        Sponsored by:
-                      </Text>
-                      <Link 
-                        href={step.data.sponsor.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        color="blue.600"
-                        fontSize="xs"
-                        fontWeight="semibold"
-                        _hover={{ textDecoration: 'underline' }}
-                      >
-                        {step.data.sponsor.name}
-                      </Link>
-                    </HStack>
-                  </Box>
+                  <HStack fontSize="xs" color={mutedColor}>
+                    <Text>
+                      Sponsored by:
+                    </Text>
+                    <Link 
+                      href={step.data.sponsor.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {step.data.sponsor.name} <ExternalLink size={10} style={{ display: 'inline' }} />
+                    </Link>
+                  </HStack>
                 )}
               </VStack>
             )}
@@ -131,7 +123,7 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
             step.data?.operations && Array.isArray(step.data.operations) ? (
               <VStack align="stretch" gap={3}>
                 {step.data.operations.map((operation: any, index: number) => (
-                  <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg={cardBg} maxW="100%" minW={0}>
+                  <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg={cardBg} minW={0}>
                     <VStack align="stretch" gap={2}>
                       <HStack justify="space-between" align="start">
                         <Text fontSize="sm" fontWeight="bold" color="blue.600" flex="1">
@@ -152,14 +144,14 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
                       )}
                       
                       {operation.console && operation.console.trim() && (
-                        <Collapsible.Root maxW="100%" width="100%">
+                        <Collapsible.Root width="100%">
                           <Collapsible.Trigger asChild>
                             <Button variant="outline" size="xs" width="fit-content">
                               <ChevronDown size={12} /> View Console Output
                             </Button>
                           </Collapsible.Trigger>
-                          <Collapsible.Content maxW="100%" overflow="hidden">
-                            <Box mt={2} maxW="100%" overflowX="hidden">
+                          <Collapsible.Content overflow="hidden">
+                            <Box mt={2} overflowX="hidden">
                               <CodeBlock 
                                 language="bash"
                                 showLineNumbers
@@ -205,9 +197,6 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
       return null;
     }
 
-    const migrationData = step.data;
-    const summary = migrationData ? createMigrationSummary(migrationData) : null;
-
     return (
       <VStack gap={3} align="stretch" mt={3}>
         <Alert.Root status="info">
@@ -220,40 +209,6 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
             </Alert.Description>
           </Alert.Content>
         </Alert.Root>
-        
-        {summary && (
-          <Box p={3} bg={configBg} borderRadius="md">
-            <VStack align="stretch" gap={2}>
-              <HStack justify="space-between">
-                <Text fontSize="sm">Type:</Text>
-                <Badge colorPalette="blue" size="sm">{summary.migrationType}</Badge>
-              </HStack>
-              <HStack justify="space-between">
-                <Text fontSize="sm">Operations:</Text>
-                <Text fontSize="sm" fontWeight="semibold">{summary.totalOperations}</Text>
-              </HStack>
-              
-              {summary.operationBreakdown.length > 0 && (
-                <HStack gap={2} flexWrap="wrap">
-                  {summary.operationBreakdown.map(({ operation, count }: { operation: string; count: number }) => (
-                    <Badge 
-                      key={operation}
-                      colorPalette={
-                        operation === 'DROP' ? 'red' :
-                        operation === 'CREATE' ? 'green' :
-                        operation === 'ALTER' ? 'orange' :
-                        'gray'
-                      }
-                      size="sm"
-                    >
-                      {operation}: {count}
-                    </Badge>
-                  ))}
-                </HStack>
-              )}
-            </VStack>
-          </Box>
-        )}
         
         <Box p={3} bg={configBg} borderRadius="md">
           <Text fontSize="sm" fontWeight="semibold" mb={3}>Migration Options:</Text>
@@ -316,33 +271,6 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
             </Alert.Description>
           </Alert.Content>
         </Alert.Root>
-        
-        {step.data && (
-          <Box p={3} bg={configBg} borderRadius="md">
-            <Text fontSize="sm" fontWeight="semibold" mb={2}>Dry-run summary:</Text>
-            {step.data.operations && Array.isArray(step.data.operations) ? (
-              <VStack align="stretch" gap={2}>
-                {step.data.operations.map((operation: any, index: number) => (
-                  <HStack key={index} justify="space-between" align="center">
-                    <Text fontSize="sm" flex="1">
-                      {operation.summary}
-                    </Text>
-                    <Badge 
-                      colorPalette={operation.status === 'complete' ? 'green' : 'gray'}
-                      size="sm"
-                    >
-                      {operation.status === 'complete' ? 'Complete' : operation.status}
-                    </Badge>
-                  </HStack>
-                ))}
-              </VStack>
-            ) : (
-              <Text fontSize="sm" color="gray.600">
-                {step.data.title || 'Dry-run completed'}
-              </Text>
-            )}
-          </Box>
-        )}
         
         <Text fontSize="sm">
           <strong>Would you like to proceed with the actual composer update?</strong>

@@ -7,6 +7,7 @@ import {
   Code,
   Table,
   Alert,
+  Link,
 } from '@chakra-ui/react';
 import {
   AccordionRoot,
@@ -34,7 +35,7 @@ export const formatUpdateStatus = (data: UpdateStatus) => {
               )}
             </VStack>
           ) : null}
-          <AccordionRoot mt={4}>
+          <AccordionRoot collapsible mt={4}>
             <AccordionItem value="response-details">
               <AccordionItemTrigger>
                 <Box flex="1" textAlign="left">
@@ -65,7 +66,7 @@ export const formatUpdateStatus = (data: UpdateStatus) => {
               )}
             </VStack>
           ) : null}
-          <AccordionRoot mt={4}>
+          <AccordionRoot collapsible mt={4}>
             <AccordionItem value="error-details">
               <AccordionItemTrigger>
                 <Box flex="1" textAlign="left">
@@ -136,7 +137,7 @@ export const formatTokenInfo = (data: { success: boolean; tokenInfo: TokenInfo; 
             <Text><strong>TOTP Enabled:</strong> {tokenInfo.totp_enabled ? 'Yes' : 'No'}</Text>
           )}
         </VStack>
-        <AccordionRoot mt={4}>
+        <AccordionRoot collapsible mt={4}>
           <AccordionItem value="migration-response">
             <AccordionItemTrigger>
               <Box flex="1" textAlign="left">
@@ -223,7 +224,7 @@ export const formatDatabaseBackups = (data: any[]) => {
         </Table.Root>
       </Box>
       <Box mt={4}>
-        <AccordionRoot>
+        <AccordionRoot collapsible>
           <AccordionItem value="raw-response-1">
             <AccordionItemTrigger>
               <Box flex="1" textAlign="left">
@@ -252,80 +253,6 @@ const sortPackageEntries = (packages: [string, any][], priorityPrefix = 'contao'
     
     return nameA.localeCompare(nameB);
   });
-};
-
-export const formatInstalledPackages = (data: any) => {
-  if (!data || typeof data !== 'object') {
-    return (
-      <Alert.Root status="info">
-        <Alert.Indicator />
-        <Alert.Content>
-          <Alert.Title>No packages found</Alert.Title>
-          <Alert.Description>
-            No installed packages data available.
-          </Alert.Description>
-        </Alert.Content>
-      </Alert.Root>
-    );
-  }
-
-  const packages = Object.entries(data);
-  
-  return (
-    <VStack gap={4} align="stretch">
-      <Text fontSize="md" color="gray.600">
-        Found {packages.length} installed package{packages.length !== 1 ? 's' : ''}:
-      </Text>
-      <Box maxH="400px" overflowY="auto">
-        <Table.Root variant="outline" size="sm">
-          <Table.Header position="sticky" top={0}>
-            <Table.Row>
-              <Table.ColumnHeader>Package Name</Table.ColumnHeader>
-              <Table.ColumnHeader>Version</Table.ColumnHeader>
-              <Table.ColumnHeader>Type</Table.ColumnHeader>
-              <Table.ColumnHeader>Description</Table.ColumnHeader>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {packages.map(([name, pkg]: [string, any]) => (
-              <Table.Row key={name}>
-                <Table.Cell>
-                  <Text fontSize="sm" fontFamily="mono">{name}</Text>
-                </Table.Cell>
-                <Table.Cell>
-                  <Badge colorPalette="blue" fontSize="xs">{pkg.version || 'N/A'}</Badge>
-                </Table.Cell>
-                <Table.Cell>
-                  <Badge colorPalette={getTypeColorPalette(pkg.type)} fontSize="xs">{pkg.type || 'library'}</Badge>
-                </Table.Cell>
-                <Table.Cell>
-                  <Text fontSize="xs" lineClamp={2}>
-                    {pkg.description || 'No description available'}
-                  </Text>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
-      </Box>
-      <Box mt={4}>
-        <AccordionRoot>
-          <AccordionItem value="raw-response-2">
-            <AccordionItemTrigger>
-              <Box flex="1" textAlign="left">
-                Show raw package data
-              </Box>
-            </AccordionItemTrigger>
-            <AccordionItemContent pb={4}>
-              <CodeBlock language="json" showLineNumbers maxHeight="300px">
-                {JSON.stringify(data, null, 2)}
-              </CodeBlock>
-            </AccordionItemContent>
-          </AccordionItem>
-        </AccordionRoot>
-      </Box>
-    </VStack>
-  );
 };
 
 const getTypeColorPalette = (type: string) => {
@@ -382,7 +309,17 @@ export const formatSortedPackages = (data: any, options?: { priorityPrefix?: str
             {packages.map(([name, pkg]: [string, any]) => (
               <Table.Row key={name}>
                 <Table.Cell>
-                  <Text fontSize="sm" fontFamily="mono">{name}</Text>
+                  <Link 
+                    href={`https://packagist.org/packages/${name}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    fontSize="sm" 
+                    fontFamily="mono"
+                    color="blue.500"
+                    _hover={{ color: "blue.600", textDecoration: "underline" }}
+                  >
+                    {name}
+                  </Link>
                 </Table.Cell>
                 <Table.Cell>
                   <Badge colorPalette="blue" fontSize="xs">{pkg.version || 'N/A'}</Badge>

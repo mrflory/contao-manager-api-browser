@@ -41,6 +41,12 @@ class EnhancedMockServer extends MockServer {
 
         this.loadScenario(scenarioData);
         (this as any).currentScenarioName = scenario;
+        
+        // Reset migration cycle counter for multiple migration cycles scenarios
+        if (scenario.includes('multiple-migration-cycles')) {
+          const { migrationHandlers } = require('./handlers/migrationHandlers');
+          migrationHandlers.resetMigrationCycles();
+        }
         console.log(`\n🎭 Scenario changed to: ${scenario}`);
         
         res.json({ success: true, scenario: scenario, description: scenarioData.description });
@@ -54,6 +60,11 @@ class EnhancedMockServer extends MockServer {
     this.getApp().post('/mock/reset', (req, res) => {
       this.reset();
       (this as any).currentScenarioName = null;
+      
+      // Reset migration cycle counter
+      const { migrationHandlers } = require('./handlers/migrationHandlers');
+      migrationHandlers.resetMigrationCycles();
+      
       console.log('\n🔄 State reset to default');
       res.json({ success: true, message: 'State reset to default' });
     });

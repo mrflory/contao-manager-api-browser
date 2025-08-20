@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { VStack, HStack, Text, Badge, Button, Box, Collapsible, Separator, Grid, GridItem } from '@chakra-ui/react';
+import { VStack, HStack, Text, Badge, Button, Box, Collapsible, Grid, GridItem } from '@chakra-ui/react';
 import { LuChevronDown as ChevronDown, LuChevronRight as ChevronRight, LuDatabase as Database, LuTrash2 as Trash } from 'react-icons/lu';
 import { useColorModeValue } from '../ui/color-mode';
 import { CodeBlock } from '../ui/code-block';
@@ -10,6 +10,8 @@ export interface MigrationOperationsProps {
 }
 
 export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, summary }) => {
+  // Use step ID for state isolation - each step gets its own expansion state
+  const stepKey = summary?.stepId || 'default';
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const cardBg = useColorModeValue('white', 'gray.800');
   const summaryBg = useColorModeValue('blue.50', 'blue.900');
@@ -18,9 +20,10 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
   if (!data || !data.operations) return null;
 
   const toggleCategory = (category: string) => {
+    const categoryKey = `${stepKey}-${category}`;
     setExpandedCategories(prev => ({
       ...prev,
-      [category]: !prev[category]
+      [categoryKey]: !prev[categoryKey]
     }));
   };
 
@@ -177,7 +180,6 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
         <Box p={4} bg={summaryBg} borderRadius="md" borderWidth="1px">
           <VStack align="stretch" gap={3}>
             <HStack justify="space-between">
-              <Text fontSize="md" fontWeight="bold">Migration Summary</Text>
               <Badge colorPalette="blue" size="sm">{summary.migrationType}</Badge>
             </HStack>
             
@@ -233,7 +235,7 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
               >
                 <HStack width="100%" justify="space-between">
                   <HStack>
-                    {expandedCategories[category] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    {expandedCategories[`${stepKey}-${category}`] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     {getCategoryIcon(category)}
                     <Text fontWeight="semibold">{getCategoryLabel(category)}</Text>
                     <Badge colorPalette={getCategoryColor(category)} size="sm">
@@ -243,7 +245,7 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
                 </HStack>
               </Button>
               
-              <Collapsible.Root open={expandedCategories[category]}>
+              <Collapsible.Root open={expandedCategories[`${stepKey}-${category}`]}>
                 <Collapsible.Content>
                   <VStack align="stretch" gap={3} p={4} bg={cardBg}>
                     {operations.map((operation, index) => {
@@ -260,19 +262,6 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
             </Box>
           ))}
         </VStack>
-        
-        {/* Hash Display */}
-        {data.hash && (
-          <Box>
-            <Separator />
-            <HStack mt={3}>
-              <Text fontSize="sm" fontWeight="semibold">Migration Hash:</Text>
-              <CodeBlock language="text" maxHeight="auto">
-                {data.hash}
-              </CodeBlock>
-            </HStack>
-          </Box>
-        )}
       </VStack>
     );
   }
@@ -280,26 +269,7 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
   // Fallback to basic display
   return (
     <VStack align="stretch" gap={2}>
-      {data.type && (
-        <HStack>
-          <Text fontSize="sm" fontWeight="semibold">Type:</Text>
-          <Badge colorPalette="blue" size="sm">{data.type}</Badge>
-        </HStack>
-      )}
-      
-      <HStack>
-        <Text fontSize="sm" fontWeight="semibold">Operations:</Text>
-        <Text fontSize="sm">{data.operations.length} pending</Text>
-      </HStack>
-      
-      {data.hash && (
-        <HStack>
-          <Text fontSize="sm" fontWeight="semibold">Hash:</Text>
-          <CodeBlock language="text" maxHeight="auto">
-            {`${data.hash.substring(0, 12)}...`}
-          </CodeBlock>
-        </HStack>
-      )}
+      <Text fontSize="sm">{data.operations.length} operations pending</Text>
     </VStack>
   );
 };

@@ -113,22 +113,3 @@ export const isMigrationStep = (step: WorkflowStep): boolean => {
          (step.data?.operations || step.data?.status || step.data?.type);
 };
 
-/**
- * Get step title for data rendering
- */
-export const getStepDataTitle = (step: WorkflowStep, isActive: boolean): string => {
-  if (isComposerStep(step)) {
-    const isDryRun = step.id.includes('dry-run');
-    return isActive 
-      ? (isDryRun ? 'Analyzing changes...' : 'Updating packages...')
-      : (isDryRun ? 'Planned Changes' : 'Package Updates');
-  }
-  
-  if (isMigrationStep(step)) {
-    return isActive
-      ? (step.id.includes('check') ? 'Checking migrations...' : 'Executing migrations...')
-      : (step.id.includes('check') ? 'Migration Summary' : 'Migration Results');
-  }
-  
-  return isActive ? 'Processing...' : 'Completed';
-};

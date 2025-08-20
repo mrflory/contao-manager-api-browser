@@ -124,7 +124,12 @@ export const useWorkflow = () => {
     updateState(prev => ({
       ...prev,
       steps: prev.steps.map((step, index) => 
-        index === prev.currentStep ? { ...step, ...stepUpdate } : step
+        index === prev.currentStep ? { 
+          ...step, 
+          ...stepUpdate,
+          // Deep clone data to prevent reference sharing between steps
+          data: stepUpdate.data ? JSON.parse(JSON.stringify(stepUpdate.data)) : stepUpdate.data
+        } : step
       )
     }));
   }, [updateState]);
@@ -333,6 +338,14 @@ export const useWorkflow = () => {
                 const maxCycle = Math.max(...allMigrationHistory.map(h => h.cycle), 0);
                 const nextCycle = maxCycle + 1;
                 
+                console.log('🔄 Migration cycle creation:', {
+                  executeStepId: executeStep.id,
+                  allMigrationHistory,
+                  maxCycle,
+                  nextCycle,
+                  existingSteps: newSteps.map(s => s.id)
+                });
+                
                 // Create new check step for next iteration with clean state
                 const newCheckStep: WorkflowStep = {
                   id: `check-migrations-loop-${nextCycle}`,
@@ -351,12 +364,14 @@ export const useWorkflow = () => {
                   migrationHistory: [] // Start with empty history for new cycle
                 };
                 
-                // Insert new steps after the current execute step
+                // Always create new migration steps for each cycle
+                console.log('✅ Creating new migration steps:', newCheckStep.id, newExecuteStep.id);
                 newSteps.splice(executeStepIndex + 1, 0, newCheckStep, newExecuteStep);
+                const nextStepIndex = executeStepIndex + 1; // Move to new check step
                 
                 return {
                   ...prev,
-                  currentStep: executeStepIndex + 1, // Move to new check step
+                  currentStep: nextStepIndex,
                   steps: newSteps
                 };
               }
@@ -867,8 +882,23 @@ export const useWorkflow = () => {
     skipMigrations,
     skipComposerUpdate,
     isComplete: state.currentStep >= state.steps.length && !state.isRunning,
-    hasPendingMigrations: state.steps.find(step => step.id === 'check-migrations-loop')?.status === 'complete' && 
-                         state.steps.find(step => step.id === 'check-migrations-loop')?.data?.hash &&
-                         state.isPaused
+    hasPendingMigrations: (() => {
+      const currentStep = state.steps[state.currentStep];
+      const result = currentStep?.id.startsWith('check-migrations-loop') &&
+                     currentStep?.status === 'complete' && 
+                     currentStep?.data?.hash &&
+                     state.isPaused;
+      
+      console.log('🔍 hasPendingMigrations check:', {
+        currentStepIndex: state.currentStep,
+        currentStepId: currentStep?.id,
+        currentStepStatus: currentStep?.status,
+        hasHash: !!currentStep?.data?.hash,
+        isPaused: state.isPaused,
+        result
+      });
+      
+      return result;
+    })()
   };
 };

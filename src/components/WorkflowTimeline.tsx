@@ -7,7 +7,7 @@ import { WorkflowStepComponent } from './workflow/WorkflowStep';
 interface WorkflowTimelineProps {
   steps: WorkflowStep[];
   currentStep: number;
-  createMigrationSummary: (migrationData: any) => any;
+  createMigrationSummary: (migrationData: any, stepId?: string) => any;
   hasPendingTasksError: boolean;
   hasPendingMigrations: boolean;
   hasDryRunComplete: boolean;
@@ -82,7 +82,6 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
         <WorkflowStepComponent
           key={step.id}
           step={step}
-          createMigrationSummary={createMigrationSummary}
           hasPendingTasksError={hasPendingTasksError}
           hasPendingMigrations={hasPendingMigrations}
           hasDryRunComplete={hasDryRunComplete}
@@ -95,6 +94,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
           onSkipComposerUpdate={onSkipComposerUpdate}
           onCancelWorkflow={onCancelWorkflow}
           configBg={configBg}
+          createMigrationSummary={createMigrationSummary}
         />
       ))}
     </TimelineRoot>

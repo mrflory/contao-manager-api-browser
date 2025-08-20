@@ -18,7 +18,7 @@ import { useWorkflow } from '../hooks/useWorkflow';
 import { WorkflowConfig } from '../types';
 
 // Helper function to analyze migration operations and create detailed summary
-const createMigrationSummary = (migrationData: any) => {
+const createMigrationSummary = (migrationData: any, stepId?: string) => {
   if (!migrationData || !migrationData.operations) {
     return null;
   }
@@ -189,6 +189,7 @@ const createMigrationSummary = (migrationData: any) => {
     }));
 
   return {
+    stepId: stepId || 'unknown', // Include step ID for cycle isolation
     totalOperations: migrationData.operations.length,
     operationBreakdown: nonZeroOperations,
     operationDetails,
