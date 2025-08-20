@@ -1,6 +1,7 @@
 import React from 'react';
 import { useColorMode } from './color-mode';
-import { CodeBlock as ChakraCodeBlock, createShikiAdapter, IconButton, ClientOnly, Container } from '@chakra-ui/react';
+import { CodeBlock as ChakraCodeBlock, IconButton, ClientOnly, Container } from '@chakra-ui/react';
+import { shikiAdapter } from '../../utils/shikiAdapter';
 
 export interface CodeBlockProps {
   children: string;
@@ -11,17 +12,6 @@ export interface CodeBlockProps {
   title?: string;
   className?: string;
 }
-
-// Create Shiki adapter following Chakra UI v3 documentation
-export const shikiAdapter = createShikiAdapter({
-  async load() {
-    const { createHighlighter } = await import('shiki');
-    return createHighlighter({
-      langs: ['json', 'sql', 'bash', 'typescript', 'javascript', 'sh', 'text'],
-      themes: ['github-light', 'github-dark']
-    });
-  }
-});
 
 export const CodeBlock: React.FC<CodeBlockProps> = ({
   children,

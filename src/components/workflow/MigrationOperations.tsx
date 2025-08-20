@@ -16,6 +16,7 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
   const cardBg = useColorModeValue('white', 'gray.800');
   const summaryBg = useColorModeValue('blue.50', 'blue.900');
   const warningBg = useColorModeValue('orange.50', 'orange.900');
+  const operationBg = useColorModeValue('gray.50', 'gray.700');
 
   if (!data || !data.operations) return null;
 
@@ -248,14 +249,11 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
               <Collapsible.Root open={expandedCategories[`${stepKey}-${category}`]}>
                 <Collapsible.Content>
                   <VStack align="stretch" gap={3} p={4} bg={cardBg}>
-                    {operations.map((operation, index) => {
-                      const operationBg = useColorModeValue('gray.50', 'gray.700');
-                      return (
-                        <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg={operationBg}>
-                          {renderOperationDetails(operation, category)}
-                        </Box>
-                      );
-                    })}
+                    {operations.map((operation, index) => (
+                      <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg={operationBg}>
+                        {renderOperationDetails(operation, category)}
+                      </Box>
+                    ))}
                   </VStack>
                 </Collapsible.Content>
               </Collapsible.Root>
