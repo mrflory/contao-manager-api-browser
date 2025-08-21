@@ -80,7 +80,7 @@ const SiteDetails: React.FC = () => {
     loadConfig.execute();
   };
 
-  if (loadConfig.state.loading) {
+  if (loadConfig.state.loading || !config || (config && !site)) {
     return (
       <Container maxW="4xl">
         <LoadingState message="Loading site details..." />
