@@ -7,7 +7,7 @@
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useWorkflow } from '../../hooks/useWorkflow';
+import { useWorkflow } from '../../backup/useWorkflowOld';
 import { 
   setupTestEnvironment, 
   teardownTestEnvironment, 

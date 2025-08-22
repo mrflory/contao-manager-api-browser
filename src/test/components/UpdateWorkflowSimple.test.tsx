@@ -30,15 +30,15 @@ jest.mock('../../components/ui/checkbox', () => ({
 }));
 
 import { UpdateWorkflow } from '../../components/UpdateWorkflow';
-import { useWorkflow } from '../../hooks/useWorkflow';
+import { useUpdateWorkflow } from '../../workflow';
 import { useToastNotifications } from '../../hooks/useToastNotifications';
 import { WorkflowState } from '../../types';
 
 // Mock hooks
-jest.mock('../../hooks/useWorkflow');
+jest.mock('../../workflow');
 jest.mock('../../hooks/useToastNotifications');
 
-const mockUseWorkflow = jest.mocked(useWorkflow);
+const mockUseUpdateWorkflow = jest.mocked(useUpdateWorkflow);
 const mockUseToastNotifications = jest.mocked(useToastNotifications);
 
 describe('UpdateWorkflow Component (Simplified)', () => {

@@ -226,6 +226,11 @@ export class TaskApiService {
   static deleteTaskData = api.deleteTaskData;
 
   /**
+   * Patch task status (for aborting tasks)
+   */
+  static patchTaskStatus = api.patchTaskStatus;
+
+  /**
    * Get maintenance mode status
    */
   static getMaintenanceModeStatus = api.getMaintenanceModeStatus;

@@ -372,6 +372,20 @@ export const ExpertTab: React.FC = () => {
             </GridItem>
             <GridItem>
               <Button
+                colorPalette="yellow"
+                onClick={() => handleApiCallWithModal(
+                  'patch-task',
+                  () => TaskApiService.patchTaskStatus('aborting'),
+                  'Patch Task (Abort)'
+                )}
+                loading={isLoading('patch-task')}
+                width="full"
+              >
+                Patch Task (Abort)
+              </Button>
+            </GridItem>
+            <GridItem>
+              <Button
                 colorPalette="red"
                 onClick={() => handleApiCallWithModal(
                   'delete-task',

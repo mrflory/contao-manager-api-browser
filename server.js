@@ -1312,6 +1312,19 @@ app.put('/api/task', async (req, res) => {
     }
 });
 
+app.patch('/api/task', async (req, res) => {
+    try {
+        console.log('[TASK-PATCH] Starting request');
+        console.log('[TASK-PATCH] Request body:', JSON.stringify(req.body, null, 2));
+        const response = await proxyToContaoManager('/api/task', 'PATCH', req.body, req);
+        handleApiResponse('TASK-PATCH', response, res);
+    } catch (error) {
+        console.error('[TASK-PATCH] Error:', error.message);
+        console.error('[TASK-PATCH] Full error:', error);
+        res.status(500).json({ error: 'Failed to patch task data: ' + error.message });
+    }
+});
+
 app.delete('/api/task', async (req, res) => {
     try {
         console.log('[TASK-DELETE] Starting request');

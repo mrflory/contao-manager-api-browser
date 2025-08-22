@@ -1,0 +1,326 @@
+import React, { useState, useEffect } from 'react';
+import { Badge, HStack, VStack, Text, Collapsible, Spinner, IconButton, Box, Button, Alert } from '@chakra-ui/react';
+import { LuCheck as Check, LuX as X, LuMinus as Minus, LuCircle as Circle, LuChevronDown as ChevronDown, LuChevronUp as ChevronUp, LuPlay as Play } from 'react-icons/lu';
+import {
+  TimelineItem as TimelineItemUI,
+  TimelineConnector,
+  TimelineContent,
+  TimelineTitle,
+  TimelineDescription,
+} from '../../components/ui/timeline';
+import { TimelineItem, TimelineExecutionRecord } from '../engine/types';
+import { useColorModeValue } from '../../components/ui/color-mode';
+import { formatTime, getDuration } from '../../utils/dateUtils';
+import { UserActionPanel } from './UserActionPanel';
+import { CodeBlock } from '../../components/ui/code-block';
+import { ComposerOperations } from '../../components/workflow/ComposerOperations';
+import { MigrationOperations } from '../../components/workflow/MigrationOperations';
+import { Separator } from '@chakra-ui/react';
+
+interface TimelineItemRendererProps {
+  item: TimelineItem;
+  executionRecord?: TimelineExecutionRecord;
+  isCurrent?: boolean;
+  onUserAction: (actionId: string) => Promise<void>;
+  onRetry: () => Promise<void>;
+  onSkip: () => Promise<void>;
+  onStartFromStep?: () => Promise<void>;
+  isWorkflowRunning?: boolean;
+}
+
+// Helper functions to determine timeline item types
+const isComposerTimelineItem = (item: TimelineItem, data: unknown): boolean => {
+  return (item.id.includes('dry-run') || 
+          item.id.includes('composer-update')) && 
+         typeof data === 'object' && 
+         data !== null &&
+         'operations' in data;
+};
+
+const isMigrationTimelineItem = (item: TimelineItem, data: unknown): boolean => {
+  return (item.id.includes('migrations') || item.id.includes('migration')) && 
+         typeof data === 'object' && 
+         data !== null &&
+         ('operations' in data || 'status' in data || 'type' in data);
+};
+
+export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
+  item,
+  executionRecord,
+  onUserAction,
+  onRetry,
+  onSkip,
+  onStartFromStep,
+  isWorkflowRunning
+}) => {
+  const mutedColor = useColorModeValue('gray.500', 'gray.400');
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  
+  // Smart auto-expand/collapse logic
+  useEffect(() => {
+    if (item.status === 'active') {
+      // Auto-expand when item becomes active
+      setIsExpanded(true);
+    } else if (item.status === 'error' || item.status === 'user_action_required') {
+      // Always expand and keep expanded for errors or user actions
+      setIsExpanded(true);
+    } else if (item.status === 'complete') {
+      // Auto-collapse when item completes and doesn't need user action
+      setIsExpanded(false);
+    }
+  }, [item.status]);
+  
+  // Determine if content should be shown
+  const shouldShowContent = isExpanded || 
+                           item.status === 'error' || 
+                           item.status === 'active' || 
+                           item.status === 'user_action_required';
+  
+  const getStepIcon = () => {
+    switch (item.status) {
+      case 'active':
+        return <Spinner size="md" borderWidth="4px" />;
+      case 'complete':
+        return <Check color="white" size={24} />;
+      case 'error':
+        return <X color="white" size={24} />;
+      case 'skipped':
+        return <Minus color="white" size={24} />;
+      default:
+        return <Circle color="white" size={24} />;
+    }
+  };
+  
+  const getIndicatorColor = () => {
+    switch (item.status) {
+      case 'active':
+        return 'blue.300';
+      case 'complete':
+        return 'green.500';
+      case 'error':
+        return 'red.500';
+      case 'skipped':
+        return 'blue.800';
+      case 'user_action_required':
+        return 'orange.500';
+      default:
+        return 'blue.500';
+    }
+  };
+  
+  const getStatusBadge = () => {
+    const getStatusBadgeColor = () => {
+      switch (item.status) {
+        case 'active':
+          return 'blue';
+        case 'complete':
+          return 'green';
+        case 'error':
+          return 'red';
+        case 'skipped':
+          return 'gray';
+        case 'user_action_required':
+          return 'orange';
+        default:
+          return 'gray';
+      }
+    };
+    
+    const getStatusBadgeText = () => {
+      switch (item.status) {
+        case 'active':
+          return 'In Progress';
+        case 'complete':
+          return 'Complete';
+        case 'error':
+          return 'Error';
+        case 'skipped':
+          return 'Skipped';
+        case 'user_action_required':
+          return 'Action Required';
+        default:
+          return 'Pending';
+      }
+    };
+    
+    return (
+      <Badge colorPalette={getStatusBadgeColor()}>
+        {getStatusBadgeText()}
+      </Badge>
+    );
+  };
+  
+  return (
+    <TimelineItemUI opacity={item.status === 'skipped' ? 0.6 : 1}>
+      <TimelineConnector bg={getIndicatorColor()}>
+        {getStepIcon()}
+      </TimelineConnector>
+      
+      <TimelineContent>
+        <TimelineTitle fontSize="md">
+          <HStack justify="space-between" align="center" width="100%">
+            <Text>{item.title}</Text>
+            <HStack align="center" gap={2}>
+              {getStatusBadge()}
+              
+              {/* Start from this step button - only show for pending/skipped steps when workflow is not running */}
+              {onStartFromStep && !isWorkflowRunning && (item.status === 'pending' || item.status === 'skipped') && (
+                <IconButton
+                  size="xs"
+                  variant="outline"
+                  colorPalette="blue"
+                  onClick={onStartFromStep}
+                  aria-label="Start workflow from this step"
+                  title="Start workflow from this step"
+                >
+                  <Play size={12} />
+                </IconButton>
+              )}
+              
+              {/* Manual toggle arrow */}
+              <IconButton
+                size="xs"
+                variant="ghost"
+                onClick={() => setIsExpanded(!isExpanded)}
+                aria-label={isExpanded ? "Collapse step details" : "Expand step details"}
+              >
+                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </IconButton>
+            </HStack>
+          </HStack>
+        </TimelineTitle>
+
+        {/* Collapsible content area */}
+        <Collapsible.Root 
+          open={shouldShowContent} 
+          onOpenChange={(details) => setIsExpanded(details.open)}
+        >
+          <Collapsible.Content>
+            <VStack align="stretch" gap={3} mt={3}>
+              {/* Step description */}
+              <TimelineDescription fontSize="sm" color={mutedColor}>
+                {item.description}
+              </TimelineDescription>
+
+              {/* Timestamps */}
+              {(item.startTime || item.endTime) && (
+                <HStack gap={4} fontSize="xs" color={mutedColor}>
+                  {item.startTime && (
+                    <Text>Started: {formatTime(item.startTime)}</Text>
+                  )}
+                  {item.endTime && (
+                    <Text>Ended: {formatTime(item.endTime)}</Text>
+                  )}
+                  {item.startTime && (
+                    <Text>Duration: {getDuration(item.startTime, item.endTime)}</Text>
+                  )}
+                </HStack>
+              )}
+
+              {/* Error display */}
+              {item.status === 'error' && executionRecord?.result?.error && (
+                <Text 
+                  fontSize="sm" 
+                  color="red.500" 
+                  p={3} 
+                  bg="red.50" 
+                  borderRadius="md" 
+                  borderLeft="4px solid" 
+                  borderColor="red.500"
+                >
+                  ⚠️ {executionRecord.result.error}
+                </Text>
+              )}
+              
+              {/* Custom UI content from timeline result */}
+              {executionRecord?.result?.uiContent && (
+                <Box>
+                  {executionRecord.result.uiContent}
+                </Box>
+              )}
+              
+              {/* Formatted data display for composer/migration items during progress or completion */}
+              {(item.status === 'active' || item.status === 'complete' || item.status === 'error' || item.status === 'user_action_required') && 
+               executionRecord?.result?.data && (
+                <>
+                  {/* Composer operations display */}
+                  {isComposerTimelineItem(item, executionRecord.result.data) && (
+                    <VStack align="stretch" gap={3}>
+                      <ComposerOperations data={executionRecord.result.data} />
+                      <Separator />
+                    </VStack>
+                  )}
+                  
+                  {/* Migration operations display */}
+                  {isMigrationTimelineItem(item, executionRecord.result.data) && (
+                    <VStack align="stretch" gap={3}>
+                      <MigrationOperations 
+                        data={executionRecord.result.data}
+                        summary={executionRecord.result.data} // TODO: Create migration summary if needed
+                      />
+                      <Separator />
+                    </VStack>
+                  )}
+                </>
+              )}
+              
+              {/* Raw data display for active, completed, error, or user action required items (but not for composer/migration items that have formatted displays) */}
+              {(item.status === 'active' || item.status === 'complete' || item.status === 'error' || item.status === 'user_action_required') && 
+               executionRecord?.result?.data && 
+               !isComposerTimelineItem(item, executionRecord.result.data) &&
+               !isMigrationTimelineItem(item, executionRecord.result.data) && (
+                <VStack align="stretch" gap={2}>
+                  <Text fontSize="xs" fontWeight="semibold" color={mutedColor}>
+                    Raw Data:
+                  </Text>
+                  <Collapsible.Root>
+                    <Collapsible.Trigger asChild>
+                      <Button variant="outline" size="xs" width="fit-content">
+                        <ChevronDown size={12} /> Show Raw Data
+                      </Button>
+                    </Collapsible.Trigger>
+                    <Collapsible.Content>
+                      <Box mt={2}>
+                        <CodeBlock 
+                          language="json" 
+                          showLineNumbers 
+                          maxHeight="200px"
+                        >
+                          {JSON.stringify(executionRecord.result.data, null, 2)}
+                        </CodeBlock>
+                      </Box>
+                    </Collapsible.Content>
+                  </Collapsible.Root>
+                </VStack>
+              )}
+              
+              {/* User action panel */}
+              {item.status === 'user_action_required' && (
+                <>
+                  {executionRecord?.result?.userActions ? (
+                    <UserActionPanel
+                      actions={executionRecord.result.userActions}
+                      onAction={onUserAction}
+                      onRetry={item.canRetry() ? onRetry : undefined}
+                      onSkip={item.canSkip() ? onSkip : undefined}
+                    />
+                  ) : (
+                    <Alert.Root status="warning" size="sm">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>
+                          Action required but no actions available. Check console for details.
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert.Root>
+                  )}
+                </>
+              )}
+            </VStack>
+          </Collapsible.Content>
+        </Collapsible.Root>
+      </TimelineContent>
+    </TimelineItemUI>
+  );
+};

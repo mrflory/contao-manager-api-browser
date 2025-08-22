@@ -61,6 +61,7 @@ export interface MockState {
   scenarios?: {
     taskFailures?: Record<string, string>; // task name -> error message
     migrationFailures?: boolean;
+    multipleMigrationCycles?: boolean;
     networkLatency?: number;
     authErrors?: boolean;
     malformedResponses?: boolean;

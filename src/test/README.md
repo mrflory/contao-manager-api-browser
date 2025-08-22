@@ -159,7 +159,7 @@ Test complete workflows with the mock server:
 
 ```typescript
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useWorkflow } from '../../hooks/useWorkflow';
+import { useWorkflow } from '../../backup/useWorkflowOld';
 import { withMockServer, loadScenario, TestContext } from '../utils/testHelpers';
 
 describe('Workflow Integration Tests', () => {
