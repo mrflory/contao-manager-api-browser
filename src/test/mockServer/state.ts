@@ -17,14 +17,66 @@ export function createDefaultState(): MockState {
     },
 
     contaoInfo: {
-      version: '5.2.1',
+      version: '5.5.11',
+      cli: {
+        commands: {
+          'cache:clear': { arguments: [], options: ['no-warmup', 'help'] },
+          'contao:migrate': { arguments: [], options: ['dry-run', 'help'] },
+          'contao:backup:create': { arguments: ['name'], options: ['help'] }
+        }
+      },
       api: {
         version: 2,
-        features: ['contao/database-migration', 'contao/backup', 'contao/maintenance-mode']
+        features: {
+          'contao/manager-bundle': {
+            'dot-env': ['APP_SECRET', 'DATABASE_URL'],
+            'config': ['disable-packages'],
+            'jwt-cookie': ['debug']
+          }
+        },
+        commands: ['help', 'config:get', 'jwt-cookie:generate']
+      },
+      config: {
+        preview_script: '/preview.php',
+        messenger: {
+          web_worker: {
+            transports: ['contao_prio_high', 'contao_prio_normal'],
+            grace_period: 'PT10M'
+          },
+          workers: []
+        },
+        pretty_error_screens: true,
+        backend_search: {
+          dsn: 'loupe:///var/www/contao/var/loupe',
+          enabled: true,
+          index_name: 'contao_backend'
+        },
+        csrf_cookie_prefix: 'csrf_',
+        csrf_token_name: 'contao_csrf_token',
+        error_level: 6135,
+        upload_path: 'files',
+        editable_files: 'css,js,html,xml',
+        console_path: '/var/www/contao/bin/console',
+        image: {
+          bypass_cache: false,
+          imagine_options: {
+            jpeg_quality: 80,
+            jpeg_sampling_factors: [2, 1, 1],
+            interlace: 'plane'
+          },
+          imagine_service: null,
+          reject_large_uploads: false,
+          sizes: [],
+          target_dir: '/var/www/contao/assets/images',
+          valid_extensions: ['jpg', 'jpeg', 'png', 'gif', 'svg'],
+          preview_extensions: ['jpg', 'jpeg', 'png', 'gif']
+        }
       },
       supported: true,
-      project_dir: '/var/www/html',
-      public_dir: 'public'
+      conflicts: [],
+      project_dir: '/var/www/contao',
+      public_dir: 'public',
+      directory_separator: '/'
     },
 
     selfUpdate: {
@@ -95,6 +147,23 @@ export function createDefaultState(): MockState {
         name: 'backup_2024_01_10_10_15_00.sql.gz', 
         createdAt: '2024-01-10T10:15:00Z',
         size: 1874432
+      }
+    ],
+
+    users: [
+      {
+        username: 'admin',
+        scope: 'admin',
+        passkey: false,
+        totp_enabled: true,
+        limited: false
+      },
+      {
+        username: 'developer',
+        scope: 'install',
+        passkey: false,
+        totp_enabled: false,
+        limited: false
       }
     ]
   };

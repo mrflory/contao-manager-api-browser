@@ -18,13 +18,71 @@ export interface MockState {
   
   contaoInfo: {
     version: string | null;
+    cli: {
+      commands: Record<string, {
+        arguments: string[];
+        options: string[];
+      }>;
+    };
     api: {
       version: number;
-      features: string[];
+      features: Record<string, {
+        'dot-env'?: string[];
+        'config'?: string[];
+        'jwt-cookie'?: string[];
+      }>;
+      commands: string[];
+    };
+    config: {
+      preview_script: string;
+      messenger: {
+        web_worker: {
+          transports: string[];
+          grace_period: string;
+        };
+        workers: Array<{
+          transports: string[];
+          options: string[];
+          autoscale: {
+            desired_size: number;
+            max: number;
+            enabled: boolean;
+            min: number;
+          };
+        }>;
+      };
+      pretty_error_screens: boolean;
+      backend_search: {
+        dsn: string;
+        enabled: boolean;
+        index_name: string;
+      };
+      csrf_cookie_prefix: string;
+      csrf_token_name: string;
+      error_level: number;
+      upload_path: string;
+      editable_files: string;
+      console_path: string;
+      image: {
+        bypass_cache: boolean;
+        imagine_options: {
+          jpeg_quality: number;
+          jpeg_sampling_factors: number[];
+          interlace: string;
+        };
+        imagine_service: any;
+        reject_large_uploads: boolean;
+        sizes: any[];
+        target_dir: string;
+        valid_extensions: string[];
+        preview_extensions?: string[];
+      };
     };
     supported: boolean;
+    conflicts: string[];
     project_dir: string;
     public_dir: string;
+    directory_separator: '/' | '\\';
   };
 
   // Self-update information
@@ -56,6 +114,9 @@ export interface MockState {
 
   // Backups
   backups: BackupInfo[];
+
+  // Users
+  users: UserInfo[];
 
   // Scenario-specific settings
   scenarios?: {
@@ -121,6 +182,19 @@ export interface BackupInfo {
   name: string;
   createdAt: string;
   size: number;
+}
+
+export interface UserInfo {
+  username: string;
+  scope: 'admin' | 'install' | 'update' | 'read';
+  passkey: boolean;
+  totp_enabled: boolean;
+  limited: boolean;
+}
+
+export interface ErrorResponse {
+  status: number;
+  body: any;
 }
 
 // Test scenario configuration

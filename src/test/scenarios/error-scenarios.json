@@ -14,7 +14,7 @@
         },
         "scenarios": {
           "taskFailures": {
-            "composer/update": "Your requirements could not be resolved to an installable set of packages.\n\nProblem 1\n- contao/core 5.3.0 requires php ^8.2 but your php version (8.1.15) does not satisfy that requirement."
+            "composer/update": "Loading composer repositories with package information\nUpdating dependencies\nYour requirements could not be resolved to an installable set of packages.\n\nProblem 1\n- contao/core-bundle 5.3.37 requires php ^8.2 but your php version (8.1.15) does not satisfy that requirement.\n- Root composer.json requires contao/core-bundle ^5.3 -> satisfiable by contao/core-bundle[5.3.37].\n\nProblem 2\n- oveleon/contao-cookiebar 2.1.5 conflicts with symfony/clock ^6.4.8\n\nUse the option --with-all-dependencies (-W) to allow upgrades, downgrades and removals for packages currently locked to specific versions."
           },
           "networkLatency": 100
         }
@@ -32,9 +32,14 @@
         },
         "pendingMigrations": [
           {
-            "name": "ALTER TABLE tl_member ADD CONSTRAINT unique_email",
+            "name": "ALTER TABLE tl_member ADD CONSTRAINT unique_email UNIQUE (email)",
+            "status": "error",
+            "message": "SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'user@example.com' for key 'unique_email'"
+          },
+          {
+            "name": "CREATE TABLE tl_advanced_features (id int(10) unsigned NOT NULL auto_increment, PRIMARY KEY (id))",
             "status": "pending",
-            "message": "Adding unique constraint to email field"
+            "message": "Creating advanced features table"
           }
         ],
         "scenarios": {

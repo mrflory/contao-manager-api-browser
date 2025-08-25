@@ -73,6 +73,11 @@ export class MockServer {
     // Package endpoints
     router.get('/packages/root', packageHandlers.getRootPackage(() => this.state));
     router.get('/packages/local', packageHandlers.getLocalPackages(() => this.state));
+    router.get('/packages/local/:name', packageHandlers.getLocalPackage(() => this.state));
+
+    // User management endpoints
+    router.get('/users', serverHandlers.getUsers(() => this.state));
+    router.get('/users/:username', serverHandlers.getUser(() => this.state));
 
     // Maintenance mode endpoints
     router.get('/contao/maintenance-mode', (req: Request, res: Response) => {
@@ -89,9 +94,17 @@ export class MockServer {
       res.json({ enabled: false });
     });
 
-    // Backup endpoints
-    router.get('/contao/backup', (req: Request, res: Response) => {
-      res.json(this.state.backups || []);
+    // Backup endpoints  
+    router.get('/contao/backup', serverHandlers.getBackups(() => this.state));
+
+    // Session endpoints (mock)
+    router.get('/session', (req: Request, res: Response) => {
+      const users = this.state.users || [];
+      if (users.length > 0) {
+        res.json(users[0]); // Return first user as logged in
+      } else {
+        res.status(204).send();
+      }
     });
 
     this.app.use('/api', router);

@@ -27,8 +27,11 @@ describe('New Server Endpoints', () => {
       expect(data).toHaveProperty('api');
       expect(data.api).toHaveProperty('version');
       expect(data.api).toHaveProperty('features');
-      expect(Array.isArray(data.api.features)).toBe(true);
+      expect(typeof data.api.features).toBe('object');
+      expect(data.api.features).not.toBeNull();
       expect(data).toHaveProperty('project_dir');
+      expect(data).toHaveProperty('config');
+      expect(data).toHaveProperty('cli');
     });
   });
 

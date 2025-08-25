@@ -14,14 +14,72 @@
         },
         "pendingMigrations": [
           {
-            "name": "CREATE TABLE tl_new_feature",
+            "name": "CREATE TABLE tl_new_feature (id int(10) unsigned NOT NULL auto_increment, tstamp int(10) unsigned NOT NULL default '0', PRIMARY KEY (id))",
             "status": "pending",
             "message": "Adding table for new feature"
           },
           {
-            "name": "ALTER TABLE tl_content ADD COLUMN enhanced_field",
+            "name": "ALTER TABLE tl_content ADD enhanced_field varchar(255) NOT NULL default ''",
             "status": "pending",
             "message": "Adding enhanced field to content"
+          },
+          {
+            "name": "UPDATE tl_user SET admin=1 WHERE username='admin'",
+            "status": "pending",
+            "message": "Updating user permissions"
+          }
+        ],
+        "localPackages": {
+          "contao/core-bundle": {
+            "name": "contao/core-bundle",
+            "version": "5.3.34",
+            "type": "contao-bundle",
+            "description": "Contao CMS core bundle",
+            "license": "LGPL-3.0-or-later",
+            "authors": [
+              { "name": "Leo Feyer", "email": "leo@contao.org" }
+            ],
+            "require": {
+              "php": "^8.1",
+              "symfony/framework-bundle": "^6.4"
+            }
+          },
+          "contao/manager-bundle": {
+            "name": "contao/manager-bundle",
+            "version": "5.3.34",
+            "type": "contao-bundle",
+            "description": "Contao Manager bundle",
+            "license": "LGPL-3.0-or-later"
+          },
+          "doctrine/dbal": {
+            "name": "doctrine/dbal",
+            "version": "3.8.3",
+            "type": "library",
+            "description": "Powerful PHP database abstraction layer (DBAL) with many features for database schema introspection and management.",
+            "license": "MIT"
+          },
+          "oveleon/contao-cookiebar": {
+            "name": "oveleon/contao-cookiebar",
+            "version": "2.1.4",
+            "type": "contao-bundle",
+            "description": "Cookie management for Contao CMS",
+            "license": "MIT"
+          }
+        },
+        "users": [
+          {
+            "username": "admin",
+            "scope": "admin",
+            "passkey": false,
+            "totp_enabled": true,
+            "limited": false
+          },
+          {
+            "username": "developer",
+            "scope": "install",
+            "passkey": false,
+            "totp_enabled": false,
+            "limited": false
           }
         ],
         "scenarios": {
@@ -94,17 +152,29 @@
           "supported": true
         },
         "localPackages": {
-          "contao/core": {
-            "name": "contao/core",
-            "version": "5.2.0",
-            "type": "library",
-            "description": "Contao Core Bundle"
+          "contao/core-bundle": {
+            "name": "contao/core-bundle",
+            "version": "5.3.37",
+            "type": "contao-bundle",
+            "description": "Contao CMS core bundle",
+            "license": "LGPL-3.0-or-later",
+            "authors": [
+              { "name": "Leo Feyer", "email": "leo@contao.org" }
+            ]
           },
-          "symfony/framework-bundle": {
-            "name": "symfony/framework-bundle", 
-            "version": "6.4.1",
-            "type": "symfony-bundle",
-            "description": "Symfony FrameworkBundle"
+          "contao/news-bundle": {
+            "name": "contao/news-bundle",
+            "version": "5.3.37",
+            "type": "contao-bundle",
+            "description": "Contao news bundle",
+            "license": "LGPL-3.0-or-later"
+          },
+          "symfony/clock": {
+            "name": "symfony/clock",
+            "version": "6.4.8",
+            "type": "library",
+            "description": "Decouples applications from the system clock",
+            "license": "MIT"
           }
         },
         "pendingMigrations": [],

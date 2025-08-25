@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { MockState, TaskData } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { realResponseData } from '../realResponseData';
 
 export const taskHandlers = {
   getTask: (getState: () => MockState) => (req: Request, res: Response) => {
@@ -57,9 +58,29 @@ export const taskHandlers = {
         if (state.scenarios?.taskFailures?.[name]) {
           state.currentTask.status = 'error';
           state.currentTask.console = state.scenarios.taskFailures[name];
+          if (state.currentTask.operations) {
+            // Mark first operation as error
+            state.currentTask.operations[0].status = 'error';
+          }
         } else {
           state.currentTask.status = 'complete';
-          state.currentTask.console += `\n${name} completed successfully`;
+          // Use realistic console completion output
+          if (name === 'composer/update') {
+            state.currentTask.console = realResponseData.taskOperations.composerUpdate.console;
+          } else if (name === 'composer/install') {
+            state.currentTask.console = realResponseData.taskOperations.composerInstall.console;
+          } else if (name === 'contao/migrate') {
+            state.currentTask.console = realResponseData.taskOperations.contaoMigrate.console;
+          } else {
+            state.currentTask.console += `\n${name} completed successfully`;
+          }
+          
+          // Mark all operations as complete
+          if (state.currentTask.operations) {
+            state.currentTask.operations.forEach(op => {
+              op.status = 'complete';
+            });
+          }
         }
       }
     }, duration);
@@ -135,34 +156,45 @@ function getTaskOperations(taskName: string, config: any) {
   const operations = [];
   
   if (taskName === 'composer/update') {
-    operations.push(
-      {
-        summary: 'Validating composer.json',
-        details: 'Checking for syntax errors',
-        console: 'Validating composer.json... OK',
-        status: config?.dry_run ? 'complete' : 'pending'
-      },
-      {
-        summary: 'Resolving dependencies',
-        details: 'Computing dependency resolution',
-        console: 'Loading composer repositories with package information...',
-        status: 'pending'
-      }
-    );
-
-    if (!config?.dry_run) {
-      operations.push({
-        summary: 'Downloading packages',
-        details: 'Fetching updated packages',
-        console: 'Downloading packages...',
-        status: 'pending'
-      });
-    }
+    operations.push({
+      summary: realResponseData.taskOperations.composerUpdate.summary,
+      details: realResponseData.taskOperations.composerUpdate.details,
+      console: realResponseData.taskOperations.composerUpdate.console,
+      status: config?.dry_run ? 'complete' : 'pending'
+    });
+  } else if (taskName === 'composer/install') {
+    operations.push({
+      summary: realResponseData.taskOperations.composerInstall.summary,
+      details: realResponseData.taskOperations.composerInstall.details,
+      console: realResponseData.taskOperations.composerInstall.console,
+      status: 'pending'
+    });
+  } else if (taskName === 'contao/migrate') {
+    operations.push({
+      summary: realResponseData.taskOperations.contaoMigrate.summary,
+      details: realResponseData.taskOperations.contaoMigrate.details,
+      console: realResponseData.taskOperations.contaoMigrate.console,
+      status: 'pending'
+    });
   } else if (taskName === 'manager/self-update') {
     operations.push({
       summary: 'Downloading manager update',
-      details: 'Fetching latest manager version',
-      console: 'Downloading contao-manager.phar.php...',
+      details: 'Fetching latest manager version from GitHub',
+      console: 'Downloading contao-manager.phar.php from GitHub releases...\nValidating checksum...\nInstalling new version...',
+      status: 'pending'
+    });
+  } else if (taskName === 'contao/backup-create') {
+    operations.push({
+      summary: 'Creating database backup',
+      details: 'Dumping database to backup file',
+      console: 'mysqldump --single-transaction --routines --triggers contao_db > backup_2024-06-18_17-30-45.sql\nBackup created successfully (15.7 MB)',
+      status: 'pending'
+    });
+  } else if (taskName === 'contao/rebuild-cache') {
+    operations.push({
+      summary: 'Clearing Symfony cache',
+      details: 'Removing cache files and warming up',
+      console: 'bin/console cache:clear --env=prod\nCache cleared successfully\nbin/console cache:warmup --env=prod\nCache warmed up successfully',
       status: 'pending'
     });
   }

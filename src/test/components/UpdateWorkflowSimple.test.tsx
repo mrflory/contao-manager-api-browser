@@ -20,7 +20,7 @@ jest.mock('../../components/ui/toggle-tip', () => ({
   InfoTip: ({ children, ...props }: any) => <div data-testid="info-tip" {...props}>{children}</div>,
 }));
 
-jest.mock('../../components/WorkflowTimeline', () => ({
+jest.mock('../../workflow/ui/WorkflowTimeline', () => ({
   WorkflowTimeline: ({ steps, ...props }: any) => <div data-testid="workflow-timeline" {...props} />,
 }));
 
@@ -64,22 +64,28 @@ describe('UpdateWorkflow Component (Simplified)', () => {
   });
 
   const mockUseWorkflowReturn = {
-    state: createBasicWorkflowState(),
-    initializeWorkflow: jest.fn(),
-    startWorkflow: jest.fn(),
-    startWorkflowFromStep: jest.fn(),
-    stopWorkflow: jest.fn(),
-    resumeWorkflow: jest.fn(),
-    clearPendingTasks: jest.fn(),
-    confirmMigrations: jest.fn(),
-    skipMigrations: jest.fn(),
-    skipComposerUpdate: jest.fn(),
+    initialize: jest.fn(),
+    config: { performDryRun: false },
+    engine: null,
+    isRunning: false,
+    isPaused: false,
     isComplete: false,
-    hasPendingMigrations: false,
+    error: undefined,
+    currentIndex: 0,
+    progress: 0,
+    executionHistory: [],
+    start: jest.fn(),
+    startFromStep: jest.fn(),
+    pause: jest.fn(),
+    resume: jest.fn(),
+    stop: jest.fn(),
+    reset: jest.fn(),
+    addItems: jest.fn(),
+    getEngine: jest.fn(() => null),
   };
 
   beforeEach(() => {
-    mockUseWorkflow.mockReturnValue(mockUseWorkflowReturn);
+    mockUseUpdateWorkflow.mockReturnValue(mockUseWorkflowReturn);
     mockUseToastNotifications.mockReturnValue(mockToast);
     jest.clearAllMocks();
   });
@@ -108,7 +114,7 @@ describe('UpdateWorkflow Component (Simplified)', () => {
   });
 
   test('handles running state', () => {
-    mockUseWorkflowReturn.state.isRunning = true;
+    mockUseWorkflowReturn.isRunning = true;
     render(
       <ChakraProvider value={system}>
         <UpdateWorkflow />

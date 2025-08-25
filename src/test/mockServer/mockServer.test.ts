@@ -232,7 +232,7 @@ describe('Mock Server Tests', () => {
 
       const completedTask = await apiClient.get('/task');
       expect(completedTask.status).toBe('complete');
-      expect(completedTask.console).toContain('completed successfully');
+      expect(completedTask.console).toContain('Generating optimized autoload files');
     }, 15000);
 
     test('simulates task failures when configured', async () => {
