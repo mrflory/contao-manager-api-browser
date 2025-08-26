@@ -72,9 +72,9 @@ export const MigrationConfigModal: React.FC<MigrationConfigModalProps> = ({
   };
 
   return (
-    <DialogRoot open={isOpen} onOpenChange={(e) => !e.open && handleClose()}>
+    <DialogRoot open={isOpen} onOpenChange={(e) => !e.open && handleClose()} size="lg">
       <DialogBackdrop />
-      <DialogContent maxW="lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Start Database Migration</DialogTitle>
           <DialogCloseTrigger />

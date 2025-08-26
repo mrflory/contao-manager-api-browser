@@ -82,7 +82,7 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
   }, [step.status, hasPendingTasksError, hasPendingMigrations, hasDryRunComplete]);
 
   // Determine if content should be shown (expanded or has important content)
-  const shouldShowContent = isExpanded || step.status === 'error' || step.status === 'active' || needsConfirmation();
+  const shouldShowContent = isExpanded || step.status === 'error' || step.status === 'active' || step.status === 'cancelled' || needsConfirmation();
 
   const getStepIcon = () => {
     switch (step.status) {
@@ -94,6 +94,8 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
         return <X color="white" size={24} />;
       case 'skipped':
         return <Minus color="white" size={24} />;
+      case 'cancelled':
+        return <X color="white" size={24} />;
       default:
         return <Circle color="white" size={24} />;
     }
@@ -109,6 +111,8 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
         return 'red.500'; // Red for error
       case 'skipped':
         return 'blue.800'; // Dark blue for skipped
+      case 'cancelled':
+        return 'orange.500'; // Orange for cancelled
       default:
         return 'blue.500'; // Default blue for pending
     }

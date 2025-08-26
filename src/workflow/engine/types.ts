@@ -1,10 +1,10 @@
 import React from 'react';
 
 // Timeline item status
-export type TimelineItemStatus = 'pending' | 'active' | 'complete' | 'error' | 'skipped' | 'user_action_required';
+export type TimelineItemStatus = 'pending' | 'active' | 'complete' | 'error' | 'skipped' | 'cancelled' | 'user_action_required';
 
 // Workflow event types
-export type WorkflowEvent = 'started' | 'paused' | 'resumed' | 'stopped' | 'completed' | 'item_started' | 'item_completed' | 'item_error' | 'user_action_required' | 'item_progress';
+export type WorkflowEvent = 'started' | 'paused' | 'resumed' | 'stopped' | 'cancelled' | 'completed' | 'item_started' | 'item_completed' | 'item_error' | 'user_action_required' | 'item_progress';
 
 // User action definition
 export interface UserAction {
@@ -80,6 +80,7 @@ export interface TimelineItem {
   // Optional lifecycle methods
   onSkip?(): Promise<void>;
   onRetry?(): Promise<void>;
+  onCancel?(): Promise<void>;
   canSkip(): boolean;
   canRetry(): boolean;
 }

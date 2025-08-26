@@ -1,6 +1,7 @@
-import React from 'react';
-import { VStack, Box, HStack, Text, Badge, Button, Collapsible, Link, Separator } from '@chakra-ui/react';
-import { LuChevronDown as ChevronDown, LuExternalLink as ExternalLink } from 'react-icons/lu';
+import React, { useState } from 'react';
+import { VStack, Box, HStack, Text, Badge, Button, Link, Separator, IconButton } from '@chakra-ui/react';
+import { LuChevronDown as ChevronDown, LuChevronUp as ChevronUp, LuExternalLink as ExternalLink, LuCode as Code } from 'react-icons/lu';
+import { JsonDisplayModal } from '../modals/ApiResultModal';
 import { useColorModeValue } from '../ui/color-mode';
 import { CodeBlock } from '../ui/code-block';
 import { getOperationBadgeColor, getOperationBadgeText } from '../../utils/workflowUtils';
@@ -14,6 +15,46 @@ export interface ComposerOperationsProps {
 export const ComposerOperations: React.FC<ComposerOperationsProps> = ({ data }) => {
   const mutedColor = useColorModeValue('gray.500', 'gray.400');
   const cardBg = useColorModeValue('white', 'gray.800');
+  
+  // Raw data modal state
+  const [isRawDataOpen, setIsRawDataOpen] = useState(false);
+
+  // Console output visibility state for each operation
+  const ConsoleToggle = ({ operation }: { operation: any }) => {
+    const [showConsole, setShowConsole] = useState(false);
+    
+    if (!operation.console || !operation.console.trim()) {
+      return null;
+    }
+    
+    return (
+      <>
+        <Button 
+          variant="outline" 
+          size="xs" 
+          width="fit-content"
+          display="flex"
+          alignItems="center"
+          gap={1}
+          onClick={() => setShowConsole(!showConsole)}
+        >
+          {showConsole ? <ChevronUp size={12} /> : <ChevronDown size={12} />} 
+          {showConsole ? 'Hide' : 'View'} Console Output
+        </Button>
+        {showConsole && (
+          <Box mt={2} overflowX="hidden">
+            <CodeBlock 
+              language="bash"
+              showLineNumbers
+              maxHeight="300px"
+            >
+              {operation.console}
+            </CodeBlock>
+          </Box>
+        )}
+      </>
+    );
+  };
 
   if (!data || !data.operations) return null;
 
@@ -53,6 +94,30 @@ export const ComposerOperations: React.FC<ComposerOperationsProps> = ({ data }) 
 
   return (
     <VStack align="stretch" gap={4}>
+      {/* Header with title and raw data button */}
+      <HStack justify="space-between" align="center">
+        <Text fontSize="sm" fontWeight="semibold" color={mutedColor}>
+          Composer Operations
+        </Text>
+        <IconButton
+          size="xs"
+          variant="outline"
+          colorPalette="gray"
+          aria-label="View raw composer data"
+          title="View raw composer data"
+          onClick={() => setIsRawDataOpen(true)}
+        >
+          <Code size={12} />
+        </IconButton>
+        <JsonDisplayModal
+          isOpen={isRawDataOpen}
+          onClose={() => setIsRawDataOpen(false)}
+          title="Raw Composer Data"
+          data={data}
+          size="xl"
+        />
+      </HStack>
+      
       {data.sponsor && renderSponsor(data.sponsor)}
       
       {/* Package Summary for successful operations */}
@@ -81,26 +146,7 @@ export const ComposerOperations: React.FC<ComposerOperationsProps> = ({ data }) 
               </Text>
             )}
             
-            {operation.console && operation.console.trim() && (
-              <Collapsible.Root width="100%">
-                <Collapsible.Trigger asChild>
-                  <Button variant="outline" size="xs" width="fit-content">
-                    <ChevronDown size={12} /> View Console Output
-                  </Button>
-                </Collapsible.Trigger>
-                <Collapsible.Content overflow="hidden">
-                  <Box mt={2} overflowX="hidden">
-                    <CodeBlock 
-                      language="bash"
-                      showLineNumbers
-                      maxHeight="300px"
-                    >
-                      {operation.console}
-                    </CodeBlock>
-                  </Box>
-                </Collapsible.Content>
-              </Collapsible.Root>
-            )}
+            <ConsoleToggle operation={operation} />
           </VStack>
         </Box>
       ))}

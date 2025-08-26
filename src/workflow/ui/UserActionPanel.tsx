@@ -6,14 +6,12 @@ interface UserActionPanelProps {
   actions: UserAction[];
   onAction: (actionId: string) => Promise<void>;
   onRetry?: () => Promise<void>;
-  onSkip?: () => Promise<void>;
 }
 
 export const UserActionPanel: React.FC<UserActionPanelProps> = ({
   actions,
   onAction,
-  onRetry,
-  onSkip
+  onRetry
 }) => {
   const [isExecuting, setIsExecuting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,20 +46,6 @@ export const UserActionPanel: React.FC<UserActionPanelProps> = ({
     }
   };
   
-  const handleSkip = async () => {
-    if (isExecuting || !onSkip) return;
-    
-    setIsExecuting('skip');
-    setError(null);
-    
-    try {
-      await onSkip();
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Skip failed');
-    } finally {
-      setIsExecuting(null);
-    }
-  };
   
   return (
     <VStack align="stretch" gap={3}>
@@ -99,8 +83,8 @@ export const UserActionPanel: React.FC<UserActionPanelProps> = ({
         ))}
         
         {/* Additional actions */}
-        <HStack gap={2} justify="flex-end">
-          {onRetry && (
+        {onRetry && (
+          <HStack gap={2} justify="flex-end">
             <Button
               variant="outline"
               size="xs"
@@ -110,20 +94,8 @@ export const UserActionPanel: React.FC<UserActionPanelProps> = ({
             >
               Retry
             </Button>
-          )}
-          
-          {onSkip && (
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={handleSkip}
-              disabled={!!isExecuting}
-              loading={isExecuting === 'skip'}
-            >
-              Skip
-            </Button>
-          )}
-        </HStack>
+          </HStack>
+        )}
       </VStack>
     </VStack>
   );

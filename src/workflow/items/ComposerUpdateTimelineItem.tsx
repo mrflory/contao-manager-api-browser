@@ -133,4 +133,24 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
     this.stopPolling();
     await super.onSkip();
   }
+
+  async onCancel(): Promise<void> {
+    // Stop any ongoing polling
+    this.stopPolling();
+    
+    // Try to abort the active task if one exists
+    try {
+      const taskData = await api.getTaskData();
+      if (taskData && taskData.status === 'active') {
+        console.log('Cancelling active composer update task');
+        await api.patchTaskStatus('aborting');
+      }
+    } catch (error) {
+      // Ignore errors when checking/aborting task during cancellation
+      console.warn('Could not abort composer update task during cancellation:', error);
+    }
+    
+    // Call parent implementation to set cancelled status
+    await super.onCancel();
+  }
 }

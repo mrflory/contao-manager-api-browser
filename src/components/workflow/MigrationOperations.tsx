@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { VStack, HStack, Text, Badge, Button, Box, Collapsible, Grid, GridItem } from '@chakra-ui/react';
-import { LuChevronDown as ChevronDown, LuChevronRight as ChevronRight, LuDatabase as Database, LuTrash2 as Trash } from 'react-icons/lu';
+import { VStack, HStack, Text, Badge, Button, Box, Grid, GridItem, IconButton } from '@chakra-ui/react';
+import { LuChevronDown as ChevronDown, LuChevronRight as ChevronRight, LuDatabase as Database, LuTrash2 as Trash, LuCode as Code } from 'react-icons/lu';
+import { JsonDisplayModal } from '../modals/ApiResultModal';
 import { useColorModeValue } from '../ui/color-mode';
 import { CodeBlock } from '../ui/code-block';
 
@@ -17,6 +18,11 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
   const summaryBg = useColorModeValue('blue.50', 'blue.900');
   const warningBg = useColorModeValue('orange.50', 'orange.900');
   const operationBg = useColorModeValue('gray.50', 'gray.700');
+  const mutedColor = useColorModeValue('gray.500', 'gray.400');
+  
+  // Raw data modal state
+  const [isRawDataOpen, setIsRawDataOpen] = useState(false);
+  
 
   if (!data || !data.operations) return null;
 
@@ -177,6 +183,30 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
   if (summary && summary.operationBreakdown) {
     return (
       <VStack align="stretch" gap={4}>
+        {/* Header with title and raw data button */}
+        <HStack justify="space-between" align="center">
+          <Text fontSize="sm" fontWeight="semibold" color={mutedColor}>
+            Migration Operations
+          </Text>
+          <IconButton
+            size="xs"
+            variant="outline"
+            colorPalette="gray"
+            aria-label="View raw migration data"
+            title="View raw migration data"
+            onClick={() => setIsRawDataOpen(true)}
+          >
+            <Code size={12} />
+          </IconButton>
+          <JsonDisplayModal
+            isOpen={isRawDataOpen}
+            onClose={() => setIsRawDataOpen(false)}
+            title="Raw Migration Data"
+            data={data}
+            size="xl"
+          />
+        </HStack>
+        
         {/* Summary Overview */}
         <Box p={4} bg={summaryBg} borderRadius="md" borderWidth="1px">
           <VStack align="stretch" gap={3}>
@@ -246,17 +276,15 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
                 </HStack>
               </Button>
               
-              <Collapsible.Root open={expandedCategories[`${stepKey}-${category}`]}>
-                <Collapsible.Content>
-                  <VStack align="stretch" gap={3} p={4} bg={cardBg}>
-                    {operations.map((operation, index) => (
-                      <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg={operationBg}>
-                        {renderOperationDetails(operation, category)}
-                      </Box>
-                    ))}
-                  </VStack>
-                </Collapsible.Content>
-              </Collapsible.Root>
+              {expandedCategories[`${stepKey}-${category}`] && (
+                <VStack align="stretch" gap={3} p={4} bg={cardBg}>
+                  {operations.map((operation, index) => (
+                    <Box key={index} p={3} borderWidth="1px" borderRadius="md" bg={operationBg}>
+                      {renderOperationDetails(operation, category)}
+                    </Box>
+                  ))}
+                </VStack>
+              )}
             </Box>
           ))}
         </VStack>
@@ -266,7 +294,31 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
 
   // Fallback to basic display
   return (
-    <VStack align="stretch" gap={2}>
+    <VStack align="stretch" gap={4}>
+      {/* Header with title and raw data button */}
+      <HStack justify="space-between" align="center">
+        <Text fontSize="sm" fontWeight="semibold" color={mutedColor}>
+          Migration Operations
+        </Text>
+        <IconButton
+            size="xs"
+            variant="outline"
+            colorPalette="gray"
+            aria-label="View raw migration data"
+            title="View raw migration data"
+            onClick={() => setIsRawDataOpen(true)}
+          >
+            <Code size={12} />
+          </IconButton>
+          <JsonDisplayModal
+            isOpen={isRawDataOpen}
+            onClose={() => setIsRawDataOpen(false)}
+            title="Raw Migration Data"
+            data={data}
+            size="xl"
+          />
+      </HStack>
+      
       <Text fontSize="sm">{data.operations.length} operations pending</Text>
     </VStack>
   );

@@ -25,8 +25,24 @@ export class UpdateManagerTimelineItem extends BaseTimelineItem {
     this.setActive();
     
     try {
+      // Emit initial progress update
+      if (this.context?.engine) {
+        this.context.engine.emitProgress(this, { 
+          status: 'active', 
+          message: 'Starting Contao Manager update...' 
+        });
+      }
+      
       // Start the manager self-update task
       await api.setTaskData({ name: 'manager/self-update' });
+      
+      // Emit progress update after starting task
+      if (this.context?.engine) {
+        this.context.engine.emitProgress(this, { 
+          status: 'active', 
+          message: 'Manager update task started, polling for results...' 
+        });
+      }
       
       // Start polling for task completion
       return this.startPolling();
@@ -57,6 +73,15 @@ export class UpdateManagerTimelineItem extends BaseTimelineItem {
             return;
           }
           
+          // Emit progress update with current task data
+          if (this.context?.engine) {
+            this.context.engine.emitProgress(this, {
+              status: 'active',
+              message: `Updating manager... (status: ${taskData.status})`,
+              taskData
+            });
+          }
+          
           // Check task status
           if (taskData.status === 'complete') {
             this.stopPolling();
@@ -65,6 +90,15 @@ export class UpdateManagerTimelineItem extends BaseTimelineItem {
               await api.deleteTaskData();
             } catch (cleanupError) {
               console.warn('Failed to clean up task data:', cleanupError);
+            }
+            
+            // Emit completion progress update
+            if (this.context?.engine) {
+              this.context.engine.emitProgress(this, {
+                status: 'complete',
+                message: 'Manager update completed successfully',
+                taskData
+              });
             }
             
             resolve(this.setComplete(taskData));
@@ -80,6 +114,13 @@ export class UpdateManagerTimelineItem extends BaseTimelineItem {
           // 204 No Content means task completed
           if (error instanceof Error && error.message.includes('204')) {
             this.stopPolling();
+            // Emit completion progress update
+            if (this.context?.engine) {
+              this.context.engine.emitProgress(this, {
+                status: 'complete',
+                message: 'Manager update completed successfully'
+              });
+            }
             resolve(this.setComplete());
           } else {
             this.stopPolling();

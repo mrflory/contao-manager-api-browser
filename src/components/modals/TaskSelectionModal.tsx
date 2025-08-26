@@ -79,9 +79,9 @@ export const TaskSelectionModal: React.FC<TaskSelectionModalProps> = ({
   };
 
   return (
-    <DialogRoot open={isOpen} onOpenChange={(e) => !e.open && onClose()}>
+    <DialogRoot open={isOpen} onOpenChange={(e) => !e.open && onClose()} size="xl">
       <DialogBackdrop />
-      <DialogContent maxW="2xl">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Select Task to Execute</DialogTitle>
           <DialogCloseTrigger />

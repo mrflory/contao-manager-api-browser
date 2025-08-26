@@ -1,15 +1,12 @@
-import { createShikiAdapter } from '@chakra-ui/react';
-import { createHighlighter } from 'shiki';
+import type { HighlighterGeneric } from "shiki"
+import { createShikiAdapter } from "@chakra-ui/react"
 
-// Create the highlighter promise once - this is the recommended singleton pattern
-const highlighterPromise = createHighlighter({
-  langs: ['json', 'sql', 'bash', 'typescript', 'javascript', 'sh', 'text'],
-  themes: ['github-light', 'github-dark']
-});
-
-// Create the Shiki adapter with the highlighter promise
-export const shikiAdapter = createShikiAdapter({
+export const shikiAdapter = createShikiAdapter<HighlighterGeneric<any, any>>({
   async load() {
-    return await highlighterPromise;
-  }
-});
+    const { createHighlighter } = await import("shiki")
+    return createHighlighter({
+      langs: ['json', 'sql', 'bash', 'typescript', 'javascript', 'sh', 'text'],
+      themes: ['github-light', 'github-dark']
+    })
+  },
+})

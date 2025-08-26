@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { VStack, HStack, Text, Badge, Button, Box, Collapsible, Grid, GridItem } from '@chakra-ui/react';
+import { VStack, HStack, Text, Badge, Button, Box, Grid, GridItem } from '@chakra-ui/react';
 import { LuChevronDown as ChevronDown, LuChevronRight as ChevronRight, LuPackage as Package, LuTrash2 as Trash, LuDownload as Download, LuRefreshCw as RefreshCw, LuLock as Lock } from 'react-icons/lu';
 import { useColorModeValue } from '../ui/color-mode';
 import { PackageSummary as PackageSummaryType, PackageOperation, getPackageOperationColor, getPackageOperationLabel } from '../../utils/packageParser';
@@ -111,17 +111,15 @@ export const PackageSummary: React.FC<PackageSummaryProps> = ({ summary }) => {
               </HStack>
             </Button>
             
-            <Collapsible.Root open={expandedCategories[category]}>
-              <Collapsible.Content>
-                <Box as="ul" p={4} bg={cardBg} listStyleType="none">
-                  {operations.map((operation, index) => (
-                    <Box as="li" key={index} py={1}>
-                      {renderPackageDetails(operation)}
-                    </Box>
-                  ))}
-                </Box>
-              </Collapsible.Content>
-            </Collapsible.Root>
+            {expandedCategories[category] && (
+              <Box as="ul" p={4} bg={cardBg} listStyleType="none">
+                {operations.map((operation, index) => (
+                  <Box as="li" key={index} py={1}>
+                    {renderPackageDetails(operation)}
+                  </Box>
+                ))}
+              </Box>
+            )}
           </Box>
         ))}
       </VStack>

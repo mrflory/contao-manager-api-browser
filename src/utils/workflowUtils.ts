@@ -14,6 +14,8 @@ export const getStepIconName = (step: WorkflowStep): string => {
       return 'x';
     case 'skipped':
       return 'minus';
+    case 'cancelled':
+      return 'x';
     default:
       return 'circle';
   }
@@ -32,6 +34,8 @@ export const getStatusBadgeColor = (step: WorkflowStep): string => {
       return 'red';
     case 'skipped':
       return 'gray';
+    case 'cancelled':
+      return 'orange';
     default:
       return 'gray';
   }
@@ -50,6 +54,8 @@ export const getStatusBadgeText = (step: WorkflowStep): string => {
       return 'Error';
     case 'skipped':
       return 'Skipped';
+    case 'cancelled':
+      return 'Cancelled';
     default:
       return 'Pending';
   }

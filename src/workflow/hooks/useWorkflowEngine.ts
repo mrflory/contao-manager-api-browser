@@ -48,6 +48,11 @@ export function useWorkflowEngine(initialItems?: TimelineItem[]) {
       setIsRunning(false);
       setIsPaused(false);
     };
+
+    const handleCancelled = () => {
+      setIsRunning(false);
+      setIsPaused(false);
+    };
     
     const handleCompleted = () => {
       setIsRunning(false);
@@ -76,6 +81,7 @@ export function useWorkflowEngine(initialItems?: TimelineItem[]) {
     workflowEngine.on('paused', handlePaused);
     workflowEngine.on('resumed', handleResumed);
     workflowEngine.on('stopped', handleStopped);
+    workflowEngine.on('cancelled', handleCancelled);
     workflowEngine.on('completed', handleCompleted);
     workflowEngine.on('item_error', handleItemError);
     workflowEngine.on('item_started', updateProgress);
@@ -89,6 +95,7 @@ export function useWorkflowEngine(initialItems?: TimelineItem[]) {
       workflowEngine.off('paused', handlePaused);
       workflowEngine.off('resumed', handleResumed);
       workflowEngine.off('stopped', handleStopped);
+      workflowEngine.off('cancelled', handleCancelled);
       workflowEngine.off('completed', handleCompleted);
       workflowEngine.off('item_error', handleItemError);
       workflowEngine.off('item_started', updateProgress);
@@ -126,6 +133,12 @@ export function useWorkflowEngine(initialItems?: TimelineItem[]) {
   const stop = useCallback(() => {
     if (engineRef.current) {
       engineRef.current.stop();
+    }
+  }, []);
+
+  const cancel = useCallback(async () => {
+    if (engineRef.current) {
+      await engineRef.current.cancel();
     }
   }, []);
   
@@ -168,6 +181,7 @@ export function useWorkflowEngine(initialItems?: TimelineItem[]) {
     pause,
     resume,
     stop,
+    cancel,
     reset,
     addItems,
     getEngine

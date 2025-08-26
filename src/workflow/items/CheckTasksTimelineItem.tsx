@@ -1,6 +1,6 @@
-import React from 'react';
-import { VStack, HStack, Text, Badge, Button, Box, Collapsible, Link } from '@chakra-ui/react';
-import { LuChevronDown as ChevronDown, LuExternalLink as ExternalLink } from 'react-icons/lu';
+import React, { useState } from 'react';
+import { VStack, HStack, Text, Badge, Button, Box, Link } from '@chakra-ui/react';
+import { LuChevronDown as ChevronDown, LuChevronUp as ChevronUp, LuExternalLink as ExternalLink } from 'react-icons/lu';
 import { BaseTimelineItem } from '../engine/BaseTimelineItem';
 import { TimelineResult, UserAction, WorkflowContext } from '../engine/types';
 import { api } from '../../utils/api';
@@ -24,10 +24,24 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
     this.setActive();
     
     try {
+      // Emit initial progress update
+      if (this.context?.engine) {
+        this.context.engine.emitProgress(this, { status: 'active', message: 'Checking for pending tasks...' });
+      }
+      
       // Check for regular tasks first
       const taskData = await api.getTaskData();
       if (taskData && Object.keys(taskData).length > 0) {
+        // Emit progress update about found tasks
+        if (this.context?.engine) {
+          this.context.engine.emitProgress(this, { status: 'active', message: 'Found pending tasks', taskData });
+        }
         return this.handlePendingTasks(taskData);
+      }
+      
+      // Emit progress update for migration check
+      if (this.context?.engine) {
+        this.context.engine.emitProgress(this, { status: 'active', message: 'Checking for pending migrations...' });
       }
       
       // Also check for database migration tasks
@@ -35,6 +49,10 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
         const migrationStatus = await api.getDatabaseMigrationStatus();
         if (migrationStatus && Object.keys(migrationStatus).length > 0 && migrationStatus.status) {
           if (migrationStatus.status === 'active' || migrationStatus.status === 'pending') {
+            // Emit progress update about found migrations
+            if (this.context?.engine) {
+              this.context.engine.emitProgress(this, { status: 'active', message: 'Found pending migrations', migrationStatus });
+            }
             return this.handlePendingMigration(migrationStatus);
           }
         }
@@ -43,12 +61,21 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
         console.warn('Migration status check failed:', migrationError);
       }
       
+      // Emit final progress update
+      if (this.context?.engine) {
+        this.context.engine.emitProgress(this, { status: 'complete', message: 'No pending tasks found' });
+      }
+      
       // No pending tasks found
       return this.setComplete();
       
     } catch (error) {
       // 204 No Content means no tasks - this is what we want
       if (error instanceof Error && error.message.includes('204')) {
+        // Emit final progress update
+        if (this.context?.engine) {
+          this.context.engine.emitProgress(this, { status: 'complete', message: 'No pending tasks found' });
+        }
         return this.setComplete();
       } else {
         return this.setError(error instanceof Error ? error.message : 'Failed to check tasks');
@@ -64,9 +91,20 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
         variant: 'primary',
         execute: async () => {
           try {
+            // Emit progress update for clearing tasks
+            if (this.context?.engine) {
+              this.context.engine.emitProgress(this, { status: 'active', message: 'Clearing pending tasks...' });
+            }
+            
             // If task is active, abort it first
             if (taskData.status === 'active') {
               console.log('Aborting active task before deletion');
+              
+              // Emit progress update for aborting
+              if (this.context?.engine) {
+                this.context.engine.emitProgress(this, { status: 'active', message: 'Aborting active task...' });
+              }
+              
               await api.patchTaskStatus('aborting');
               
               // Wait for task to be aborted (polling until status changes to 'stopped')
@@ -74,6 +112,15 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
               const maxAttempts = 10;
               while (attempts < maxAttempts) {
                 await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
+                
+                // Emit progress update during polling
+                if (this.context?.engine) {
+                  this.context.engine.emitProgress(this, { 
+                    status: 'active', 
+                    message: `Waiting for task to abort... (${attempts + 1}/${maxAttempts})`
+                  });
+                }
+                
                 const currentTask = await api.getTaskData();
                 if (!currentTask || currentTask.status === 'stopped' || currentTask.status === 'error') {
                   break;
@@ -82,8 +129,19 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
               }
             }
             
+            // Emit progress update for deleting
+            if (this.context?.engine) {
+              this.context.engine.emitProgress(this, { status: 'active', message: 'Deleting task data...' });
+            }
+            
             // Now delete the task
             await api.deleteTaskData();
+            
+            // Emit completion progress update
+            if (this.context?.engine) {
+              this.context.engine.emitProgress(this, { status: 'complete', message: 'Tasks cleared successfully' });
+            }
+            
             return { action: 'continue' };
           } catch (error) {
             throw error;
@@ -111,7 +169,18 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
         variant: 'primary',
         execute: async () => {
           try {
+            // Emit progress update for clearing migration
+            if (this.context?.engine) {
+              this.context.engine.emitProgress(this, { status: 'active', message: 'Clearing pending migration task...' });
+            }
+            
             await api.deleteDatabaseMigrationTask();
+            
+            // Emit completion progress update
+            if (this.context?.engine) {
+              this.context.engine.emitProgress(this, { status: 'complete', message: 'Migration task cleared successfully' });
+            }
+            
             return { action: 'continue' };
           } catch (error) {
             throw error;
@@ -136,6 +205,43 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
   
   private renderTaskDisplay(taskData: any): React.ReactNode {
     const cardBg = 'white'; // We'll need to handle color mode later
+    
+    // Console output visibility state for each operation
+    const ConsoleToggle = ({ operation }: { operation: any }) => {
+      const [showConsole, setShowConsole] = useState(false);
+      
+      if (!operation.console || !operation.console.trim()) {
+        return null;
+      }
+      
+      return (
+        <>
+          <Button 
+            variant="outline" 
+            size="xs" 
+            width="fit-content"
+            display="flex"
+            alignItems="center"
+            gap={1}
+            onClick={() => setShowConsole(!showConsole)}
+          >
+            {showConsole ? <ChevronUp size={12} /> : <ChevronDown size={12} />} 
+            {showConsole ? 'Hide' : 'View'} Console Output
+          </Button>
+          {showConsole && (
+            <Box mt={2} overflowX="hidden">
+              <CodeBlock 
+                language="bash"
+                showLineNumbers
+                maxHeight="300px"
+              >
+                {operation.console}
+              </CodeBlock>
+            </Box>
+          )}
+        </>
+      );
+    };
     
     return (
       <VStack align="stretch" gap={3}>
@@ -205,26 +311,7 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
                     </Text>
                   )}
                   
-                  {operation.console && operation.console.trim() && (
-                    <Collapsible.Root width="100%">
-                      <Collapsible.Trigger asChild>
-                        <Button variant="outline" size="xs" width="fit-content">
-                          <ChevronDown size={12} /> View Console Output
-                        </Button>
-                      </Collapsible.Trigger>
-                      <Collapsible.Content overflow="hidden">
-                        <Box mt={2} overflowX="hidden">
-                          <CodeBlock 
-                            language="bash"
-                            showLineNumbers
-                            maxHeight="300px"
-                          >
-                            {operation.console}
-                          </CodeBlock>
-                        </Box>
-                      </Collapsible.Content>
-                    </Collapsible.Root>
-                  )}
+                  <ConsoleToggle operation={operation} />
                 </VStack>
               </Box>
             ))}

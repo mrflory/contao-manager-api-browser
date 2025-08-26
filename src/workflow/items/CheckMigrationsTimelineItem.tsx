@@ -28,8 +28,24 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
     this.setActive();
     
     try {
+      // Emit initial progress update
+      if (this.context?.engine) {
+        this.context.engine.emitProgress(this, { 
+          status: 'active', 
+          message: 'Starting database migration check...' 
+        });
+      }
+      
       // Start database migration check (dry-run)
       await api.startDatabaseMigration({});
+      
+      // Emit progress update after starting migration check
+      if (this.context?.engine) {
+        this.context.engine.emitProgress(this, { 
+          status: 'active', 
+          message: 'Migration check started, polling for results...' 
+        });
+      }
       
       // Start polling for migration status
       return this.startPolling();
@@ -45,6 +61,15 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
         try {
           const migrationStatus = await api.getDatabaseMigrationStatus();
           
+          // Emit progress update with current migration status
+          if (this.context?.engine) {
+            this.context.engine.emitProgress(this, {
+              status: 'active',
+              message: `Checking migrations... (status: ${migrationStatus.status})`,
+              migrationStatus
+            });
+          }
+          
           if (migrationStatus.status === 'pending') {
             this.stopPolling();
             
@@ -56,9 +81,25 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
             }
             
             if (!migrationStatus.hash || migrationStatus.hash === '' || migrationStatus.hash === null) {
+              // Emit final progress update
+              if (this.context?.engine) {
+                this.context.engine.emitProgress(this, {
+                  status: 'complete',
+                  message: 'No migrations needed',
+                  migrationStatus
+                });
+              }
               // No migrations needed
               resolve(this.setComplete(migrationStatus));
             } else {
+              // Emit progress update about found migrations
+              if (this.context?.engine) {
+                this.context.engine.emitProgress(this, {
+                  status: 'active',
+                  message: 'Migrations found, awaiting user confirmation',
+                  migrationStatus
+                });
+              }
               // Migrations needed - require user confirmation
               resolve(this.handlePendingMigrations(migrationStatus));
             }
@@ -70,6 +111,15 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
               await api.deleteDatabaseMigrationTask();
             } catch (cleanupError) {
               console.warn('Failed to clean up migration task:', cleanupError);
+            }
+            
+            // Emit final progress update
+            if (this.context?.engine) {
+              this.context.engine.emitProgress(this, {
+                status: 'complete',
+                message: 'Migration check completed',
+                migrationStatus
+              });
             }
             
             resolve(this.setComplete(migrationStatus));
@@ -205,5 +255,25 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
   async onSkip(): Promise<void> {
     this.stopPolling();
     await super.onSkip();
+  }
+
+  async onCancel(): Promise<void> {
+    // Stop any ongoing polling
+    this.stopPolling();
+    
+    // Try to clean up the active migration check task if one exists
+    try {
+      const migrationStatus = await api.getDatabaseMigrationStatus();
+      if (migrationStatus && migrationStatus.status === 'active') {
+        console.log('Cancelling active database migration check task');
+        await api.deleteDatabaseMigrationTask();
+      }
+    } catch (error) {
+      // Ignore errors when checking/cleaning up migration check during cancellation
+      console.warn('Could not clean up database migration check task during cancellation:', error);
+    }
+    
+    // Call parent implementation to set cancelled status
+    await super.onCancel();
   }
 }

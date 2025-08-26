@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Badge, HStack, VStack, Text, Collapsible, Spinner, IconButton, Box, Button, Alert } from '@chakra-ui/react';
-import { LuCheck as Check, LuX as X, LuMinus as Minus, LuCircle as Circle, LuChevronDown as ChevronDown, LuChevronUp as ChevronUp, LuPlay as Play } from 'react-icons/lu';
+import { Badge, HStack, VStack, Text, Spinner, IconButton, Box, Alert } from '@chakra-ui/react';
+import { LuCheck as Check, LuX as X, LuMinus as Minus, LuCircle as Circle, LuChevronDown as ChevronDown, LuChevronUp as ChevronUp, LuPlay as Play, LuCode as Code } from 'react-icons/lu';
 import {
   TimelineItem as TimelineItemUI,
   TimelineConnector,
@@ -8,11 +8,11 @@ import {
   TimelineTitle,
   TimelineDescription,
 } from '../../components/ui/timeline';
+import { JsonDisplayModal } from '../../components/modals/ApiResultModal';
 import { TimelineItem, TimelineExecutionRecord } from '../engine/types';
 import { useColorModeValue } from '../../components/ui/color-mode';
 import { formatTime, getDuration } from '../../utils/dateUtils';
 import { UserActionPanel } from './UserActionPanel';
-import { CodeBlock } from '../../components/ui/code-block';
 import { ComposerOperations } from '../../components/workflow/ComposerOperations';
 import { MigrationOperations } from '../../components/workflow/MigrationOperations';
 import { Separator } from '@chakra-ui/react';
@@ -44,17 +44,18 @@ const isMigrationTimelineItem = (item: TimelineItem, data: unknown): boolean => 
          ('operations' in data || 'status' in data || 'type' in data);
 };
 
+
 export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
   item,
   executionRecord,
   onUserAction,
   onRetry,
-  onSkip,
   onStartFromStep,
   isWorkflowRunning
 }) => {
   const mutedColor = useColorModeValue('gray.500', 'gray.400');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isRawDataOpen, setIsRawDataOpen] = useState(false);
   
   
   // Smart auto-expand/collapse logic
@@ -62,8 +63,8 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
     if (item.status === 'active') {
       // Auto-expand when item becomes active
       setIsExpanded(true);
-    } else if (item.status === 'error' || item.status === 'user_action_required') {
-      // Always expand and keep expanded for errors or user actions
+    } else if (item.status === 'error' || item.status === 'user_action_required' || item.status === 'cancelled') {
+      // Always expand and keep expanded for errors, user actions, or cancelled items
       setIsExpanded(true);
     } else if (item.status === 'complete') {
       // Auto-collapse when item completes and doesn't need user action
@@ -75,6 +76,7 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
   const shouldShowContent = isExpanded || 
                            item.status === 'error' || 
                            item.status === 'active' || 
+                           item.status === 'cancelled' ||
                            item.status === 'user_action_required';
   
   const getStepIcon = () => {
@@ -87,6 +89,8 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
         return <X color="white" size={24} />;
       case 'skipped':
         return <Minus color="white" size={24} />;
+      case 'cancelled':
+        return <X color="white" size={24} />;
       default:
         return <Circle color="white" size={24} />;
     }
@@ -102,6 +106,8 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
         return 'red.500';
       case 'skipped':
         return 'blue.800';
+      case 'cancelled':
+        return 'orange.500';
       case 'user_action_required':
         return 'orange.500';
       default:
@@ -120,6 +126,8 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
           return 'red';
         case 'skipped':
           return 'gray';
+        case 'cancelled':
+          return 'orange';
         case 'user_action_required':
           return 'orange';
         default:
@@ -137,6 +145,8 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
           return 'Error';
         case 'skipped':
           return 'Skipped';
+        case 'cancelled':
+          return 'Cancelled';
         case 'user_action_required':
           return 'Action Required';
         default:
@@ -163,6 +173,20 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
             <Text>{item.title}</Text>
             <HStack align="center" gap={2}>
               {getStatusBadge()}
+              
+              {/* Raw Data button - show when execution data is available */}
+              {executionRecord?.result?.data && (
+                <IconButton
+                  size="xs"
+                  variant="outline"
+                  colorPalette="gray"
+                  aria-label="View raw API response data"
+                  title="View raw API response data"
+                  onClick={() => setIsRawDataOpen(true)}
+                >
+                  <Code size={12} />
+                </IconButton>
+              )}
               
               {/* Start from this step button - only show for pending/skipped steps when workflow is not running */}
               {onStartFromStep && !isWorkflowRunning && (item.status === 'pending' || item.status === 'skipped') && (
@@ -192,11 +216,7 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
         </TimelineTitle>
 
         {/* Collapsible content area */}
-        <Collapsible.Root 
-          open={shouldShowContent} 
-          onOpenChange={(details) => setIsExpanded(details.open)}
-        >
-          <Collapsible.Content>
+        {shouldShowContent && (
             <VStack align="stretch" gap={3} mt={3}>
               {/* Step description */}
               <TimelineDescription fontSize="sm" color={mutedColor}>
@@ -265,35 +285,6 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
                 </>
               )}
               
-              {/* Raw data display for active, completed, error, or user action required items (but not for composer/migration items that have formatted displays) */}
-              {(item.status === 'active' || item.status === 'complete' || item.status === 'error' || item.status === 'user_action_required') && 
-               executionRecord?.result?.data && 
-               !isComposerTimelineItem(item, executionRecord.result.data) &&
-               !isMigrationTimelineItem(item, executionRecord.result.data) && (
-                <VStack align="stretch" gap={2}>
-                  <Text fontSize="xs" fontWeight="semibold" color={mutedColor}>
-                    Raw Data:
-                  </Text>
-                  <Collapsible.Root>
-                    <Collapsible.Trigger asChild>
-                      <Button variant="outline" size="xs" width="fit-content">
-                        <ChevronDown size={12} /> Show Raw Data
-                      </Button>
-                    </Collapsible.Trigger>
-                    <Collapsible.Content>
-                      <Box mt={2}>
-                        <CodeBlock 
-                          language="json" 
-                          showLineNumbers 
-                          maxHeight="200px"
-                        >
-                          {JSON.stringify(executionRecord.result.data, null, 2)}
-                        </CodeBlock>
-                      </Box>
-                    </Collapsible.Content>
-                  </Collapsible.Root>
-                </VStack>
-              )}
               
               {/* User action panel */}
               {item.status === 'user_action_required' && (
@@ -303,7 +294,6 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
                       actions={executionRecord.result.userActions}
                       onAction={onUserAction}
                       onRetry={item.canRetry() ? onRetry : undefined}
-                      onSkip={item.canSkip() ? onSkip : undefined}
                     />
                   ) : (
                     <Alert.Root status="warning" size="sm">
@@ -318,9 +308,19 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
                 </>
               )}
             </VStack>
-          </Collapsible.Content>
-        </Collapsible.Root>
+        )}
       </TimelineContent>
+      
+      {/* Raw data modal */}
+      {executionRecord?.result?.data && (
+        <JsonDisplayModal
+          isOpen={isRawDataOpen}
+          onClose={() => setIsRawDataOpen(false)}
+          title="Raw API Response Data"
+          data={executionRecord.result.data}
+          size="xl"
+        />
+      )}
     </TimelineItemUI>
   );
 };

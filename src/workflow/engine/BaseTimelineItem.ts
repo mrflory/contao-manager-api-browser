@@ -33,6 +33,12 @@ export abstract class BaseTimelineItem implements TimelineItem {
     this.startTime = undefined;
     this.endTime = undefined;
   }
+
+  async onCancel(): Promise<void> {
+    // Default implementation - subclasses should override for cleanup
+    this.status = 'cancelled';
+    this.endTime = new Date();
+  }
   
   canSkip(): boolean {
     return true;

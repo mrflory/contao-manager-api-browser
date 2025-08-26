@@ -23,7 +23,25 @@ export class UpdateVersionsTimelineItem extends BaseTimelineItem {
     this.setActive();
     
     try {
+      // Emit initial progress update
+      if (this.context?.engine) {
+        this.context.engine.emitProgress(this, { 
+          status: 'active', 
+          message: 'Updating version information...' 
+        });
+      }
+      
       const result = await api.updateVersionInfo();
+      
+      // Emit completion progress update
+      if (this.context?.engine) {
+        this.context.engine.emitProgress(this, { 
+          status: 'complete', 
+          message: 'Version information updated successfully',
+          result
+        });
+      }
+      
       return this.setComplete(result);
       
     } catch (error) {

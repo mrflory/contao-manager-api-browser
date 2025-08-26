@@ -63,10 +63,17 @@ describe('UpdateWorkflow Component (Simplified)', () => {
     config: { performDryRun: false },
   });
 
+  const mockEngine = {
+    getTimeline: jest.fn(() => [
+      { id: 'check-tasks', title: 'Check Tasks', description: 'Checking...', status: 'pending' },
+      { id: 'composer-update', title: 'Update', description: 'Updating...', status: 'pending' },
+    ]),
+  } as any; // Type assertion for test simplicity
+
   const mockUseWorkflowReturn = {
     initialize: jest.fn(),
     config: { performDryRun: false },
-    engine: null,
+    engine: mockEngine,
     isRunning: false,
     isPaused: false,
     isComplete: false,
@@ -81,7 +88,8 @@ describe('UpdateWorkflow Component (Simplified)', () => {
     stop: jest.fn(),
     reset: jest.fn(),
     addItems: jest.fn(),
-    getEngine: jest.fn(() => null),
+    getEngine: jest.fn(() => mockEngine),
+    cancel: jest.fn(),
   };
 
   beforeEach(() => {

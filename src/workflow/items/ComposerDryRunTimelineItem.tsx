@@ -3,7 +3,6 @@ import { Alert } from '@chakra-ui/react';
 import { BaseTimelineItem } from '../engine/BaseTimelineItem';
 import { TimelineResult, UserAction, WorkflowContext } from '../engine/types';
 import { api } from '../../utils/api';
-import { ComposerOperations } from '../../components/workflow/ComposerOperations';
 
 /**
  * Timeline item for running composer dry-run
@@ -145,13 +144,13 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
       }
     ];
     
-    const uiContent = this.renderDryRunResults(taskData);
+    const uiContent = this.renderDryRunResults();
     const result = this.requireUserAction(actions, uiContent, taskData);
     
     return result;
   }
   
-  private renderDryRunResults(taskData?: any): React.ReactNode {
+  private renderDryRunResults(): React.ReactNode {
     return (
       <Alert.Root status="success">
         <Alert.Indicator />
@@ -175,5 +174,25 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
   async onSkip(): Promise<void> {
     this.stopPolling();
     await super.onSkip();
+  }
+
+  async onCancel(): Promise<void> {
+    // Stop any ongoing polling
+    this.stopPolling();
+    
+    // Try to abort the active task if one exists
+    try {
+      const taskData = await api.getTaskData();
+      if (taskData && taskData.status === 'active') {
+        console.log('Cancelling active composer dry-run task');
+        await api.patchTaskStatus('aborting');
+      }
+    } catch (error) {
+      // Ignore errors when checking/aborting task during cancellation
+      console.warn('Could not abort composer dry-run task during cancellation:', error);
+    }
+    
+    // Call parent implementation to set cancelled status
+    await super.onCancel();
   }
 }

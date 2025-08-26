@@ -10,9 +10,53 @@ import {
 } from '@chakra-ui/react';
 import { ProgressRoot, ProgressBar } from './ui/progress';
 import { Checkbox } from './ui/checkbox';
-import { LuPlay as Play, LuPause as Pause, LuRefreshCw as RefreshCw } from 'react-icons/lu';
+import { LuPlay as Play, LuPause as Pause, LuRefreshCw as RefreshCw, LuX as X } from 'react-icons/lu';
 import { useToastNotifications, TOAST_MESSAGES } from '../hooks/useToastNotifications';
 import { useUpdateWorkflow, WorkflowTimeline, WorkflowConfig } from '../workflow';
+
+/**
+ * Get descriptive text for the next action when resuming the workflow
+ */
+const getResumeActionDescription = (workflow: ReturnType<typeof useUpdateWorkflow>): string => {
+  // If no engine or not paused, return default
+  if (!workflow.engine || !workflow.isPaused) {
+    return 'Resume Workflow';
+  }
+
+  // Get the next item that will be executed
+  const timeline = workflow.engine.getTimeline();
+  const currentIndex = workflow.currentIndex;
+  
+  // If we're at the end of the timeline, return default
+  if (currentIndex >= timeline.length) {
+    return 'Resume Workflow';
+  }
+
+  const nextItem = timeline[currentIndex];
+  
+  // Map timeline item IDs to user-friendly action descriptions
+  const actionMap: Record<string, string> = {
+    'check-tasks': 'Continue checking pending tasks',
+    'check-manager': 'Continue checking manager updates',
+    'update-manager': 'Continue with manager update',
+    'composer-dry-run': 'Continue with composer dry-run',
+    'composer-update': 'Continue with composer update',
+    'check-migrations-loop': 'Continue checking database migrations',
+    'execute-migrations': 'Continue with database migrations',
+    'update-versions': 'Continue updating version information',
+  };
+
+  // Handle migration cycles (e.g., check-migrations-loop-2, check-migrations-loop-3)
+  if (nextItem.id.startsWith('check-migrations-loop-')) {
+    return 'Continue checking database migrations';
+  }
+  if (nextItem.id.startsWith('execute-migrations-')) {
+    return 'Continue with database migrations';
+  }
+
+  // Return specific action description or fall back to the item title
+  return actionMap[nextItem.id] || `Continue with ${nextItem.title.toLowerCase()}`;
+};
 
 export const UpdateWorkflow: React.FC = () => {
   const [config, setConfig] = useState<WorkflowConfig>({ 
@@ -35,6 +79,14 @@ export const UpdateWorkflow: React.FC = () => {
   const handleResume = async () => {
     await workflow.resume();
     toast.showInfo(TOAST_MESSAGES.WORKFLOW_RESUMED);
+  };
+
+  const handleCancel = async () => {
+    await workflow.cancel();
+    toast.showWarning({
+      title: 'Workflow Cancelled',
+      description: 'Workflow has been cancelled and all background tasks have been stopped.',
+    });
   };
 
   const handleReset = () => {
@@ -81,6 +133,7 @@ export const UpdateWorkflow: React.FC = () => {
   const canStart = !workflow.isRunning && !workflow.isComplete && workflow.engine;
   const canPause = workflow.isRunning;
   const canResume = workflow.isPaused;
+  const canCancel = workflow.isRunning || workflow.isPaused;
 
   return (
     <VStack gap={6} align="stretch">
@@ -166,7 +219,17 @@ export const UpdateWorkflow: React.FC = () => {
                 onClick={handleResume}
                 size="lg"
               >
-                <Play size={16} /> Resume Workflow
+                <Play size={16} /> {getResumeActionDescription(workflow)}
+              </Button>
+            )}
+
+            {canCancel && (
+              <Button
+                colorPalette="red"
+                onClick={handleCancel}
+                size="lg"
+              >
+                <X size={16} /> Cancel Workflow
               </Button>
             )}
 

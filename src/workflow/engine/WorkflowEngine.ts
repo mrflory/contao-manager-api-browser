@@ -27,7 +27,7 @@ export class WorkflowEngine implements WorkflowEngineInterface {
   constructor() {
     // Initialize event handler sets
     const events: WorkflowEvent[] = [
-      'started', 'paused', 'resumed', 'stopped', 'completed',
+      'started', 'paused', 'resumed', 'stopped', 'cancelled', 'completed',
       'item_started', 'item_completed', 'item_error', 'user_action_required', 'item_progress'
     ];
     
@@ -133,6 +133,29 @@ export class WorkflowEngine implements WorkflowEngineInterface {
     this.state.endTime = new Date();
     
     this.emit('stopped');
+  }
+
+  async cancel(): Promise<void> {
+    // Set state to cancelled/stopped
+    this.state.isRunning = false;
+    this.state.isPaused = false;
+    this.state.endTime = new Date();
+    
+    // Cancel all timeline items that might have background processes
+    const cancelPromises = this.state.timeline.map(async (item) => {
+      if (item.onCancel && (item.status === 'active' || item.status === 'pending')) {
+        try {
+          await item.onCancel();
+        } catch (error) {
+          console.warn(`Error cancelling item ${item.id}:`, error);
+        }
+      }
+    });
+    
+    // Wait for all cancellations to complete
+    await Promise.all(cancelPromises);
+    
+    this.emit('cancelled');
   }
   
   // Execute specific item
@@ -332,9 +355,35 @@ export class WorkflowEngine implements WorkflowEngineInterface {
           await this.resume();
           break;
           
-        case 'skip':
-          await this.skipItem(this.state.currentIndex);
+        case 'skip': {
+          // Mark current item as complete and skip the NEXT item
+          if (item) {
+            item.status = 'complete';
+            item.endTime = new Date();
+            this.emit('item_completed', item, record?.result);
+          }
+          
+          // Skip the next item (index + 1)
+          const nextIndex = this.state.currentIndex + 1;
+          if (nextIndex < this.state.timeline.length) {
+            const nextItem = this.state.timeline[nextIndex];
+            
+            // Call the skip callback if the next item can be skipped
+            if (nextItem.canSkip()) {
+              await nextItem.onSkip?.();
+            }
+            
+            // Move to the item after the skipped one
+            this.state.currentIndex = nextIndex + 1;
+          } else {
+            // No next item to skip, just move forward
+            this.state.currentIndex = nextIndex;
+          }
+          
+          // Continue workflow
+          await this.resume();
           break;
+        }
           
         case 'stop':
           this.stop();

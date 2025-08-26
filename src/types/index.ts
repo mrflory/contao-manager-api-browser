@@ -49,7 +49,7 @@ export interface TokenInfo {
 }
 
 // Workflow Types
-export type WorkflowStepStatus = 'pending' | 'active' | 'complete' | 'error' | 'skipped';
+export type WorkflowStepStatus = 'pending' | 'active' | 'complete' | 'error' | 'skipped' | 'cancelled';
 
 export interface WorkflowStep {
   id: string;
