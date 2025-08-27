@@ -101,6 +101,10 @@ export class ExecuteMigrationsTimelineItem extends BaseTimelineItem {
               <MigrationOperations data={migrationStatus} />
             ) : null;
             
+            // Set the timeline item status to complete before resolving
+            this.status = 'complete';
+            this.endTime = new Date();
+            
             resolve({
               status: 'success',
               data: migrationStatus,

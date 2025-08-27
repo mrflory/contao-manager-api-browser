@@ -22,7 +22,7 @@ export const StepDataRenderer: React.FC<StepDataRendererProps> = ({ step, migrat
   if (isComposerStep(step) && (isActive || isComplete)) {
     return (
       <VStack align="stretch" gap={3}>
-        <ComposerOperations data={step.data} />
+        <ComposerOperations data={step.data} stepId={step.id} />
         
         <Separator />
         

@@ -21,6 +21,7 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
     return true; // Composer update can be skipped
   }
   
+  
   async execute(context?: WorkflowContext): Promise<TimelineResult> {
     this.context = context;
     this.setActive();

@@ -11,6 +11,7 @@ export function useWorkflowEngine(initialItems?: TimelineItem[]) {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -52,6 +53,7 @@ export function useWorkflowEngine(initialItems?: TimelineItem[]) {
     const handleCancelled = () => {
       setIsRunning(false);
       setIsPaused(false);
+      setIsCancelled(true);
     };
     
     const handleCompleted = () => {
@@ -69,10 +71,12 @@ export function useWorkflowEngine(initialItems?: TimelineItem[]) {
         const newIndex = workflowEngine.getCurrentIndex();
         const newProgress = workflowEngine.getProgress();
         const newHistory = [...workflowEngine.getExecutionHistory()];
+        const hasCancelled = workflowEngine.hasCancelledItems();
         
         setCurrentIndex(newIndex);
         setProgress(newProgress);
         setExecutionHistory(newHistory);
+        setIsCancelled(hasCancelled);
       }
     };
     
@@ -149,6 +153,7 @@ export function useWorkflowEngine(initialItems?: TimelineItem[]) {
       setIsRunning(false);
       setIsPaused(false);
       setIsComplete(false);
+      setIsCancelled(false);
       setError(undefined);
       setCurrentIndex(0);
       setProgress(0);
@@ -172,6 +177,7 @@ export function useWorkflowEngine(initialItems?: TimelineItem[]) {
     isRunning,
     isPaused,
     isComplete,
+    isCancelled,
     error,
     currentIndex,
     progress,
