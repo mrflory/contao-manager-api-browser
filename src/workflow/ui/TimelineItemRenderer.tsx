@@ -15,6 +15,8 @@ import { formatTime, getDuration } from '../../utils/dateUtils';
 import { UserActionPanel } from './UserActionPanel';
 import { ComposerOperations } from '../../components/workflow/ComposerOperations';
 import { MigrationOperations } from '../../components/workflow/MigrationOperations';
+import { ManagerOperations } from '../../components/workflow/ManagerOperations';
+import { ManagerVersionComparison } from '../../components/display/ManagerVersionComparison';
 import { Separator } from '@chakra-ui/react';
 
 interface TimelineItemRendererProps {
@@ -43,6 +45,24 @@ const isMigrationTimelineItem = (item: TimelineItem, data: unknown): boolean => 
          data !== null &&
          ('operations' in data || 'status' in data || 'type' in data);
 };
+
+const isManagerTimelineItem = (item: TimelineItem, data: unknown): boolean => {
+  return (item.id.includes('update-manager') || item.id.includes('manager-update')) && 
+         typeof data === 'object' && 
+         data !== null &&
+         'operations' in data;
+};
+
+const hasVersionComparison = (data: unknown): data is { versionComparison: { currentVersion: string; latestVersion: string; needsUpdate: boolean; type: string } } => {
+  return typeof data === 'object' && 
+         data !== null &&
+         'versionComparison' in data &&
+         typeof (data as any).versionComparison === 'object' &&
+         (data as any).versionComparison !== null &&
+         'currentVersion' in (data as any).versionComparison &&
+         'latestVersion' in (data as any).versionComparison;
+};
+
 
 
 export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
@@ -260,6 +280,21 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
                 </Box>
               )}
               
+              {/* Version comparison display for manager update check */}
+              {(item.status === 'active' || item.status === 'complete' || item.status === 'error') && 
+               executionRecord?.result?.data && 
+               hasVersionComparison(executionRecord.result.data) && (
+                <VStack align="stretch" gap={3}>
+                  <ManagerVersionComparison
+                    currentVersion={executionRecord.result.data.versionComparison.currentVersion}
+                    latestVersion={executionRecord.result.data.versionComparison.latestVersion}
+                    showStatus={true}
+                    size="md"
+                  />
+                  <Separator />
+                </VStack>
+              )}
+
               {/* Formatted data display for composer/migration items during progress or completion */}
               {(item.status === 'active' || item.status === 'complete' || item.status === 'error' || item.status === 'user_action_required') && 
                executionRecord?.result?.data && (
@@ -282,6 +317,18 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
                       <Separator />
                     </VStack>
                   )}
+                  
+                  {/* Manager operations display */}
+                  {isManagerTimelineItem(item, executionRecord.result.data) && (
+                    <VStack align="stretch" gap={3}>
+                      <ManagerOperations 
+                        data={executionRecord.result.data}
+                        stepId={item.id}
+                      />
+                      <Separator />
+                    </VStack>
+                  )}
+                  
                 </>
               )}
               
@@ -306,6 +353,18 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
                     </Alert.Root>
                   )}
                 </>
+              )}
+
+              {/* Cancelled status message */}
+              {item.status === 'cancelled' && (
+                <Alert.Root status="warning" size="sm">
+                  <Alert.Indicator />
+                  <Alert.Content>
+                    <Alert.Description>
+                      This step was cancelled. The workflow was stopped before this action could complete.
+                    </Alert.Description>
+                  </Alert.Content>
+                </Alert.Root>
               )}
             </VStack>
         )}

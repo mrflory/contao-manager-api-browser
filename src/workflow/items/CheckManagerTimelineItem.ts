@@ -46,6 +46,17 @@ export class CheckManagerTimelineItem extends BaseTimelineItem {
       
       const needsUpdate = selfUpdate.current_version !== selfUpdate.latest_version;
       
+      // Add version comparison metadata that the UI can use
+      const versionData = {
+        ...selfUpdate,
+        versionComparison: {
+          currentVersion: selfUpdate.current_version,
+          latestVersion: selfUpdate.latest_version,
+          needsUpdate,
+          type: 'manager'
+        }
+      };
+
       if (needsUpdate) {
         // Emit progress update about needed update
         if (this.context?.engine) {
@@ -57,7 +68,7 @@ export class CheckManagerTimelineItem extends BaseTimelineItem {
         }
         // Manager needs update - inject UpdateManagerTimelineItem
         const updateManagerItem = new UpdateManagerTimelineItem();
-        return this.injectNextItems([updateManagerItem], selfUpdate);
+        return this.injectNextItems([updateManagerItem], versionData);
       } else {
         // Emit completion progress update
         if (this.context?.engine) {
@@ -68,7 +79,7 @@ export class CheckManagerTimelineItem extends BaseTimelineItem {
           });
         }
         // No update needed
-        return this.setComplete(selfUpdate);
+        return this.setComplete(versionData);
       }
       
     } catch (error) {

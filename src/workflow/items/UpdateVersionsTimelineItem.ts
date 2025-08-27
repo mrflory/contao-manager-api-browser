@@ -1,6 +1,8 @@
+import React from 'react';
 import { BaseTimelineItem } from '../engine/BaseTimelineItem';
 import { TimelineResult, WorkflowContext } from '../engine/types';
 import { api } from '../../utils/api';
+import { VersionInfoDisplay } from '../../components/workflow/VersionInfoDisplay';
 
 /**
  * Timeline item for updating version information
@@ -33,16 +35,32 @@ export class UpdateVersionsTimelineItem extends BaseTimelineItem {
       
       const result = await api.updateVersionInfo();
       
+      // Create UI content to display version information
+      const uiContent = result.success && result.versionInfo 
+        ? React.createElement(VersionInfoDisplay, {
+            versionInfo: result.versionInfo,
+            size: 'md',
+            showLastUpdated: true
+          })
+        : null;
+      
       // Emit completion progress update
       if (this.context?.engine) {
         this.context.engine.emitProgress(this, { 
           status: 'complete', 
-          message: 'Version information updated successfully',
-          result
+          message: 'Version information updated successfully'
         });
       }
       
-      return this.setComplete(result);
+      // Create custom result with UI content
+      this.status = 'complete';
+      this.endTime = new Date();
+      
+      return {
+        status: 'success',
+        data: result,
+        uiContent: uiContent
+      };
       
     } catch (error) {
       return this.setError(error instanceof Error ? error.message : 'Failed to update version information');

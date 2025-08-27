@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { VStack, HStack, Text, Badge, Button, Box, Grid, GridItem, IconButton } from '@chakra-ui/react';
-import { LuChevronDown as ChevronDown, LuChevronRight as ChevronRight, LuDatabase as Database, LuTrash2 as Trash, LuCode as Code } from 'react-icons/lu';
-import { JsonDisplayModal } from '../modals/ApiResultModal';
+import React, { useState, useCallback, useEffect } from 'react';
+import { VStack, HStack, Text, Badge, Button, Box, Grid, GridItem } from '@chakra-ui/react';
+import { LuChevronDown as ChevronDown, LuChevronRight as ChevronRight, LuDatabase as Database, LuTrash2 as Trash } from 'react-icons/lu';
 import { useColorModeValue } from '../ui/color-mode';
 import { CodeBlock } from '../ui/code-block';
+
+// Global state to persist category expansion state across component re-mounts
+const categoryExpansionState = new Map<string, boolean>();
 
 export interface MigrationOperationsProps {
   data: any;
@@ -13,26 +15,48 @@ export interface MigrationOperationsProps {
 export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, summary }) => {
   // Use step ID for state isolation - each step gets its own expansion state
   const stepKey = summary?.stepId || 'default';
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  
+  // Initialize state from persistent storage
+  const initializeExpandedCategories = useCallback(() => {
+    const categories: Record<string, boolean> = {};
+    if (summary && summary.operationBreakdown) {
+      summary.operationBreakdown.forEach(({ category }: { category: string }) => {
+        const categoryKey = `${stepKey}-${category}`;
+        categories[categoryKey] = categoryExpansionState.get(categoryKey) || false;
+      });
+    }
+    return categories;
+  }, [stepKey, summary]);
+  
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(initializeExpandedCategories);
+  
+  // Sync state with persistent storage on mount
+  useEffect(() => {
+    const categories = initializeExpandedCategories();
+    setExpandedCategories(categories);
+  }, [initializeExpandedCategories]);
+  
+  // All hooks must be called before any conditional returns
+  const toggleCategory = useCallback((category: string) => {
+    const categoryKey = `${stepKey}-${category}`;
+    const newState = !expandedCategories[categoryKey];
+    
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryKey]: newState
+    }));
+    
+    // Persist state globally
+    categoryExpansionState.set(categoryKey, newState);
+  }, [expandedCategories, stepKey]);
+  
   const cardBg = useColorModeValue('white', 'gray.800');
   const summaryBg = useColorModeValue('blue.50', 'blue.900');
   const warningBg = useColorModeValue('orange.50', 'orange.900');
   const operationBg = useColorModeValue('gray.50', 'gray.700');
-  const mutedColor = useColorModeValue('gray.500', 'gray.400');
   
-  // Raw data modal state
-  const [isRawDataOpen, setIsRawDataOpen] = useState(false);
-  
-
+  // Conditional return AFTER all hooks
   if (!data || !data.operations) return null;
-
-  const toggleCategory = (category: string) => {
-    const categoryKey = `${stepKey}-${category}`;
-    setExpandedCategories(prev => ({
-      ...prev,
-      [categoryKey]: !prev[categoryKey]
-    }));
-  };
 
   const getCategoryIcon = (category: string) => {
     if (category.includes('DROP') || category.includes('DELETE')) {
@@ -183,29 +207,6 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
   if (summary && summary.operationBreakdown) {
     return (
       <VStack align="stretch" gap={4}>
-        {/* Header with title and raw data button */}
-        <HStack justify="space-between" align="center">
-          <Text fontSize="sm" fontWeight="semibold" color={mutedColor}>
-            Migration Operations
-          </Text>
-          <IconButton
-            size="xs"
-            variant="outline"
-            colorPalette="gray"
-            aria-label="View raw migration data"
-            title="View raw migration data"
-            onClick={() => setIsRawDataOpen(true)}
-          >
-            <Code size={12} />
-          </IconButton>
-          <JsonDisplayModal
-            isOpen={isRawDataOpen}
-            onClose={() => setIsRawDataOpen(false)}
-            title="Raw Migration Data"
-            data={data}
-            size="xl"
-          />
-        </HStack>
         
         {/* Summary Overview */}
         <Box p={4} bg={summaryBg} borderRadius="md" borderWidth="1px">
@@ -295,31 +296,7 @@ export const MigrationOperations: React.FC<MigrationOperationsProps> = ({ data, 
   // Fallback to basic display
   return (
     <VStack align="stretch" gap={4}>
-      {/* Header with title and raw data button */}
-      <HStack justify="space-between" align="center">
-        <Text fontSize="sm" fontWeight="semibold" color={mutedColor}>
-          Migration Operations
-        </Text>
-        <IconButton
-            size="xs"
-            variant="outline"
-            colorPalette="gray"
-            aria-label="View raw migration data"
-            title="View raw migration data"
-            onClick={() => setIsRawDataOpen(true)}
-          >
-            <Code size={12} />
-          </IconButton>
-          <JsonDisplayModal
-            isOpen={isRawDataOpen}
-            onClose={() => setIsRawDataOpen(false)}
-            title="Raw Migration Data"
-            data={data}
-            size="xl"
-          />
-      </HStack>
       
-      <Text fontSize="sm">{data.operations.length} operations pending</Text>
     </VStack>
   );
 };

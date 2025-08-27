@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { VStack, HStack, Text, Badge, Button, Box, Link } from '@chakra-ui/react';
+import { VStack, HStack, Text, Badge, Button, Box, Link, Alert } from '@chakra-ui/react';
 import { LuChevronDown as ChevronDown, LuChevronUp as ChevronUp, LuExternalLink as ExternalLink } from 'react-icons/lu';
 import { BaseTimelineItem } from '../engine/BaseTimelineItem';
 import { TimelineResult, UserAction, WorkflowContext } from '../engine/types';
@@ -66,8 +66,10 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
         this.context.engine.emitProgress(this, { status: 'complete', message: 'No pending tasks found' });
       }
       
-      // No pending tasks found
-      return this.setComplete();
+      // No pending tasks found - return success result with UI content
+      const result = this.setComplete({ noPendingTasks: true });
+      result.uiContent = this.renderNoTasksSuccess();
+      return result;
       
     } catch (error) {
       // 204 No Content means no tasks - this is what we want
@@ -76,7 +78,9 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
         if (this.context?.engine) {
           this.context.engine.emitProgress(this, { status: 'complete', message: 'No pending tasks found' });
         }
-        return this.setComplete();
+        const result = this.setComplete({ noPendingTasks: true });
+        result.uiContent = this.renderNoTasksSuccess();
+        return result;
       } else {
         return this.setError(error instanceof Error ? error.message : 'Failed to check tasks');
       }
@@ -363,6 +367,20 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
           with the update workflow.
         </Text>
       </VStack>
+    );
+  }
+  
+  private renderNoTasksSuccess(): React.ReactNode {
+    return (
+      <Alert.Root status="success">
+        <Alert.Indicator />
+        <Alert.Content>
+          <Alert.Title>No pending tasks</Alert.Title>
+          <Alert.Description>
+            All systems are clear - no tasks are currently running or pending.
+          </Alert.Description>
+        </Alert.Content>
+      </Alert.Root>
     );
   }
 }

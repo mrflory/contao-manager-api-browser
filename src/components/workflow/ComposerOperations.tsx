@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { VStack, Box, HStack, Text, Badge, Button, Link, Separator, IconButton } from '@chakra-ui/react';
 import { LuChevronDown as ChevronDown, LuChevronUp as ChevronUp, LuExternalLink as ExternalLink, LuCode as Code } from 'react-icons/lu';
 import { JsonDisplayModal } from '../modals/ApiResultModal';
@@ -8,20 +8,39 @@ import { getOperationBadgeColor, getOperationBadgeText } from '../../utils/workf
 import { parsePackageOperations } from '../../utils/packageParser';
 import { PackageSummary } from './PackageSummary';
 
+// Global state to persist console output visibility across component re-mounts
+const consoleVisibilityState = new Map<string, boolean>();
+
 export interface ComposerOperationsProps {
   data: any;
+  stepId?: string; // Used to create unique keys for persistent state
 }
 
-export const ComposerOperations: React.FC<ComposerOperationsProps> = ({ data }) => {
+export const ComposerOperations: React.FC<ComposerOperationsProps> = ({ data, stepId }) => {
   const mutedColor = useColorModeValue('gray.500', 'gray.400');
   const cardBg = useColorModeValue('white', 'gray.800');
   
   // Raw data modal state
   const [isRawDataOpen, setIsRawDataOpen] = useState(false);
 
-  // Console output visibility state for each operation
-  const ConsoleToggle = ({ operation }: { operation: any }) => {
-    const [showConsole, setShowConsole] = useState(false);
+  // Console output visibility state for each operation with persistent state
+  const ConsoleToggle = ({ operation, operationIndex }: { operation: any; operationIndex: number }) => {
+    // Create unique key for this operation's console state
+    const consoleKey = `${stepId || 'default'}-operation-${operationIndex}`;
+    
+    // Get current state from persistent storage, defaulting to false
+    const getCurrentState = useCallback(() => {
+      return consoleVisibilityState.get(consoleKey) || false;
+    }, [consoleKey]);
+    
+    const [showConsole, setShowConsole] = useState(getCurrentState);
+    
+    const toggleConsole = useCallback(() => {
+      const newState = !showConsole;
+      setShowConsole(newState);
+      // Persist state globally
+      consoleVisibilityState.set(consoleKey, newState);
+    }, [showConsole, consoleKey]);
     
     if (!operation.console || !operation.console.trim()) {
       return null;
@@ -36,7 +55,7 @@ export const ComposerOperations: React.FC<ComposerOperationsProps> = ({ data }) 
           display="flex"
           alignItems="center"
           gap={1}
-          onClick={() => setShowConsole(!showConsole)}
+          onClick={toggleConsole}
         >
           {showConsole ? <ChevronUp size={12} /> : <ChevronDown size={12} />} 
           {showConsole ? 'Hide' : 'View'} Console Output
@@ -146,7 +165,7 @@ export const ComposerOperations: React.FC<ComposerOperationsProps> = ({ data }) 
               </Text>
             )}
             
-            <ConsoleToggle operation={operation} />
+            <ConsoleToggle operation={operation} operationIndex={index} />
           </VStack>
         </Box>
       ))}

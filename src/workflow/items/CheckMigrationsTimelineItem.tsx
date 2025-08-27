@@ -199,7 +199,14 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
         label: 'Skip Migrations',
         description: 'Skip all remaining migrations',
         variant: 'secondary',
-        execute: async () => ({ action: 'skip' })
+        execute: async () => {
+          // When skipping migrations, we want to complete this step and go directly to the final step
+          // without inserting ExecuteMigrationsTimelineItem or additional CheckMigrationsTimelineItem
+          return { 
+            action: 'continue',
+            data: { ...migrationStatus, skipped: true }
+          };
+        }
       },
       {
         id: 'cancel',

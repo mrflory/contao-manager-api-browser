@@ -18,8 +18,8 @@ import { useUpdateWorkflow, WorkflowTimeline, WorkflowConfig } from '../workflow
  * Get descriptive text for the next action when resuming the workflow
  */
 const getResumeActionDescription = (workflow: ReturnType<typeof useUpdateWorkflow>): string => {
-  // If no engine or not paused, return default
-  if (!workflow.engine || !workflow.isPaused) {
+  // If no engine, not paused, or cancelled, return default
+  if (!workflow.engine || !workflow.isPaused || workflow.isCancelled) {
     return 'Resume Workflow';
   }
 
@@ -100,9 +100,17 @@ export const UpdateWorkflow: React.FC = () => {
   const getWorkflowStatus = () => {
     if (workflow.isComplete) return 'complete';
     if (workflow.error) return 'error';
+    if (workflow.isCancelled) return 'cancelled';
     if (workflow.isRunning) return 'running';
     if (workflow.isPaused) return 'paused';
     return 'ready';
+  };
+
+  // Helper function to check if there are any items requiring user action
+  const hasUserActionRequired = () => {
+    if (!workflow.engine) return false;
+    const timeline = workflow.engine.getTimeline();
+    return timeline.some(item => item.status === 'user_action_required');
   };
 
   const getStatusBadge = () => {
@@ -110,6 +118,7 @@ export const UpdateWorkflow: React.FC = () => {
     const colorMap = {
       complete: 'green',
       error: 'red',
+      cancelled: 'orange',
       running: 'blue',
       paused: 'orange',
       ready: 'gray'
@@ -118,6 +127,7 @@ export const UpdateWorkflow: React.FC = () => {
     const textMap = {
       complete: 'Complete',
       error: 'Error',
+      cancelled: 'Cancelled',
       running: 'Running',
       paused: 'Paused',
       ready: 'Ready'
@@ -130,10 +140,10 @@ export const UpdateWorkflow: React.FC = () => {
     );
   };
 
-  const canStart = !workflow.isRunning && !workflow.isComplete && workflow.engine;
+  const canStart = !workflow.isRunning && !workflow.isComplete && workflow.engine && !workflow.isCancelled;
   const canPause = workflow.isRunning;
-  const canResume = workflow.isPaused;
-  const canCancel = workflow.isRunning || workflow.isPaused;
+  const canResume = workflow.isPaused && !workflow.isCancelled;
+  const canCancel = workflow.isRunning || workflow.isPaused || (workflow.engine && hasUserActionRequired());
 
   return (
     <VStack gap={6} align="stretch">
@@ -173,7 +183,7 @@ export const UpdateWorkflow: React.FC = () => {
           )}
 
           {/* Configuration */}
-          {!workflow.isRunning && !workflow.isComplete && (
+          {!workflow.isRunning && !workflow.isComplete && !workflow.isCancelled && (
             <Box>
               <Text fontWeight="semibold" mb={3}>Configuration</Text>
               <VStack align="start" gap={3}>
@@ -233,7 +243,7 @@ export const UpdateWorkflow: React.FC = () => {
               </Button>
             )}
 
-            {(workflow.isComplete || workflow.error) && (
+            {(workflow.isComplete || workflow.error || workflow.isCancelled) && (
               <Button
                 colorPalette="green"
                 onClick={handleReset}
@@ -253,6 +263,19 @@ export const UpdateWorkflow: React.FC = () => {
                 <Alert.Description>
                   Your Contao installation has been successfully updated. 
                   All components are now up to date.
+                </Alert.Description>
+              </Alert.Content>
+            </Alert.Root>
+          )}
+
+          {/* Cancelled Alert */}
+          {workflow.isCancelled && !workflow.error && (
+            <Alert.Root status="warning">
+              <Alert.Indicator />
+              <Alert.Content>
+                <Alert.Title>Workflow Cancelled</Alert.Title>
+                <Alert.Description>
+                  The update workflow has been cancelled. You can reset the workflow to start over or review the steps that were completed.
                 </Alert.Description>
               </Alert.Content>
             </Alert.Root>
