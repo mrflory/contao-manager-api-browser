@@ -71,6 +71,8 @@ export const taskHandlers = {
             state.currentTask.console = realResponseData.taskOperations.composerInstall.console;
           } else if (name === 'contao/migrate') {
             state.currentTask.console = realResponseData.taskOperations.contaoMigrate.console;
+          } else if (name === 'manager/self-update') {
+            state.currentTask.console = `Manager update completed successfully!\nVersion updated from 1.9.4 to 1.9.5\nRestarting manager services...`;
           } else {
             state.currentTask.console += `\n${name} completed successfully`;
           }
@@ -180,7 +182,20 @@ function getTaskOperations(taskName: string, config: any) {
     operations.push({
       summary: 'Downloading manager update',
       details: 'Fetching latest manager version from GitHub',
-      console: 'Downloading contao-manager.phar.php from GitHub releases...\nValidating checksum...\nInstalling new version...',
+      console: `Checking latest release from GitHub API...
+Found new version: 1.9.5 (current: 1.9.4)
+Downloading https://github.com/contao/contao-manager/releases/download/1.9.5/contao-manager.phar.php
+Progress: [████████████████████████████████] 100% (2.5 MB/2.5 MB)
+Verifying SHA256 checksum: 8f2a3c4d5e6f7a8b9c0d1e2f3a4b5c6d...`,
+      status: 'pending'
+    }, {
+      summary: 'Installing manager update',
+      details: 'Backing up current version and installing update',
+      console: `Creating backup of current manager at contao-manager.phar.php.backup
+Moving new version to contao-manager.phar.php
+Setting file permissions (644)
+Manager update completed successfully!
+Version updated from 1.9.4 to 1.9.5`,
       status: 'pending'
     });
   } else if (taskName === 'contao/backup-create') {

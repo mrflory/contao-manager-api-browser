@@ -77,6 +77,7 @@ describe('UpdateWorkflow Component (Simplified)', () => {
     isRunning: false,
     isPaused: false,
     isComplete: false,
+    isCancelled: false,
     error: undefined,
     currentIndex: 0,
     progress: 0,
