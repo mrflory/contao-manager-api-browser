@@ -1,5 +1,6 @@
-import React from 'react';
-import { Button } from '@chakra-ui/react';
+import React, { useState } from 'react';
+import { Button, VStack } from '@chakra-ui/react';
+import { Checkbox } from '../ui/checkbox';
 import {
   DialogRoot,
   DialogContent,
@@ -14,7 +15,7 @@ import {
 export interface ConfirmationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (additionalOptions?: { deleteToken?: boolean }) => void;
   title: string;
   message: string | React.ReactNode;
   confirmLabel?: string;
@@ -22,6 +23,9 @@ export interface ConfirmationDialogProps {
   confirmColorPalette?: 'red' | 'orange' | 'blue' | 'green';
   isLoading?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  // Optional token deletion checkbox
+  showTokenDeletionOption?: boolean;
+  tokenDeletionLabel?: string;
 }
 
 export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
@@ -35,9 +39,13 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   confirmColorPalette = 'red',
   isLoading = false,
   size = 'sm',
+  showTokenDeletionOption = false,
+  tokenDeletionLabel = 'Also delete authentication token',
 }) => {
+  const [deleteToken, setDeleteToken] = useState(false);
+
   const handleConfirm = () => {
-    onConfirm();
+    onConfirm(showTokenDeletionOption ? { deleteToken } : undefined);
   };
 
   return (
@@ -55,11 +63,23 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
           </DialogTitle>
         </DialogHeader>
         <DialogBody>
-          {typeof message === 'string' ? (
-            <p>{message}</p>
-          ) : (
-            message
-          )}
+          <VStack gap={4} align="start">
+            {typeof message === 'string' ? (
+              <p>{message}</p>
+            ) : (
+              message
+            )}
+            
+            {showTokenDeletionOption && (
+              <Checkbox
+                checked={deleteToken}
+                onCheckedChange={(checked) => setDeleteToken(Boolean(checked.checked))}
+                disabled={isLoading}
+              >
+                {tokenDeletionLabel}
+              </Checkbox>
+            )}
+          </VStack>
         </DialogBody>
         <DialogFooter>
           <Button 

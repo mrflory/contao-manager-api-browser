@@ -166,6 +166,11 @@ export class ExpertApiService {
   static getTokensList = api.getTokensList;
 
   /**
+   * Delete a user token
+   */
+  static deleteToken = api.deleteToken;
+
+  /**
    * Get database backups
    */
   static getDatabaseBackups = api.getDatabaseBackups;

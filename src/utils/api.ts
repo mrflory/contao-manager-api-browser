@@ -142,6 +142,12 @@ export const api = {
     return makeApiCall(`/users/${username}/tokens/${tokenId}`);
   },
 
+  async deleteToken(username: string, tokenId: string): Promise<any> {
+    return makeApiCall(`/users/${username}/tokens/${tokenId}`, {
+      method: 'DELETE'
+    });
+  },
+
   // Contao API endpoints
   async getDatabaseMigrationStatus(): Promise<any> {
     return makeApiCall('/contao/database-migration');

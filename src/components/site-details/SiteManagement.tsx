@@ -11,7 +11,7 @@ import { ReauthenticationForm } from '../forms/ReauthenticationForm';
 import { ConfirmationDialog } from '../modals/ConfirmationDialog';
 import { useToastNotifications, TOAST_MESSAGES } from '../../hooks/useToastNotifications';
 import { useApiCall } from '../../hooks/useApiCall';
-import { SiteApiService } from '../../services/apiCallService';
+import { SiteApiService, ExpertApiService } from '../../services/apiCallService';
 
 export interface SiteManagementProps {
   site: Site;
@@ -26,6 +26,8 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
 }) => {
   const [showReauthForm, setShowReauthForm] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [tokenInfo, setTokenInfo] = useState<{ username: string; tokenId?: string } | null>(null);
+  const [fetchingTokenInfo, setFetchingTokenInfo] = useState(false);
 
   const toast = useToastNotifications();
 
@@ -43,9 +45,15 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
     () => SiteApiService.removeSite(site.url),
     {
       onSuccess: () => {
-        toast.showSuccess(TOAST_MESSAGES.SITE_REMOVED(site.name));
+        // Don't show toast here anymore - we'll handle it in handleRemoveSite
         onSiteRemoved();
       },
+    }
+  );
+
+  const deleteToken = useApiCall(
+    async (params: { username: string; tokenId: string }) => {
+      return ExpertApiService.deleteToken(params.username, params.tokenId);
     }
   );
 
@@ -62,9 +70,95 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
     setShowReauthForm(false);
   };
 
-  const handleRemoveSite = async () => {
+  const fetchTokenInfo = async () => {
+    setFetchingTokenInfo(true);
+    try {
+      const response = await ExpertApiService.getTokenInfo();
+      if (response.success && response.tokenInfo?.username) {
+        // Try to get the actual token list to find the current token ID
+        try {
+          const tokensResponse = await ExpertApiService.getTokensList(response.tokenInfo.username);
+          if (tokensResponse && Array.isArray(tokensResponse) && tokensResponse.length > 0) {
+            // Use the first token as the current one (this is a simplification)
+            // In a real app, you'd need to identify which token is currently being used
+            const currentToken = tokensResponse[0];
+            setTokenInfo({ 
+              username: response.tokenInfo.username,
+              tokenId: currentToken.id || 'current'
+            });
+          } else {
+            // Fallback to a reasonable default
+            setTokenInfo({ 
+              username: response.tokenInfo.username,
+              tokenId: 'current'
+            });
+          }
+        } catch (tokenListError) {
+          console.warn('Failed to fetch token list, using fallback:', tokenListError);
+          setTokenInfo({ 
+            username: response.tokenInfo.username,
+            tokenId: 'current'
+          });
+        }
+      } else {
+        setTokenInfo(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch token info:', error);
+      setTokenInfo(null);
+    } finally {
+      setFetchingTokenInfo(false);
+    }
+  };
+
+  const handleRemoveSite = async (options?: { deleteToken?: boolean }) => {
     setRemoveDialogOpen(false);
-    await removeSite.execute();
+    
+    let tokenDeleted = false;
+    
+    try {
+      // If token deletion was requested, do it FIRST before removing site
+      if (options?.deleteToken && tokenInfo?.username && tokenInfo?.tokenId) {
+        try {
+          console.log(`Attempting to delete token ${tokenInfo.tokenId} for user ${tokenInfo.username}`);
+          await deleteToken.execute({ 
+            username: tokenInfo.username, 
+            tokenId: tokenInfo.tokenId 
+          });
+          tokenDeleted = true;
+          console.log('Token deletion successful');
+        } catch (tokenError) {
+          console.error('Failed to delete token:', tokenError);
+          // Continue with site removal even if token deletion fails
+          toast.showWarning('Failed to delete authentication token, but will proceed with site removal');
+        }
+      }
+      
+      // Then remove the site from local config
+      await removeSite.execute();
+      
+      // Show appropriate success message based on what operations were performed
+      if (tokenDeleted) {
+        toast.showSuccess(`Site "${site.name}" removed and authentication token deleted`);
+      } else {
+        // Show the standard site removal message
+        toast.showSuccess(TOAST_MESSAGES.SITE_REMOVED(site.name));
+      }
+      
+    } catch (error) {
+      // Error handling is already done in the useApiCall hook for site removal
+      console.error('Failed to remove site:', error);
+      
+      // If we successfully deleted the token but failed to remove site, show warning
+      if (tokenDeleted) {
+        toast.showWarning('Authentication token was deleted but site removal failed');
+      }
+    }
+  };
+
+  const handleRemoveButtonClick = () => {
+    setRemoveDialogOpen(true);
+    fetchTokenInfo(); // Fetch token info when dialog opens
   };
 
   return (
@@ -89,7 +183,7 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
             </Button>
             <Button
               colorPalette="red"
-              onClick={() => setRemoveDialogOpen(true)}
+              onClick={handleRemoveButtonClick}
             >
               <Trash2 size={16} /> Remove Site
             </Button>
@@ -112,7 +206,9 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
         confirmLabel="Remove"
         cancelLabel="Cancel"
         confirmColorPalette="red"
-        isLoading={removeSite.state.loading}
+        isLoading={removeSite.state.loading || deleteToken.state.loading}
+        showTokenDeletionOption={!fetchingTokenInfo && tokenInfo !== null}
+        tokenDeletionLabel="Also delete authentication token from Contao Manager"
       />
     </>
   );

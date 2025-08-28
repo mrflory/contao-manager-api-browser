@@ -1200,6 +1200,19 @@ app.get('/api/users/:username/tokens/:id', async (req, res) => {
     }
 });
 
+app.delete('/api/users/:username/tokens/:id', async (req, res) => {
+    try {
+        const { username, id } = req.params;
+        console.log(`[DELETE-TOKEN] Starting request for user: ${username}, token: ${id}`);
+        const response = await proxyToContaoManager(`/api/users/${username}/tokens/${id}`, 'DELETE', null, req);
+        handleApiResponse('DELETE-TOKEN', response, res);
+    } catch (error) {
+        console.error('[DELETE-TOKEN] Error:', error.message);
+        console.error('[DELETE-TOKEN] Full error:', error);
+        res.status(500).json({ error: 'Failed to delete token: ' + error.message });
+    }
+});
+
 // Contao API endpoints
 app.get('/api/contao/database-migration', async (req, res) => {
     try {
