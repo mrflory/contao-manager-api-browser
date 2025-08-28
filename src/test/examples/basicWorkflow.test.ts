@@ -7,7 +7,7 @@
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useWorkflow } from '../../backup/useWorkflowOld';
+import { useUpdateWorkflow } from '../../workflow';
 import { 
   setupTestEnvironment, 
   teardownTestEnvironment, 
@@ -43,7 +43,7 @@ describe('Basic Workflow Example', () => {
     loadScenario(testContext.mockServer, 'happy-path.complete-update-success');
 
     // 2. Set up the React hook for testing
-    const { result } = renderHook(() => useWorkflow());
+    const { result } = renderHook(() => useUpdateWorkflow());
 
     // 3. Initialize the workflow with configuration
     act(() => {
@@ -123,7 +123,7 @@ describe('Basic Workflow Example', () => {
     // Load an error scenario
     loadScenario(testContext.mockServer, 'error-scenarios.composer-update-failure');
 
-    const { result } = renderHook(() => useWorkflow());
+    const { result } = renderHook(() => useUpdateWorkflow());
 
     act(() => {
       result.current.initializeWorkflow({ performDryRun: false });
@@ -158,7 +158,7 @@ describe('Basic Workflow Example', () => {
     // Load scenario with migrations
     loadScenario(testContext.mockServer, 'happy-path.migrations-only');
 
-    const { result } = renderHook(() => useWorkflow());
+    const { result } = renderHook(() => useUpdateWorkflow());
 
     act(() => {
       result.current.initializeWorkflow({ performDryRun: false });
@@ -188,7 +188,7 @@ describe('Basic Workflow Example', () => {
   test('Example: Testing workflow pause/resume', async () => {
     loadScenario(testContext.mockServer, 'happy-path.complete-update-success');
 
-    const { result } = renderHook(() => useWorkflow());
+    const { result } = renderHook(() => useUpdateWorkflow());
 
     act(() => {
       result.current.initializeWorkflow({ performDryRun: false });
@@ -223,7 +223,7 @@ describe('Basic Workflow Example', () => {
   test('Example: Testing pending task conflicts', async () => {
     loadScenario(testContext.mockServer, 'error-scenarios.pending-tasks-blocking');
 
-    const { result } = renderHook(() => useWorkflow());
+    const { result } = renderHook(() => useUpdateWorkflow());
 
     act(() => {
       result.current.initializeWorkflow({ performDryRun: false });
