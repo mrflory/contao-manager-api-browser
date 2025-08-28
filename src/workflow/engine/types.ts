@@ -20,8 +20,8 @@ export interface UserAction {
 
 // Result of user action
 export interface TimelineActionResult {
-  // Continue workflow, skip current item, or stop
-  action: 'continue' | 'skip' | 'stop' | 'retry';
+  // Continue workflow, skip current item, stop, cancel, or retry
+  action: 'continue' | 'skip' | 'stop' | 'cancel' | 'retry';
   
   // Additional timeline items to inject
   additionalItems?: TimelineItem[];

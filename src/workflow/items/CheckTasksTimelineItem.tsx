@@ -156,7 +156,7 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
         id: 'cancel',
         label: 'Cancel',
         variant: 'secondary',
-        execute: async () => ({ action: 'stop' })
+        execute: async () => ({ action: 'cancel' })
       }
     ];
     
@@ -195,7 +195,7 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
         id: 'cancel',
         label: 'Cancel',
         variant: 'secondary',
-        execute: async () => ({ action: 'stop' })
+        execute: async () => ({ action: 'cancel' })
       }
     ];
     

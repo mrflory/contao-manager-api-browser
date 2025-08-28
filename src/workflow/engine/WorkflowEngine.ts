@@ -404,6 +404,10 @@ export class WorkflowEngine implements WorkflowEngineInterface {
           this.stop();
           break;
           
+        case 'cancel':
+          await this.cancel();
+          break;
+          
         case 'retry':
           await this.retryItem(this.state.currentIndex);
           break;

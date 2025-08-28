@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   VStack,
@@ -62,9 +62,17 @@ export const UpdateWorkflow: React.FC = () => {
   const [config, setConfig] = useState<WorkflowConfig>({ 
     performDryRun: true
   });
+  const [isCancelling, setIsCancelling] = useState(false);
   
   const toast = useToastNotifications();
   const workflow = useUpdateWorkflow(config);
+  
+  // Reset cancellation state when workflow is cancelled
+  useEffect(() => {
+    if (workflow.isCancelled) {
+      setIsCancelling(false);
+    }
+  }, [workflow.isCancelled]);
   
   const handleStartWorkflow = async () => {
     await workflow.start();
@@ -82,11 +90,30 @@ export const UpdateWorkflow: React.FC = () => {
   };
 
   const handleCancel = async () => {
-    await workflow.cancel();
-    toast.showWarning({
-      title: 'Workflow Cancelled',
-      description: 'Workflow has been cancelled and all background tasks have been stopped.',
+    if (isCancelling) return; // Prevent multiple cancellation attempts
+    
+    setIsCancelling(true);
+    
+    // Show immediate feedback
+    toast.showInfo({
+      title: 'Cancelling Workflow',
+      description: 'Stopping all running tasks and cleaning up...',
     });
+    
+    try {
+      await workflow.cancel();
+      toast.showWarning({
+        title: 'Workflow Cancelled',
+        description: 'Workflow has been cancelled and all background tasks have been stopped.',
+      });
+    } catch (error) {
+      toast.showError({
+        title: 'Cancellation Error',
+        description: error instanceof Error ? error.message : 'Failed to cancel workflow',
+      });
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   const handleReset = () => {
@@ -101,6 +128,7 @@ export const UpdateWorkflow: React.FC = () => {
     if (workflow.isComplete) return 'complete';
     if (workflow.error) return 'error';
     if (workflow.isCancelled) return 'cancelled';
+    if (isCancelling) return 'cancelling';
     if (workflow.isRunning) return 'running';
     if (workflow.isPaused) return 'paused';
     return 'ready';
@@ -119,6 +147,7 @@ export const UpdateWorkflow: React.FC = () => {
       complete: 'green',
       error: 'red',
       cancelled: 'orange',
+      cancelling: 'orange',
       running: 'blue',
       paused: 'orange',
       ready: 'gray'
@@ -128,6 +157,7 @@ export const UpdateWorkflow: React.FC = () => {
       complete: 'Complete',
       error: 'Error',
       cancelled: 'Cancelled',
+      cancelling: 'Cancelling...',
       running: 'Running',
       paused: 'Paused',
       ready: 'Ready'
@@ -238,8 +268,10 @@ export const UpdateWorkflow: React.FC = () => {
                 colorPalette="red"
                 onClick={handleCancel}
                 size="lg"
+                loading={isCancelling}
+                disabled={isCancelling}
               >
-                <X size={16} /> Cancel Workflow
+                <X size={16} /> {isCancelling ? 'Cancelling...' : 'Cancel Workflow'}
               </Button>
             )}
 

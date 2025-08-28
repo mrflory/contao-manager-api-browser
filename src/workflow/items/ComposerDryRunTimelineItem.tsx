@@ -153,7 +153,7 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
         label: 'Cancel Workflow',
         description: 'Cancel the entire workflow',
         variant: 'danger',
-        execute: async () => ({ action: 'stop' })
+        execute: async () => ({ action: 'cancel' })
       }
     ];
     
