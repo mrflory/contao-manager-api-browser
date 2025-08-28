@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import { VStack, Box, HStack, Text, Badge, Button, Link, Separator, IconButton } from '@chakra-ui/react';
 import { LuChevronDown as ChevronDown, LuChevronUp as ChevronUp, LuExternalLink as ExternalLink, LuCode as Code } from 'react-icons/lu';
 import { JsonDisplayModal } from '../modals/ApiResultModal';
@@ -11,69 +11,82 @@ import { PackageSummary } from './PackageSummary';
 // Global state to persist console output visibility across component re-mounts
 const consoleVisibilityState = new Map<string, boolean>();
 
+// Memoized ConsoleToggle component to prevent recreation on each render
+const ConsoleToggle = memo(({ operation, operationIndex, stepId }: { 
+  operation: any; 
+  operationIndex: number; 
+  stepId?: string; 
+}) => {
+  // Create unique key for this operation's console state
+  const consoleKey = useMemo(() => 
+    `${stepId || 'default'}-operation-${operationIndex}`, 
+    [stepId, operationIndex]
+  );
+  
+  // Get current state from persistent storage, defaulting to false
+  const getCurrentState = useCallback(() => {
+    return consoleVisibilityState.get(consoleKey) || false;
+  }, [consoleKey]);
+  
+  const [showConsole, setShowConsole] = useState(getCurrentState);
+  
+  const toggleConsole = useCallback(() => {
+    const newState = !showConsole;
+    setShowConsole(newState);
+    // Persist state globally
+    consoleVisibilityState.set(consoleKey, newState);
+  }, [showConsole, consoleKey]);
+  
+  // Memoize console content to prevent CodeBlock recreation
+  const consoleContent = useMemo(() => operation.console?.trim() || '', [operation.console]);
+  
+  if (!consoleContent) {
+    return null;
+  }
+  
+  return (
+    <>
+      <Button 
+        variant="outline" 
+        size="xs" 
+        width="fit-content"
+        display="flex"
+        alignItems="center"
+        gap={1}
+        onClick={toggleConsole}
+      >
+        {showConsole ? <ChevronUp size={12} /> : <ChevronDown size={12} />} 
+        {showConsole ? 'Hide' : 'View'} Console Output
+      </Button>
+      {showConsole && (
+        <Box mt={2} overflowX="hidden">
+          <CodeBlock 
+            key={consoleKey} // Stable key to prevent recreation
+            language="bash"
+            showLineNumbers
+            maxHeight="300px"
+          >
+            {consoleContent}
+          </CodeBlock>
+        </Box>
+      )}
+    </>
+  );
+});
+
+ConsoleToggle.displayName = 'ConsoleToggle';
+
 export interface ComposerOperationsProps {
   data: any;
   stepId?: string; // Used to create unique keys for persistent state
 }
 
-export const ComposerOperations: React.FC<ComposerOperationsProps> = ({ data, stepId }) => {
+export const ComposerOperations: React.FC<ComposerOperationsProps> = memo(({ data, stepId }) => {
   const mutedColor = useColorModeValue('gray.500', 'gray.400');
   const cardBg = useColorModeValue('white', 'gray.800');
   
   // Raw data modal state
   const [isRawDataOpen, setIsRawDataOpen] = useState(false);
-
-  // Console output visibility state for each operation with persistent state
-  const ConsoleToggle = ({ operation, operationIndex }: { operation: any; operationIndex: number }) => {
-    // Create unique key for this operation's console state
-    const consoleKey = `${stepId || 'default'}-operation-${operationIndex}`;
-    
-    // Get current state from persistent storage, defaulting to false
-    const getCurrentState = useCallback(() => {
-      return consoleVisibilityState.get(consoleKey) || false;
-    }, [consoleKey]);
-    
-    const [showConsole, setShowConsole] = useState(getCurrentState);
-    
-    const toggleConsole = useCallback(() => {
-      const newState = !showConsole;
-      setShowConsole(newState);
-      // Persist state globally
-      consoleVisibilityState.set(consoleKey, newState);
-    }, [showConsole, consoleKey]);
-    
-    if (!operation.console || !operation.console.trim()) {
-      return null;
-    }
-    
-    return (
-      <>
-        <Button 
-          variant="outline" 
-          size="xs" 
-          width="fit-content"
-          display="flex"
-          alignItems="center"
-          gap={1}
-          onClick={toggleConsole}
-        >
-          {showConsole ? <ChevronUp size={12} /> : <ChevronDown size={12} />} 
-          {showConsole ? 'Hide' : 'View'} Console Output
-        </Button>
-        {showConsole && (
-          <Box mt={2} overflowX="hidden">
-            <CodeBlock 
-              language="bash"
-              showLineNumbers
-              maxHeight="300px"
-            >
-              {operation.console}
-            </CodeBlock>
-          </Box>
-        )}
-      </>
-    );
-  };
 
   if (!data || !data.operations) return null;
 
@@ -96,9 +109,9 @@ export const ComposerOperations: React.FC<ComposerOperationsProps> = ({ data, st
     );
   };
 
-  // Parse package operations from console output for successful operations
-  const getPackageSummary = () => {
-    const successfulOperations = data.operations?.filter((op: any) => op.status === 'complete');
+  // Memoize package summary to prevent unnecessary recalculations
+  const packageSummary = useMemo(() => {
+    const successfulOperations = data?.operations?.filter((op: any) => op.status === 'complete');
     if (!successfulOperations || successfulOperations.length === 0) return null;
     
     // Combine console outputs from all successful operations
@@ -107,9 +120,7 @@ export const ComposerOperations: React.FC<ComposerOperationsProps> = ({ data, st
       .join('\n');
     
     return parsePackageOperations(combinedConsole);
-  };
-
-  const packageSummary = getPackageSummary();
+  }, [data?.operations]);
 
   return (
     <VStack align="stretch" gap={4}>
@@ -165,10 +176,12 @@ export const ComposerOperations: React.FC<ComposerOperationsProps> = ({ data, st
               </Text>
             )}
             
-            <ConsoleToggle operation={operation} operationIndex={index} />
+            <ConsoleToggle operation={operation} operationIndex={index} stepId={stepId} />
           </VStack>
         </Box>
       ))}
     </VStack>
   );
-};
+});
+
+ComposerOperations.displayName = 'ComposerOperations';

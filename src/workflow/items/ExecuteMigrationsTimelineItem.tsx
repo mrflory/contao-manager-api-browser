@@ -8,6 +8,7 @@ import { MigrationOperations } from '../../components/workflow/MigrationOperatio
  */
 export class ExecuteMigrationsTimelineItem extends BaseTimelineItem {
   private pollingInterval?: NodeJS.Timeout;
+  private isCancelled = false;
   private cycle: number;
   
   constructor(cycle: number = 1) {
@@ -64,8 +65,22 @@ export class ExecuteMigrationsTimelineItem extends BaseTimelineItem {
   private startPolling(): Promise<TimelineResult> {
     return new Promise((resolve) => {
       const pollMigration = async () => {
+        // Check if cancelled - stop polling immediately if so
+        if (this.isCancelled) {
+          this.stopPolling();
+          resolve(this.setCancelled());
+          return;
+        }
+        
         try {
           const migrationStatus = await api.getDatabaseMigrationStatus();
+          
+          // Check if cancelled again after API call
+          if (this.isCancelled) {
+            this.stopPolling();
+            resolve(this.setCancelled());
+            return;
+          }
           
           if (!migrationStatus || Object.keys(migrationStatus).length === 0) {
             // Migration completed - clean up and resolve
@@ -123,6 +138,13 @@ export class ExecuteMigrationsTimelineItem extends BaseTimelineItem {
           // If status is 'active', continue polling
           
         } catch (error) {
+          // Check if cancelled during error handling
+          if (this.isCancelled) {
+            this.stopPolling();
+            resolve(this.setCancelled());
+            return;
+          }
+          
           // 204 No Content means migration completed
           if (error instanceof Error && error.message.includes('204')) {
             this.stopPolling();
@@ -134,13 +156,19 @@ export class ExecuteMigrationsTimelineItem extends BaseTimelineItem {
         }
       };
       
+      // Check if already cancelled before starting
+      if (this.isCancelled) {
+        resolve(this.setCancelled());
+        return;
+      }
+      
       // Start immediate poll, then set interval
       pollMigration();
       this.pollingInterval = setInterval(pollMigration, 2000);
       
       // Set timeout after 30 minutes (migrations can take long)
       setTimeout(() => {
-        if (this.pollingInterval) {
+        if (this.pollingInterval && !this.isCancelled) {
           this.stopPolling();
           resolve(this.setError('Migration execution timeout after 30 minutes'));
         }
@@ -161,14 +189,19 @@ export class ExecuteMigrationsTimelineItem extends BaseTimelineItem {
   }
 
   async onCancel(): Promise<void> {
-    // Stop any ongoing polling
+    console.log(`Cancelling migrations timeline item: ${this.id}`);
+    
+    // Set cancellation flag to stop polling loops
+    this.isCancelled = true;
+    
+    // Stop any ongoing polling immediately
     this.stopPolling();
     
     // Try to clean up the active migration task if one exists
     try {
       const migrationStatus = await api.getDatabaseMigrationStatus();
       if (migrationStatus && migrationStatus.status === 'active') {
-        console.log('Cancelling active database migration task');
+        console.log('Deleting active database migration task');
         await api.deleteDatabaseMigrationTask();
       }
     } catch (error) {

@@ -113,6 +113,7 @@ export interface WorkflowEngineState {
   isRunning: boolean;
   isPaused: boolean;
   isComplete: boolean;
+  isCancelling?: boolean;
   error?: string;
   startTime?: Date;
   endTime?: Date;

@@ -12,6 +12,7 @@ import { createMigrationSummary } from '../../utils/migrationSummary';
  */
 export class CheckMigrationsTimelineItem extends BaseTimelineItem {
   private pollingInterval?: NodeJS.Timeout;
+  private isCancelled = false;
   private cycle: number;
   
   constructor(cycle: number = 1) {
@@ -58,8 +59,22 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
   private startPolling(): Promise<TimelineResult> {
     return new Promise((resolve) => {
       const pollMigration = async () => {
+        // Check if cancelled - stop polling immediately if so
+        if (this.isCancelled) {
+          this.stopPolling();
+          resolve(this.setCancelled());
+          return;
+        }
+        
         try {
           const migrationStatus = await api.getDatabaseMigrationStatus();
+          
+          // Check if cancelled again after API call
+          if (this.isCancelled) {
+            this.stopPolling();
+            resolve(this.setCancelled());
+            return;
+          }
           
           // Emit progress update with current migration status
           if (this.context?.engine) {
@@ -265,14 +280,19 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
   }
 
   async onCancel(): Promise<void> {
-    // Stop any ongoing polling
+    console.log(`Cancelling migrations check timeline item: ${this.id}`);
+    
+    // Set cancellation flag to stop polling loops
+    this.isCancelled = true;
+    
+    // Stop any ongoing polling immediately
     this.stopPolling();
     
     // Try to clean up the active migration check task if one exists
     try {
       const migrationStatus = await api.getDatabaseMigrationStatus();
       if (migrationStatus && migrationStatus.status === 'active') {
-        console.log('Cancelling active database migration check task');
+        console.log('Deleting active database migration check task');
         await api.deleteDatabaseMigrationTask();
       }
     } catch (error) {

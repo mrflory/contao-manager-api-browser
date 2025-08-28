@@ -8,6 +8,7 @@ import { ComposerOperations } from '../../components/workflow/ComposerOperations
  */
 export class ComposerUpdateTimelineItem extends BaseTimelineItem {
   private pollingInterval?: NodeJS.Timeout;
+  private isCancelled = false;
   
   constructor() {
     super(
@@ -44,8 +45,22 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
   private startPolling(): Promise<TimelineResult> {
     return new Promise((resolve) => {
       const pollTask = async () => {
+        // Check if cancelled - stop polling immediately if so
+        if (this.isCancelled) {
+          this.stopPolling();
+          resolve(this.setCancelled());
+          return;
+        }
+        
         try {
           const taskData = await api.getTaskData();
+          
+          // Check if cancelled again after API call
+          if (this.isCancelled) {
+            this.stopPolling();
+            resolve(this.setCancelled());
+            return;
+          }
           
           if (!taskData || Object.keys(taskData).length === 0) {
             // Task completed - clean up and resolve
@@ -98,6 +113,13 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
           // If status is 'active', continue polling
           
         } catch (error) {
+          // Check if cancelled during error handling
+          if (this.isCancelled) {
+            this.stopPolling();
+            resolve(this.setCancelled());
+            return;
+          }
+          
           // 204 No Content means task completed
           if (error instanceof Error && error.message.includes('204')) {
             this.stopPolling();
@@ -109,13 +131,19 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
         }
       };
       
+      // Check if already cancelled before starting
+      if (this.isCancelled) {
+        resolve(this.setCancelled());
+        return;
+      }
+      
       // Start immediate poll, then set interval
       pollTask();
       this.pollingInterval = setInterval(pollTask, 2000);
       
       // Set timeout after 30 minutes (composer updates can take long)
       setTimeout(() => {
-        if (this.pollingInterval) {
+        if (this.pollingInterval && !this.isCancelled) {
           this.stopPolling();
           resolve(this.setError('Composer update timeout after 30 minutes'));
         }
@@ -136,15 +164,23 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
   }
 
   async onCancel(): Promise<void> {
-    // Stop any ongoing polling
+    console.log(`Cancelling composer update timeline item: ${this.id}`);
+    
+    // Set cancellation flag to stop polling loops
+    this.isCancelled = true;
+    
+    // Stop any ongoing polling immediately
     this.stopPolling();
     
     // Try to abort the active task if one exists
     try {
       const taskData = await api.getTaskData();
       if (taskData && taskData.status === 'active') {
-        console.log('Cancelling active composer update task');
+        console.log('Aborting active composer update task');
         await api.patchTaskStatus('aborting');
+        
+        // Wait a short time for the task to acknowledge the abort
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     } catch (error) {
       // Ignore errors when checking/aborting task during cancellation

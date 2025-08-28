@@ -136,32 +136,45 @@ export class WorkflowEngine implements WorkflowEngineInterface {
   }
 
   async cancel(): Promise<void> {
-    // Set state to cancelled/stopped
-    this.state.isRunning = false;
-    this.state.isPaused = false;
-    this.state.endTime = new Date();
+    // Prevent multiple concurrent cancellation calls
+    if (this.state.isCancelling) {
+      return;
+    }
     
-    // Cancel all timeline items that might have background processes or are waiting for user action
-    const cancelPromises = this.state.timeline.map(async (item) => {
-      if (item.onCancel && (item.status === 'active' || item.status === 'pending')) {
-        try {
-          await item.onCancel();
-        } catch (error) {
-          console.warn(`Error cancelling item ${item.id}:`, error);
-        }
-      }
+    this.state.isCancelling = true;
+    
+    try {
+      // Set state to cancelled/stopped
+      this.state.isRunning = false;
+      this.state.isPaused = false;
+      this.state.endTime = new Date();
       
-      // Mark items waiting for user action as cancelled
-      if (item.status === 'user_action_required') {
-        item.status = 'cancelled';
-        item.endTime = new Date();
-      }
-    });
-    
-    // Wait for all cancellations to complete
-    await Promise.all(cancelPromises);
-    
-    this.emit('cancelled');
+      // Cancel all timeline items that might have background processes, are active, pending, or waiting for user action
+      const cancelPromises = this.state.timeline.map(async (item) => {
+        // Call onCancel for active, pending, or user_action_required items
+        if (item.onCancel && (item.status === 'active' || item.status === 'pending' || item.status === 'user_action_required')) {
+          try {
+            console.log(`Cancelling timeline item: ${item.id} (status: ${item.status})`);
+            await item.onCancel();
+          } catch (error) {
+            console.warn(`Error cancelling item ${item.id}:`, error);
+          }
+        }
+        
+        // Mark non-complete items as cancelled
+        if (item.status !== 'complete' && item.status !== 'skipped') {
+          item.status = 'cancelled';
+          item.endTime = new Date();
+        }
+      });
+      
+      // Wait for all cancellations to complete before emitting cancelled event
+      await Promise.all(cancelPromises);
+      
+      this.emit('cancelled');
+    } finally {
+      this.state.isCancelling = false;
+    }
   }
   
   // Execute specific item

@@ -72,6 +72,15 @@ export abstract class BaseTimelineItem implements TimelineItem {
     };
   }
   
+  protected setCancelled(): TimelineResult {
+    this.status = 'cancelled';
+    this.endTime = new Date();
+    return {
+      status: 'error',
+      error: 'Operation was cancelled'
+    };
+  }
+  
   protected requireUserAction(
     actions: UserAction[], 
     uiContent?: React.ReactNode,

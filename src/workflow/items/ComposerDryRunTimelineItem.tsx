@@ -9,6 +9,7 @@ import { api } from '../../utils/api';
  */
 export class ComposerDryRunTimelineItem extends BaseTimelineItem {
   private pollingInterval?: NodeJS.Timeout;
+  private isCancelled = false;
   private lastTaskData?: any;
   
   constructor() {
@@ -54,8 +55,20 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
       const pollTask = async () => {
         if (resolved) return; // Don't poll if already resolved
         
+        // Check if cancelled - stop polling immediately if so
+        if (this.isCancelled) {
+          safeResolve(this.setCancelled());
+          return;
+        }
+        
         try {
           const taskData = await api.getTaskData();
+          
+          // Check if cancelled again after API call
+          if (this.isCancelled) {
+            safeResolve(this.setCancelled());
+            return;
+          }
           
           if (!taskData || Object.keys(taskData).length === 0) {
             // Task completed - clean up and resolve
@@ -177,15 +190,23 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
   }
 
   async onCancel(): Promise<void> {
-    // Stop any ongoing polling
+    console.log(`Cancelling composer dry-run timeline item: ${this.id}`);
+    
+    // Set cancellation flag to stop polling loops
+    this.isCancelled = true;
+    
+    // Stop any ongoing polling immediately
     this.stopPolling();
     
     // Try to abort the active task if one exists
     try {
       const taskData = await api.getTaskData();
       if (taskData && taskData.status === 'active') {
-        console.log('Cancelling active composer dry-run task');
+        console.log('Aborting active composer dry-run task');
         await api.patchTaskStatus('aborting');
+        
+        // Wait a short time for the task to acknowledge the abort
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     } catch (error) {
       // Ignore errors when checking/aborting task during cancellation
