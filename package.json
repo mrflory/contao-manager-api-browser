@@ -30,6 +30,7 @@
   "dependencies": {
     "@chakra-ui/react": "^3.21.0",
     "@emotion/react": "^11.14.0",
+    "@tanstack/react-table": "^8.21.3",
     "@types/uuid": "^10.0.0",
     "axios": "^1.6.0",
     "cors": "^2.8.5",

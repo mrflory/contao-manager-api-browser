@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -6,7 +6,6 @@ import {
   Button,
   Text,
   Flex,
-  Table,
   VStack,
   Menu,
   ButtonGroup,
@@ -14,8 +13,10 @@ import {
   Portal,
 } from '@chakra-ui/react';
 import { LuPlus as Plus, LuChevronRight as ChevronRight, LuChevronDown as ChevronDown, LuRefreshCw as RefreshCw } from 'react-icons/lu';
+import { ColumnDef } from '@tanstack/react-table';
 import { Tooltip } from "../components/ui/tooltip";
-import { Config } from '../types';
+import { EnhancedTable } from '../components/ui/enhanced-table';
+import { Config, Site } from '../types';
 import { useApiCall } from '../hooks/useApiCall';
 import { SiteApiService } from '../services/apiCallService';
 import { LoadingState } from '../components/display/LoadingState';
@@ -56,6 +57,111 @@ const SitesOverview: React.FC = () => {
     navigate('/add-site');
   };
 
+  const columns = useMemo<ColumnDef<Site>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Site',
+        cell: ({ row }) => {
+          const site = row.original;
+          return (
+            <VStack gap={1} align="start">
+              <Text fontWeight="bold">{site.name}</Text>
+              <Tooltip content={site.url}>
+                <Text fontFamily="mono" fontSize="sm" color="gray.600" cursor="help">
+                  {extractDomain(site.url)}
+                </Text>
+              </Tooltip>
+            </VStack>
+          );
+        },
+        sortingFn: (a, b) => a.original.name.localeCompare(b.original.name),
+        filterFn: (row, _columnId, value) => {
+          const site = row.original;
+          const searchValue = value.toLowerCase();
+          return (
+            site.name.toLowerCase().includes(searchValue) ||
+            extractDomain(site.url).toLowerCase().includes(searchValue) ||
+            site.url.toLowerCase().includes(searchValue)
+          );
+        },
+      },
+      {
+        accessorKey: 'versionInfo',
+        header: 'Version & Status',
+        cell: ({ row }) => {
+          const site = row.original;
+          return site.versionInfo ? (
+            <VersionBadges
+              versionInfo={site.versionInfo}
+              layout="horizontal"
+              showLastUpdated={true}
+              size="xs"
+            />
+          ) : (
+            <Text fontSize="sm" color="gray.400">
+              No version info
+            </Text>
+          );
+        },
+        sortingFn: (a, b) => {
+          const aTime = a.original.versionInfo?.lastUpdated || a.original.lastUsed;
+          const bTime = b.original.versionInfo?.lastUpdated || b.original.lastUsed;
+          return new Date(aTime).getTime() - new Date(bTime).getTime();
+        },
+        filterFn: (row, _columnId, value) => {
+          const site = row.original;
+          const searchValue = value.toLowerCase();
+          if (!site.versionInfo) return false;
+          return (
+            (site.versionInfo.contaoVersion?.toLowerCase().includes(searchValue) || false) ||
+            (site.versionInfo.phpVersion?.toLowerCase().includes(searchValue) || false) ||
+            (site.versionInfo.contaoManagerVersion?.toLowerCase().includes(searchValue) || false)
+          );
+        },
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => {
+          const site = row.original;
+          return (
+            <Flex justify="end">
+              <ButtonGroup size="sm" variant="outline" attached>
+                <Button
+                  variant="outline"
+                  onClick={() => handleSiteClick(site.url)}
+                >
+                  <ChevronRight size={16} />
+                  View
+                </Button>
+                <Menu.Root>
+                  <Menu.Trigger asChild>
+                    <IconButton variant="outline">
+                      <ChevronDown size={16} />
+                    </IconButton>
+                  </Menu.Trigger>
+                  <Portal>
+                    <Menu.Positioner>
+                      <Menu.Content>
+                        <Menu.Item value="update-version">
+                          <RefreshCw size={16} />
+                          Update Version Info
+                        </Menu.Item>
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Portal>
+                </Menu.Root>
+              </ButtonGroup>
+            </Flex>
+          );
+        },
+        enableSorting: false,
+      },
+    ],
+    [handleSiteClick]
+  );
+
   if (configApi.state.loading) {
     return (
       <Container maxW="6xl">
@@ -65,7 +171,7 @@ const SitesOverview: React.FC = () => {
   }
 
   const config = configApi.state.data as Config | undefined;
-  const sites = config?.sites ? Object.values(config.sites).sort((a, b) => a.name.localeCompare(b.name)) : [];
+  const sites = config?.sites ? Object.values(config.sites) : [];
 
   return (
     <Container maxW="6xl">
@@ -88,82 +194,15 @@ const SitesOverview: React.FC = () => {
           icon="🌐"
         />
       ) : (
-        <Table.ScrollArea borderWidth="1px" borderRadius="lg">
-          <Table.Root interactive>
-              <Table.Header>
-                <Table.Row>
-                  <Table.ColumnHeader>Site</Table.ColumnHeader>
-                  <Table.ColumnHeader>Version & Status</Table.ColumnHeader>
-                  <Table.ColumnHeader textAlign="end">Actions</Table.ColumnHeader>
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {sites.map((site) => (
-                  <Table.Row key={site.url}>
-                    {/* Column 1: Site Information */}
-                    <Table.Cell>
-                      <VStack gap={1} align="start">
-                        <Text fontWeight="bold">{site.name}</Text>
-                        <Tooltip content={site.url}>
-                          <Text fontFamily="mono" fontSize="sm" color="gray.600" cursor="help">
-                            {extractDomain(site.url)}
-                          </Text>
-                        </Tooltip>
-                      </VStack>
-                    </Table.Cell>
-                    
-                    {/* Column 2: Version & Status */}
-                    <Table.Cell>
-                      {site.versionInfo ? (
-                        <VersionBadges 
-                          versionInfo={site.versionInfo}
-                          layout="horizontal"
-                          showLastUpdated={true}
-                          size="xs"
-                        />
-                      ) : (
-                        <Text fontSize="sm" color="gray.400">
-                          No version info
-                        </Text>
-                      )}
-                    </Table.Cell>
-                    
-                    {/* Column 3: Actions */}
-                    <Table.Cell>
-                      <Flex justify="end">
-                        <ButtonGroup size="sm" variant="outline" attached>
-                          <Button
-                            variant="outline"
-                            onClick={() => handleSiteClick(site.url)}
-                          >
-                            <ChevronRight size={16} />
-                            View
-                          </Button>
-                          <Menu.Root>
-                            <Menu.Trigger asChild>
-                              <IconButton variant="outline">
-                                <ChevronDown size={16} />
-                              </IconButton>
-                            </Menu.Trigger>
-                            <Portal>
-                              <Menu.Positioner>
-                                <Menu.Content>
-                                  <Menu.Item value="update-version">
-                                    <RefreshCw size={16} />
-                                    Update Version Info
-                                  </Menu.Item>
-                                </Menu.Content>
-                              </Menu.Positioner>
-                            </Portal>
-                          </Menu.Root>
-                        </ButtonGroup>
-                      </Flex>
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-          </Table.Root>
-        </Table.ScrollArea>
+        <EnhancedTable
+          data={sites}
+          columns={columns}
+          globalFilterPlaceholder="Search sites by name, domain, or version..."
+          enableGlobalFilter={true}
+          enableSorting={true}
+          enableColumnFilters={false}
+          defaultSorting={[{ id: 'name', desc: false }]}
+        />
       )}
     </Container>
   );
