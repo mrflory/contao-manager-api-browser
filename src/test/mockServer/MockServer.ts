@@ -42,7 +42,8 @@ export class MockServer {
     
     // Logging middleware for debugging
     this.app.use((req: Request, res: Response, next) => {
-      console.log(`[MOCK] ${req.method} ${req.path}`, 
+      const queryString = Object.keys(req.query).length > 0 ? '?' + new URLSearchParams(req.query as any).toString() : '';
+      console.log(`[MOCK] ${req.method} ${req.path}${queryString}`, 
         req.body ? JSON.stringify(req.body) : '');
       next();
     });
@@ -78,6 +79,58 @@ export class MockServer {
     // User management endpoints
     router.get('/users', serverHandlers.getUsers(() => this.state));
     router.get('/users/:username', serverHandlers.getUser(() => this.state));
+    
+    // Token management endpoints
+    router.get('/users/:username/tokens', (req: Request, res: Response) => {
+      const { username } = req.params;
+      console.log(`[MOCK] GET tokens for user: ${username}`);
+      
+      // Mock tokens list
+      const mockTokens = [
+        {
+          id: 'current',
+          name: 'Mock API Token',
+          scope: 'admin',
+          created_at: '2023-01-01T00:00:00Z',
+          last_used: '2024-01-01T00:00:00Z'
+        }
+      ];
+      
+      res.json(mockTokens);
+    });
+    
+    router.get('/users/:username/tokens/:id', (req: Request, res: Response) => {
+      const { username, id } = req.params;
+      console.log(`[MOCK] GET token ${id} for user: ${username}`);
+      
+      // Mock token details
+      const mockToken = {
+        id: id,
+        name: 'Mock API Token',
+        scope: 'admin',
+        created_at: '2023-01-01T00:00:00Z',
+        last_used: '2024-01-01T00:00:00Z'
+      };
+      
+      res.json(mockToken);
+    });
+    
+    router.delete('/users/:username/tokens/:id', (req: Request, res: Response) => {
+      const { username, id } = req.params;
+      console.log(`[MOCK] DELETE token ${id} for user: ${username}`);
+      
+      // Mock successful token deletion
+      const deletedToken = {
+        id: id,
+        name: 'Mock API Token',
+        scope: 'admin',
+        created_at: '2023-01-01T00:00:00Z',
+        last_used: '2024-01-01T00:00:00Z',
+        deleted_at: new Date().toISOString()
+      };
+      
+      res.json(deletedToken);
+    });
 
     // Maintenance mode endpoints
     router.get('/contao/maintenance-mode', (req: Request, res: Response) => {
@@ -133,41 +186,59 @@ export class MockServer {
     });
     this.app.use('/contao-manager.phar.php/api', router);
 
-    // OAuth endpoints (for frontend integration)
-    this.app.get('/oauth2/authorize', (req: Request, res: Response) => {
+    // Handle OAuth client-side flow (when URL has #oauth fragment)
+    // This needs to serve HTML that will parse the OAuth parameters and redirect
+    this.setupContaoManagerRoute();
+
+    // Handle the trailing slash variant as well - preserve query parameters
+    // IMPORTANT: This must come AFTER the main route to avoid conflicts
+    this.app.get('/contao-manager.phar.php/', (req: Request, res: Response) => {
+      const queryString = req.url.includes('?') ? req.url.split('?')[1] : '';
+      const redirectUrl = `/contao-manager.phar.php${queryString ? '?' + queryString : ''}`;
+      res.redirect(redirectUrl);
+    });
+
+    // OAuth endpoints (for frontend integration) - both standalone and under Contao Manager path
+    const oauthAuthorizeHandler = (req: Request, res: Response) => {
       const { response_type, client_id, redirect_uri, scope, state } = req.query;
       
       console.log(`[OAUTH] Authorization request:`, { response_type, client_id, scope, state });
       
       // Simulate OAuth flow - in real UI testing, this would redirect back with a token
-      const mockToken = `mock_token_${Math.random().toString(36).substr(2, 12)}`;
+      const mockToken = `mock_token_${Math.random().toString(36).substring(2, 14)}`;
       const redirectUrl = `${redirect_uri}#access_token=${mockToken}&token_type=Bearer&expires_in=3600${state ? `&state=${state}` : ''}`;
       
       console.log(`[OAUTH] Redirecting to: ${redirectUrl}`);
       res.redirect(redirectUrl);
-    });
+    };
 
-    this.app.post('/oauth2/token', (req: Request, res: Response) => {
-      const { grant_type, client_id, client_secret } = req.body;
+    const oauthTokenHandler = (req: Request, res: Response) => {
+      const { grant_type, client_id } = req.body;
       
       console.log(`[OAUTH] Token request:`, { grant_type, client_id });
       
-      const mockToken = `mock_token_${Math.random().toString(36).substr(2, 12)}`;
+      const mockToken = `mock_token_${Math.random().toString(36).substring(2, 14)}`;
       res.json({
         access_token: mockToken,
         token_type: 'Bearer',
         expires_in: 3600,
         scope: 'admin'
       });
-    });
+    };
+
+    // Mount OAuth endpoints both standalone and under Contao Manager path
+    this.app.get('/oauth2/authorize', oauthAuthorizeHandler);
+    this.app.post('/oauth2/token', oauthTokenHandler);
+    this.app.get('/contao-manager.phar.php/oauth2/authorize', oauthAuthorizeHandler);
+    this.app.post('/contao-manager.phar.php/oauth2/token', oauthTokenHandler);
 
     // Health check endpoint
-    this.app.get('/health', (req: Request, res: Response) => {
+    this.app.get('/health', (_req: Request, res: Response) => {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
     });
 
     // Mock server status and control frontend
-    this.app.get('/', (req: Request, res: Response) => {
+    this.app.get('/', (_req: Request, res: Response) => {
       const availableScenarios = scenarioLoader.listScenarios();
       const currentScenario = this.getCurrentScenarioName();
       
@@ -290,6 +361,269 @@ export class MockServer {
       
       res.send(html);
     });
+  }
+
+  /**
+   * Set up the main Contao Manager route - can be overridden by subclasses
+   */
+  protected setupContaoManagerRoute(): void {
+    this.app.get('/contao-manager.phar.php', (req: Request, res: Response) => {
+      // For real Contao Manager, OAuth params come as URL fragment (#oauth?...)
+      // Since fragments aren't sent to server, we serve a page that handles both cases:
+      // 1. If query params exist (direct call), handle as OAuth
+      // 2. If no query params, serve page that checks for #oauth fragment
+      
+      const isOAuthRequest = req.query.response_type || req.query.scope || req.query.client_id;
+      
+      if (isOAuthRequest) {
+        this.handleOAuthRequest(req, res);
+        return;
+      }
+
+      // Serve a page that can handle both regular interface AND fragment-based OAuth
+      this.serveContaoManagerInterfaceWithFragmentSupport(res);
+    });
+  }
+
+  /**
+   * Serve interface that can handle #oauth fragments (like real Contao Manager)
+   */
+  protected serveContaoManagerInterfaceWithFragmentSupport(res: Response): void {
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Contao Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <script>
+        function handleOAuthFragment() {
+            // Check if URL contains #oauth fragment (like real Contao Manager)
+            if (window.location.hash.includes('#oauth')) {
+                console.log('[OAUTH] Detected #oauth fragment in URL');
+                
+                // Parse the fragment parameters
+                const fragment = window.location.hash.substring(1); // Remove #
+                const params = new URLSearchParams(fragment.replace('oauth?', ''));
+                
+                const response_type = params.get('response_type');
+                const scope = params.get('scope');
+                const client_id = params.get('client_id');
+                const redirect_uri = params.get('redirect_uri');
+                const state = params.get('state');
+                
+                if (response_type && scope && client_id && redirect_uri) {
+                    console.log('[OAUTH] Valid OAuth parameters found in fragment');
+                    
+                    // Redirect to our OAuth handler with query parameters
+                    const oauthUrl = window.location.pathname + 
+                      '?response_type=' + encodeURIComponent(response_type) +
+                      '&scope=' + encodeURIComponent(scope) +
+                      '&client_id=' + encodeURIComponent(client_id) +
+                      '&redirect_uri=' + encodeURIComponent(redirect_uri) +
+                      (state ? '&state=' + encodeURIComponent(state) : '');
+                    
+                    console.log('[OAUTH] Redirecting to OAuth handler:', oauthUrl);
+                    window.location.href = oauthUrl;
+                    return;
+                }
+            }
+            
+            // No OAuth detected, show regular interface
+            showRegularInterface();
+        }
+        
+        function showRegularInterface() {
+            document.body.innerHTML = \`
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <h1>🏗️ Contao Manager (Mock Server)</h1>
+                <div style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <h3>✅ Mock Server Active</h3>
+                    <p>This is a mock Contao Manager instance running on <code>localhost:${this.port}</code></p>
+                </div>
+                <div style="background: #e7f3ff; border: 1px solid #b3d7ff; color: #004085; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <h4>🔧 OAuth Testing</h4>
+                    <p>To test the OAuth flow, use a URL like:</p>
+                    <code style="display: block; background: #f8f9fa; padding: 10px; border-radius: 3px; margin: 10px 0; word-break: break-all;">
+                    http://localhost:${this.port}/contao-manager.phar.php/#oauth?response_type=token&scope=admin&client_id=TestApp&redirect_uri=http://localhost:5173/callback
+                    </code>
+                    <p><small>Note the <strong>#oauth?</strong> fragment - this mimics the real Contao Manager URL format</small></p>
+                </div>
+                <p><a href="/" style="color: #007bff;">← Back to Mock Server Control Panel</a></p>
+            </div>
+            \`;
+        }
+        
+        // Run when page loads
+        handleOAuthFragment();
+    </script>
+</body>
+</html>`;
+    res.send(html);
+  }
+
+  /**
+   * Handle OAuth request - can be overridden by subclasses
+   */
+  protected handleOAuthRequest(req: Request, res: Response): void {
+    const { response_type, client_id, redirect_uri, scope, state } = req.query;
+    console.log(`[OAUTH] Client-side OAuth request:`, { response_type, client_id, scope, state });
+    
+    // Generate mock token
+    const mockToken = `mock_token_${Math.random().toString(36).substring(2, 14)}`;
+    
+    // Return HTML that will redirect with the token
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Contao Manager - OAuth</title>
+    <script>
+        // Simulate OAuth authentication and redirect with token
+        setTimeout(function() {
+            var redirectUrl = '${redirect_uri}#access_token=${mockToken}&token_type=Bearer&expires_in=3600${state ? `&state=${state}` : ''}';
+            console.log('[OAUTH] Redirecting to:', redirectUrl);
+            window.location.href = redirectUrl;
+        }, 1000);
+    </script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 50px; 
+            background: #f5f5f5;
+        }
+        .container { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔐 Contao Manager OAuth</h2>
+        <div class="spinner"></div>
+        <p>Authenticating...</p>
+        <small>Mock server is generating an access token</small>
+    </div>
+</body>
+</html>`;
+    res.send(html);
+  }
+
+  /**
+   * Serve the regular Contao Manager interface - can be overridden by subclasses
+   */
+  protected serveContaoManagerInterface(res: Response): void {
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Contao Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+        }
+        .logo {
+            color: #007bff;
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .status {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .info {
+            background: #e7f3ff;
+            border: 1px solid #b3d7ff;
+            color: #004085;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🏗️ Contao Manager</div>
+            <p>Mock Server Implementation</p>
+        </div>
+        
+        <div class="status">
+            <h3>✅ Mock Server Active</h3>
+            <p>This is a mock Contao Manager instance running on <code>localhost:${this.port}</code></p>
+        </div>
+
+        <div class="info">
+            <h4>📋 Available Features</h4>
+            <ul>
+                <li>✅ OAuth Authentication Flow</li>
+                <li>✅ Self-Update Management</li>
+                <li>✅ Composer Package Management</li>
+                <li>✅ Database Migration Handling</li>
+                <li>✅ Task Execution Simulation</li>
+                <li>✅ Multi-Scenario Testing</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h4>🔧 Integration Instructions</h4>
+            <ol>
+                <li>Use URL: <code>http://localhost:${this.port}/contao-manager.phar.php</code></li>
+                <li>Select scope "admin" during OAuth flow</li>
+                <li>Mock server will handle authentication automatically</li>
+                <li>Access <a href="/">control panel</a> to switch test scenarios</li>
+            </ol>
+        </div>
+
+        <div class="info">
+            <h4>🎯 API Endpoints</h4>
+            <p>All standard Contao Manager API endpoints are available under:</p>
+            <p><code>/contao-manager.phar.php/api/*</code></p>
+        </div>
+    </div>
+</body>
+</html>`;
+    res.send(html);
   }
 
   async start(port: number = 3001): Promise<void> {

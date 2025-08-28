@@ -14,6 +14,21 @@ class EnhancedMockServer extends MockServer {
   }
 
   private setupEnhancedRoutes(): void {
+    console.log('[EnhancedMockServer] Setting up enhanced routes...');
+    
+    // No need to redefine the route - we'll override the methods instead
+
+    // Add OAuth authorize endpoint
+    this.getApp().get('/contao-manager.phar.php/oauth2/authorize', (req: any, res: any) => {
+      const { response_type, client_id, redirect_uri, scope, state } = req.query;
+      console.log('[OAUTH] Authorization request:', { response_type, client_id, scope, state });
+      
+      const mockToken = 'mock_token_' + Math.random().toString(36).substring(2, 12);
+      const redirectUrl = `${redirect_uri}#access_token=${mockToken}&token_type=Bearer&expires_in=3600${state ? `&state=${state}` : ''}`;
+      
+      console.log('[OAUTH] Redirecting to:', redirectUrl);
+      res.redirect(redirectUrl);
+    });
     // Add scenario status endpoint
     this.getApp().get('/mock/status', (req, res) => {
       res.json({ 
@@ -74,11 +89,240 @@ class EnhancedMockServer extends MockServer {
       const html = this.getEnhancedFrontendHTML();
       res.send(html);
     });
+
+
   }
 
   // Add method to expose app for route additions
   public getApp() {
     return (this as any).app;
+  }
+
+  // Override OAuth handling to implement proper authorization dialog
+  protected handleOAuthRequest(req: any, res: any): void {
+    console.log(`[ENHANCED] Handling OAuth request with query:`, req.query);
+    
+    const { response_type, client_id, redirect_uri, scope, state } = req.query;
+    console.log(`[OAUTH] Enhanced OAuth request:`, { response_type, client_id, scope, state });
+    
+    // Generate mock token (we'll use this when user clicks "Allow Access")
+    const mockToken = `enhanced_token_${Math.random().toString(36).substring(2, 14)}`;
+    
+    // Return HTML that shows the OAuth authorization dialog (like real Contao Manager)
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Contao Manager - OAuth Authorization</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0; 
+            padding: 0; 
+            background: #f8f9fa;
+            color: #212529;
+        }
+        .container { 
+            max-width: 500px; 
+            margin: 50px auto; 
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #007bff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+        .content {
+            padding: 30px;
+        }
+        .oauth-info {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .oauth-info h3 {
+            margin: 0 0 10px 0;
+            color: #495057;
+        }
+        .oauth-info p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        .scope-info {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .mock-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ffc107;
+            color: #212529;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="mock-badge">🎭 MOCK SERVER</div>
+    <div class="container">
+        <div class="header">
+            <h1>🏗️ Contao Manager</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 14px;">OAuth Authorization Request</p>
+        </div>
+        
+        <div class="content">
+            <p><strong>"${client_id || 'Unknown Application'}"</strong> is requesting access to your Contao Manager.</p>
+            
+            <div class="oauth-info">
+                <h3>Application Details</h3>
+                <p><strong>Client ID:</strong> ${client_id || 'Not specified'}</p>
+                <p><strong>Requested Scope:</strong> ${scope || 'read'}</p>
+                <p><strong>Redirect URI:</strong> ${redirect_uri || 'Not specified'}</p>
+                ${state ? `<p><strong>State:</strong> ${state}</p>` : ''}
+            </div>
+
+            <div class="scope-info">
+                <h4>📋 Permissions Requested: "${scope || 'read'}"</h4>
+                ${scope === 'admin' ? 
+                    '<p>✅ <strong>Full Admin Access</strong> - Can use all functions of the Contao Manager</p>' :
+                scope === 'install' ?
+                    '<p>⚙️ <strong>Install Access</strong> - May update and install packages and change system settings</p>' :
+                scope === 'update' ?
+                    '<p>🔄 <strong>Update Access</strong> - May update existing packages and perform maintenance tasks</p>' :
+                    '<p>👁️ <strong>Read Access</strong> - Can see installed packages and read log files</p>'
+                }
+            </div>
+
+            <div class="buttons">
+                <button class="btn btn-success" onclick="allowAccess()">
+                    ✅ Allow Access
+                </button>
+                <button class="btn btn-danger" onclick="denyAccess()">
+                    ❌ Deny Access
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function allowAccess() {
+            console.log('[OAUTH] User clicked Allow Access');
+            
+            // Handle redirect URI that may already contain a fragment
+            let baseUrl = '${redirect_uri}';
+            let tokenParams = 'access_token=${mockToken}&token_type=Bearer&expires_in=3600${state ? `&state=${state}` : ''}';
+            
+            // If redirect_uri already contains a fragment (like #token), replace it
+            if (baseUrl.includes('#')) {
+                // Replace everything after # with our token parameters
+                baseUrl = baseUrl.split('#')[0];
+            }
+            
+            const redirectUrl = baseUrl + '#' + tokenParams;
+            console.log('[OAUTH] Redirecting to:', redirectUrl);
+            window.location.href = redirectUrl;
+        }
+
+        function denyAccess() {
+            console.log('[OAUTH] User clicked Deny Access');
+            
+            // Handle redirect URI that may already contain a fragment
+            let baseUrl = '${redirect_uri}';
+            let errorParams = 'error=access_denied${state ? `&state=${state}` : ''}';
+            
+            // If redirect_uri already contains a fragment, replace it
+            if (baseUrl.includes('#')) {
+                baseUrl = baseUrl.split('#')[0];
+            }
+            
+            const redirectUrl = baseUrl + '#' + errorParams;
+            console.log('[OAUTH] Redirecting with access denied:', redirectUrl);
+            window.location.href = redirectUrl;
+        }
+
+        // Auto-allow after 10 seconds for automated testing (optional)
+        setTimeout(function() {
+            console.log('[OAUTH] Auto-allowing access for mock server testing');
+            allowAccess();
+        }, 10000);
+    </script>
+</body>
+</html>`;
+    res.send(html);
+  }
+
+  // Override the regular interface to show enhanced version
+  protected serveContaoManagerInterface(res: any): void {
+    const html = `<!DOCTYPE html>
+<html>
+<head><title>Enhanced Contao Manager Mock</title></head>
+<body style="font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0;">
+<div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+<h1>🏗️ Enhanced Contao Manager (TypeScript Mock)</h1>
+<div style="background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+<strong>Enhanced Features:</strong>
+<ul>
+<li>✅ Advanced OAuth handling with enhanced logging</li>
+<li>✅ TypeScript-based scenario management</li>
+<li>✅ Real-time scenario switching</li>
+<li>✅ Enhanced debugging and monitoring</li>
+</ul>
+</div>
+<p><a href="/contao-manager.phar.php/oauth2/authorize?response_type=token&scope=admin&client_id=test&redirect_uri=http://localhost:5173/callback" 
+   style="display: inline-block; background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Test Enhanced OAuth</a></p>
+<p><a href="/" style="color: #007bff;">← Back to Control Panel</a></p>
+</div>
+</body>
+</html>`;
+    res.send(html);
   }
 
   private getEnhancedFrontendHTML(): string {
@@ -296,6 +540,9 @@ startServerWithLogs().then(server => {
     await server.stop();
     process.exit(0);
   });
+
+  // Keep the process alive
+  process.stdin.resume();
 }).catch(error => {
   console.error('Failed to start server:', error);
   process.exit(1);
