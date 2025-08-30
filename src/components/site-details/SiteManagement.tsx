@@ -52,7 +52,8 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
   );
 
   const deleteToken = useApiCall(
-    async (params: { username: string; tokenId: string }) => {
+    async (params?: { username: string; tokenId: string }) => {
+      if (!params) throw new Error('Username and token ID are required');
       return ExpertApiService.deleteToken(params.username, params.tokenId);
     }
   );
@@ -130,7 +131,10 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
         } catch (tokenError) {
           console.error('Failed to delete token:', tokenError);
           // Continue with site removal even if token deletion fails
-          toast.showWarning('Failed to delete authentication token, but will proceed with site removal');
+          toast.showWarning({
+            title: 'Warning',
+            description: 'Failed to delete authentication token, but will proceed with site removal'
+          });
         }
       }
       
@@ -139,7 +143,10 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
       
       // Show appropriate success message based on what operations were performed
       if (tokenDeleted) {
-        toast.showSuccess(`Site "${site.name}" removed and authentication token deleted`);
+        toast.showSuccess({
+          title: 'Success',
+          description: `Site "${site.name}" removed and authentication token deleted`
+        });
       } else {
         // Show the standard site removal message
         toast.showSuccess(TOAST_MESSAGES.SITE_REMOVED(site.name));
@@ -151,7 +158,10 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
       
       // If we successfully deleted the token but failed to remove site, show warning
       if (tokenDeleted) {
-        toast.showWarning('Authentication token was deleted but site removal failed');
+        toast.showWarning({
+          title: 'Warning',
+          description: 'Authentication token was deleted but site removal failed'
+        });
       }
     }
   };
