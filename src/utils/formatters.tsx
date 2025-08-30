@@ -25,6 +25,11 @@ interface LogFile {
   lines: number;
 }
 
+interface PhpInfoHtmlResponse {
+  html?: string;
+  [key: string]: any;
+}
+
 export const formatUpdateStatus = (data: UpdateStatus) => {
   return (
     <VStack gap={4} align="stretch">
@@ -417,6 +422,71 @@ export const formatLogFiles = (data: LogFile[]) => {
             <AccordionItemContent pb={4}>
               <CodeBlock language="json" showLineNumbers>
                 {JSON.stringify(data, null, 2)}
+              </CodeBlock>
+            </AccordionItemContent>
+          </AccordionItem>
+        </AccordionRoot>
+      </Box>
+    </VStack>
+  );
+};
+
+export const formatPhpInfo = (data: PhpInfoHtmlResponse | string) => {
+  let htmlContent: string | null = null;
+  let rawData: any = data;
+
+  // Handle different response formats
+  if (typeof data === 'string') {
+    // Real API returns HTML as a simple string
+    htmlContent = data;
+  } else if (data && typeof data === 'object' && data.html) {
+    // Mock server returns JSON with html property
+    htmlContent = data.html;
+  }
+
+  if (!htmlContent) {
+    return (
+      <Alert.Root status="info">
+        <Alert.Indicator />
+        <Alert.Content>
+          <Alert.Title>No PHP Info Available</Alert.Title>
+          <Alert.Description>
+            No PHP information could be retrieved from the server.
+          </Alert.Description>
+        </Alert.Content>
+      </Alert.Root>
+    );
+  }
+
+  return (
+    <VStack gap={4} align="stretch">
+      <Text fontSize="md" color="gray.600">
+        PHP Configuration Information:
+      </Text>
+      <Box borderWidth="1px" borderRadius="md" overflow="hidden">
+        <iframe
+          srcDoc={htmlContent}
+          style={{
+            width: '100%',
+            height: '600px',
+            border: 'none',
+            backgroundColor: 'white'
+          }}
+          sandbox="allow-same-origin"
+          title="PHP Configuration Information"
+        />
+      </Box>
+      <Box mt={4}>
+        <AccordionRoot collapsible>
+          <AccordionItem value="raw-php-info">
+            <AccordionItemTrigger>
+              <Box flex="1" textAlign="left">
+                Show raw PHP info response
+              </Box>
+            </AccordionItemTrigger>
+            <AccordionItemContent pb={4}>
+              <CodeBlock language={typeof data === 'string' ? 'html' : 'json'} showLineNumbers>
+                {typeof data === 'string' ? data : JSON.stringify(rawData, null, 2)}
               </CodeBlock>
             </AccordionItemContent>
           </AccordionItem>

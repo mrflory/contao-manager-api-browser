@@ -131,66 +131,87 @@ export const serverHandlers = {
   getPhpInfo: (getState: () => MockState) => (req: Request, res: Response) => {
     const state = getState();
     
-    // Return comprehensive PHP information similar to phpinfo()
+    // Return HTML content similar to actual phpinfo() output
+    const phpInfoHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <title>PHP ${state.phpWeb.version} - phpinfo()</title>
+    <meta name="ROBOTS" content="NOINDEX,NOFOLLOW,NOARCHIVE,NOSNIPPET">
+    <style>
+        body {background-color: #fff; color: #222; font-family: sans-serif;}
+        table {border-collapse: collapse; width: 100%; box-shadow: 1px 2px 3px #ccc;}
+        .center {text-align: center;}
+        .center table { margin: 1em auto; text-align: left;}
+        .center th { text-align: center !important; }
+        td, th { border: 1px solid #666; font-size: 75%; vertical-align: baseline; padding: 4px 5px;}
+        h1 {font-size: 150%;}
+        h2 {font-size: 125%;}
+        .p {text-align: left;}
+        .e {background-color: #ccf; width: 300px; font-weight: bold;}
+        .h {background-color: #99c; font-weight: bold;}
+        .v {background-color: #ddd; max-width: 300px; overflow-x: auto;}
+        .vr {background-color: #ccc; text-align: right; width: 260px;}
+        img {float: right; border: 0;}
+        hr {width: 600px; background-color: #ccc; border: 0; height: 1px;}
+    </style>
+</head>
+<body>
+    <div class="center">
+        <table>
+            <tr class="h"><th>PHP Version ${state.phpWeb.version}</th></tr>
+        </table>
+        <br />
+        
+        <h2>PHP Core</h2>
+        <table>
+            <tr><td class="e">PHP Version</td><td class="v">${state.phpWeb.version}</td></tr>
+            <tr><td class="e">System</td><td class="v">Linux localhost 5.15.0-88-generic #98-Ubuntu SMP Mon Oct 2 15:18:56 UTC 2023 x86_64</td></tr>
+            <tr><td class="e">Build Date</td><td class="v">Dec 21 2023 15:37:27</td></tr>
+            <tr><td class="e">Server API</td><td class="v">FPM/FastCGI</td></tr>
+            <tr><td class="e">Configuration File (php.ini) Path</td><td class="v">/etc/php/8.2/fpm</td></tr>
+            <tr><td class="e">Loaded Configuration File</td><td class="v">/etc/php/8.2/fpm/php.ini</td></tr>
+        </table>
+        
+        <h2>PHP Extensions</h2>
+        <table>
+            <tr><td class="e">Core</td><td class="v">enabled</td></tr>
+            <tr><td class="e">curl</td><td class="v">enabled</td></tr>
+            <tr><td class="e">dom</td><td class="v">enabled</td></tr>
+            <tr><td class="e">gd</td><td class="v">enabled</td></tr>
+            <tr><td class="e">imagick</td><td class="v">enabled</td></tr>
+            <tr><td class="e">intl</td><td class="v">enabled</td></tr>
+            <tr><td class="e">json</td><td class="v">enabled</td></tr>
+            <tr><td class="e">mbstring</td><td class="v">enabled</td></tr>
+            <tr><td class="e">mysqli</td><td class="v">enabled</td></tr>
+            <tr><td class="e">pdo</td><td class="v">enabled</td></tr>
+            <tr><td class="e">pdo_mysql</td><td class="v">enabled</td></tr>
+            <tr><td class="e">xml</td><td class="v">enabled</td></tr>
+            <tr><td class="e">zip</td><td class="v">enabled</td></tr>
+        </table>
+        
+        <h2>Configuration</h2>
+        <table>
+            <tr><td class="e">memory_limit</td><td class="v">512M</td></tr>
+            <tr><td class="e">max_execution_time</td><td class="v">30</td></tr>
+            <tr><td class="e">upload_max_filesize</td><td class="v">64M</td></tr>
+            <tr><td class="e">post_max_size</td><td class="v">64M</td></tr>
+            <tr><td class="e">date.timezone</td><td class="v">UTC</td></tr>
+        </table>
+        
+        <h2>OpCache</h2>
+        <table>
+            <tr><td class="e">opcache.enable</td><td class="v">On</td></tr>
+            <tr><td class="e">opcache.memory_consumption</td><td class="v">128M</td></tr>
+            <tr><td class="e">opcache.interned_strings_buffer</td><td class="v">8</td></tr>
+            <tr><td class="e">opcache.max_accelerated_files</td><td class="v">10000</td></tr>
+        </table>
+    </div>
+</body>
+</html>`;
+
+    // Return JSON with HTML content as expected by the API specification
     res.json({
-      version: state.phpWeb.version,
-      version_id: state.phpWeb.version_id,
-      platform: state.phpWeb.platform || 'Linux',
-      extensions: {
-        core: true,
-        date: true,
-        libxml: true,
-        openssl: true,
-        pcre: true,
-        sqlite3: true,
-        zlib: true,
-        ctype: true,
-        curl: true,
-        dom: true,
-        fileinfo: true,
-        filter: true,
-        ftp: true,
-        hash: true,
-        iconv: true,
-        json: true,
-        mbstring: true,
-        mysqlnd: true,
-        mysqli: true,
-        pdo: true,
-        pdo_mysql: true,
-        pdo_sqlite: true,
-        phar: true,
-        posix: true,
-        readline: true,
-        reflection: true,
-        session: true,
-        simplexml: true,
-        spl: true,
-        standard: true,
-        tokenizer: true,
-        xml: true,
-        xmlreader: true,
-        xmlwriter: true,
-        zip: true,
-        // Contao-specific extensions
-        gd: true,
-        imagick: true,
-        intl: true,
-        tidy: true,
-        xsl: true
-      },
-      settings: {
-        memory_limit: '512M',
-        max_execution_time: '30',
-        upload_max_filesize: '64M',
-        post_max_size: '64M',
-        opcache_enabled: true,
-        opcache_memory_consumption: '128',
-        date_default_timezone: 'UTC'
-      },
-      sapi_name: 'fpm-fcgi',
-      system: 'Linux localhost 5.15.0-88-generic #98-Ubuntu SMP Mon Oct 2 15:18:56 UTC 2023 x86_64',
-      build_date: 'Dec 21 2023 15:37:27'
+      html: phpInfoHtml
     });
   },
 

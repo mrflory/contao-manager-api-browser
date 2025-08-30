@@ -27,7 +27,7 @@ import { ApiResultModal, JsonDisplayModal } from '../modals/ApiResultModal';
 import { TaskSelectionModal } from '../modals/TaskSelectionModal';
 import { MigrationConfigModal } from '../modals/MigrationConfigModal';
 import { TaskStatusModal } from '../modals/TaskStatusModal';
-import { formatDatabaseBackups, formatSortedPackages, formatUpdateStatus, formatTokenInfo, formatLogFiles } from '../../utils/formatters';
+import { formatDatabaseBackups, formatSortedPackages, formatUpdateStatus, formatTokenInfo, formatLogFiles, formatPhpInfo } from '../../utils/formatters';
 
 export const ExpertTab: React.FC = () => {
   const { modalState, openModal, closeModal } = useModalState();
@@ -153,7 +153,7 @@ export const ExpertTab: React.FC = () => {
     { category: 'Server Configuration', name: 'Set Server Config', description: 'Sets server configuration', technical: 'PUT /api/server/config', handler: null },
     { category: 'Server Configuration', name: 'PHP Web Config', description: 'Gets PHP web server configuration', technical: 'GET /api/server/php-web', handler: () => handleApiCallWithModal('php-web-config', ExpertApiService.getPhpWebConfig, 'PHP Web Server Configuration') },
     { category: 'Server Configuration', name: 'PHP CLI Config', description: 'Gets PHP command line configuration', technical: 'GET /api/server/php-cli', handler: null },
-    { category: 'Server Configuration', name: 'PHP Info', description: 'Gets PHP Information', technical: 'GET /api/server/phpinfo', handler: () => handleApiCallWithModal('php-info', ExpertApiService.getPhpInfo, 'PHP Information') },
+    { category: 'Server Configuration', name: 'PHP Info', description: 'Gets PHP Information', technical: 'GET /api/server/phpinfo', handler: () => handleApiCallWithModal('php-info', ExpertApiService.getPhpInfo, 'PHP Information', formatPhpInfo) },
     { category: 'Server Configuration', name: 'Opcode Cache Info', description: 'Gets PHP opcode cache Information', technical: 'GET /api/server/opcode', handler: null },
     { category: 'Server Configuration', name: 'Reset Opcode Cache', description: 'Resets the opcode cache', technical: 'DELETE /api/server/opcode', handler: null },
     { category: 'Server Configuration', name: 'Composer Config', description: 'Gets Composer configuration', technical: 'GET /api/server/composer', handler: () => handleApiCallWithModal('composer-config', ExpertApiService.getComposerConfig, 'Composer Configuration') },
