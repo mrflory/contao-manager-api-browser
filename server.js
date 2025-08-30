@@ -1161,6 +1161,55 @@ app.get('/api/server/contao', async (req, res) => {
     }
 });
 
+app.get('/api/server/phpinfo', async (req, res) => {
+    try {
+        console.log('[PHP-INFO] Starting request');
+        const response = await proxyToContaoManager('/api/server/phpinfo', 'GET', null, req);
+        handleApiResponse('PHP-INFO', response, res);
+    } catch (error) {
+        console.error('[PHP-INFO] Error:', error.message);
+        console.error('[PHP-INFO] Full error:', error);
+        res.status(500).json({ error: 'Failed to get PHP information: ' + error.message });
+    }
+});
+
+app.get('/api/server/composer', async (req, res) => {
+    try {
+        console.log('[COMPOSER-CONFIG] Starting request');
+        const response = await proxyToContaoManager('/api/server/composer', 'GET', null, req);
+        handleApiResponse('COMPOSER-CONFIG', response, res);
+    } catch (error) {
+        console.error('[COMPOSER-CONFIG] Error:', error.message);
+        console.error('[COMPOSER-CONFIG] Full error:', error);
+        res.status(500).json({ error: 'Failed to get Composer configuration: ' + error.message });
+    }
+});
+
+app.get('/api/server/database', async (req, res) => {
+    try {
+        console.log('[DATABASE-STATUS] Starting request');
+        const response = await proxyToContaoManager('/api/server/database', 'GET', null, req);
+        handleApiResponse('DATABASE-STATUS', response, res);
+    } catch (error) {
+        console.error('[DATABASE-STATUS] Error:', error.message);
+        console.error('[DATABASE-STATUS] Full error:', error);
+        res.status(500).json({ error: 'Failed to get database status: ' + error.message });
+    }
+});
+
+// Session endpoint
+app.get('/api/session', async (req, res) => {
+    try {
+        console.log('[SESSION-STATUS] Starting request');
+        const response = await proxyToContaoManager('/api/session', 'GET', null, req);
+        handleApiResponse('SESSION-STATUS', response, res);
+    } catch (error) {
+        console.error('[SESSION-STATUS] Error:', error.message);
+        console.error('[SESSION-STATUS] Full error:', error);
+        res.status(500).json({ error: 'Failed to get session status: ' + error.message });
+    }
+});
+
 // Users endpoints
 app.get('/api/users', async (req, res) => {
     try {
@@ -1453,6 +1502,31 @@ app.get('/api/packages/local/', async (req, res) => {
         console.error('[PACKAGES-LOCAL] Error:', error.message);
         console.error('[PACKAGES-LOCAL] Full error:', error);
         res.status(500).json({ error: 'Failed to get installed packages: ' + error.message });
+    }
+});
+
+app.get('/api/packages/cloud', async (req, res) => {
+    try {
+        console.log('[PACKAGES-CLOUD] Starting request');
+        const response = await proxyToContaoManager('/api/packages/cloud', 'GET', null, req);
+        handleApiResponse('PACKAGES-CLOUD', response, res);
+    } catch (error) {
+        console.error('[PACKAGES-CLOUD] Error:', error.message);
+        console.error('[PACKAGES-CLOUD] Full error:', error);
+        res.status(500).json({ error: 'Failed to get Composer cloud data: ' + error.message });
+    }
+});
+
+// Logs endpoints
+app.get('/api/logs', async (req, res) => {
+    try {
+        console.log('[LOG-FILES] Starting request');
+        const response = await proxyToContaoManager('/api/logs', 'GET', null, req);
+        handleApiResponse('LOG-FILES', response, res);
+    } catch (error) {
+        console.error('[LOG-FILES] Error:', error.message);
+        console.error('[LOG-FILES] Full error:', error);
+        res.status(500).json({ error: 'Failed to get log files: ' + error.message });
     }
 });
 

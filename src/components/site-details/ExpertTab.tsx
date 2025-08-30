@@ -21,17 +21,21 @@ import {
 import { LuPlay, LuSearch } from 'react-icons/lu';
 import { useLoadingStates } from '../../hooks/useApiCall';
 import { useModalState } from '../../hooks/useModalState';
+import { useToastNotifications } from '../../hooks/useToastNotifications';
 import { ExpertApiService, TaskApiService } from '../../services/apiCallService';
 import { ApiResultModal, JsonDisplayModal } from '../modals/ApiResultModal';
 import { TaskSelectionModal } from '../modals/TaskSelectionModal';
 import { MigrationConfigModal } from '../modals/MigrationConfigModal';
-import { formatDatabaseBackups, formatSortedPackages, formatUpdateStatus, formatTokenInfo } from '../../utils/formatters';
+import { TaskStatusModal } from '../modals/TaskStatusModal';
+import { formatDatabaseBackups, formatSortedPackages, formatUpdateStatus, formatTokenInfo, formatLogFiles } from '../../utils/formatters';
 
 export const ExpertTab: React.FC = () => {
   const { modalState, openModal, closeModal } = useModalState();
   const { isLoading, setLoading } = useLoadingStates();
+  const toast = useToastNotifications();
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
+  const [taskStatusModalOpen, setTaskStatusModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<'composer.json' | 'composer.lock'>('composer.json');
   const [jsonModalState, setJsonModalState] = useState<{
     isOpen: boolean;
@@ -90,8 +94,12 @@ export const ExpertTab: React.FC = () => {
           data: result
         });
       }
+      // Show success toast for successful API calls
+      toast.showApiSuccess('API call completed successfully', title);
     } catch (error) {
       console.error(`Error in ${title}:`, error);
+      // Show error toast notification
+      toast.showApiError(error as Error, title);
     } finally {
       setLoading(buttonId, false);
     }
@@ -116,8 +124,13 @@ export const ExpertTab: React.FC = () => {
         title: `${selectedFile} Content`,
         data
       });
+      
+      // Show success toast
+      toast.showApiSuccess('File content retrieved successfully', `Get ${selectedFile}`);
     } catch (error) {
       console.error(`Error getting ${selectedFile}:`, error);
+      // Show error toast notification
+      toast.showApiError(error as Error, `Get ${selectedFile}`);
     } finally {
       setLoading('get-files', false);
     }
@@ -127,26 +140,26 @@ export const ExpertTab: React.FC = () => {
   const apiEndpoints = useMemo(() => [
     // Session APIs
     { category: 'Session', name: 'Create Session (Login)', description: 'Create a new session with credentials or token', technical: 'POST /api/session', handler: null },
-    { category: 'Session', name: 'Get Session Status', description: 'Returns information about the current session', technical: 'GET /api/session', handler: null },
+    { category: 'Session', name: 'Get Session Status', description: 'Returns information about the current session', technical: 'GET /api/session', handler: () => handleApiCallWithModal('session-status', ExpertApiService.getSessionStatus, 'Session Status') },
     { category: 'Session', name: 'Delete Session (Logout)', description: 'Delete the current session', technical: 'DELETE /api/session', handler: null },
     
     // Files APIs
-    { category: 'Files', name: 'Get File Content', description: 'Gets the content of composer.json or composer.lock', technical: 'GET /api/files/{file}', handler: handleGetFiles },
+    { category: 'Files', name: 'Get File Content', description: 'Gets the content of composer.json or composer.lock', technical: 'GET /api/files/{file}', handler: null },
     { category: 'Files', name: 'Write File Content', description: 'Writes content to composer.json or composer.lock', technical: 'PUT /api/files/{file}', handler: null },
     
     // Server Configuration APIs
     { category: 'Server Configuration', name: 'Manager Self-Update', description: 'Gets update status of the Contao Manager', technical: 'GET /api/server/self-update', handler: () => handleApiCallWithModal('update-status', ExpertApiService.getUpdateStatus, 'Update Status', formatUpdateStatus) },
-    { category: 'Server Configuration', name: 'Server Config', description: 'Gets server configuration', technical: 'GET /api/server/config', handler: null },
+    { category: 'Server Configuration', name: 'Server Config', description: 'Gets server configuration', technical: 'GET /api/server/config', handler: () => handleApiCallWithModal('server-config', ExpertApiService.getServerConfig, 'Server Configuration') },
     { category: 'Server Configuration', name: 'Set Server Config', description: 'Sets server configuration', technical: 'PUT /api/server/config', handler: null },
     { category: 'Server Configuration', name: 'PHP Web Config', description: 'Gets PHP web server configuration', technical: 'GET /api/server/php-web', handler: () => handleApiCallWithModal('php-web-config', ExpertApiService.getPhpWebConfig, 'PHP Web Server Configuration') },
     { category: 'Server Configuration', name: 'PHP CLI Config', description: 'Gets PHP command line configuration', technical: 'GET /api/server/php-cli', handler: null },
-    { category: 'Server Configuration', name: 'PHP Info', description: 'Gets PHP Information', technical: 'GET /api/server/phpinfo', handler: null },
+    { category: 'Server Configuration', name: 'PHP Info', description: 'Gets PHP Information', technical: 'GET /api/server/phpinfo', handler: () => handleApiCallWithModal('php-info', ExpertApiService.getPhpInfo, 'PHP Information') },
     { category: 'Server Configuration', name: 'Opcode Cache Info', description: 'Gets PHP opcode cache Information', technical: 'GET /api/server/opcode', handler: null },
     { category: 'Server Configuration', name: 'Reset Opcode Cache', description: 'Resets the opcode cache', technical: 'DELETE /api/server/opcode', handler: null },
-    { category: 'Server Configuration', name: 'Composer Config', description: 'Gets Composer configuration', technical: 'GET /api/server/composer', handler: null },
+    { category: 'Server Configuration', name: 'Composer Config', description: 'Gets Composer configuration', technical: 'GET /api/server/composer', handler: () => handleApiCallWithModal('composer-config', ExpertApiService.getComposerConfig, 'Composer Configuration') },
     { category: 'Server Configuration', name: 'Contao Config', description: 'Gets Contao configuration', technical: 'GET /api/server/contao', handler: () => handleApiCallWithModal('contao-config', ExpertApiService.getContaoConfig, 'Contao Configuration') },
     { category: 'Server Configuration', name: 'Create Contao Structure', description: 'Create the Contao directory structure', technical: 'POST /api/server/contao', handler: null },
-    { category: 'Server Configuration', name: 'Database Status', description: 'Gets the current database status', technical: 'GET /api/server/database', handler: null },
+    { category: 'Server Configuration', name: 'Database Status', description: 'Gets the current database status', technical: 'GET /api/server/database', handler: () => handleApiCallWithModal('database-status', ExpertApiService.getDatabaseStatus, 'Database Status') },
     { category: 'Server Configuration', name: 'Configure Database', description: 'Configures the database URL', technical: 'POST /api/server/database', handler: null },
     { category: 'Server Configuration', name: 'Admin User Status', description: 'Gets if there is an admin user', technical: 'GET /api/server/admin-user', handler: null },
     { category: 'Server Configuration', name: 'Create Admin User', description: 'Create an admin user', technical: 'POST /api/server/admin-user', handler: null },
@@ -214,19 +227,19 @@ export const ExpertTab: React.FC = () => {
     // Tasks APIs
     { category: 'Tasks', name: 'Get Task Data', description: 'Gets task data', technical: 'GET /api/task', handler: () => handleApiCallWithModal('get-task-data', TaskApiService.getTaskData, 'Task Data') },
     { category: 'Tasks', name: 'Set Task Data', description: 'Sets task data', technical: 'PUT /api/task', handler: () => setTaskModalOpen(true) },
-    { category: 'Tasks', name: 'Patch Task Status', description: 'Starts or stops the active task', technical: 'PATCH /api/task', handler: () => handleApiCallWithModal('patch-task', () => TaskApiService.patchTaskStatus('aborting'), 'Patch Task (Abort)') },
+    { category: 'Tasks', name: 'Patch Task Status', description: 'Starts or stops the active task', technical: 'PATCH /api/task', handler: () => setTaskStatusModalOpen(true) },
     { category: 'Tasks', name: 'Delete Task Data', description: 'Deletes task data', technical: 'DELETE /api/task', handler: () => handleApiCallWithModal('delete-task', TaskApiService.deleteTaskData, 'Delete Task Data') },
     
     // Packages APIs
     { category: 'Packages', name: 'Root Package Details', description: 'Gets details of the root Composer package', technical: 'GET /api/packages/root', handler: () => handleApiCallWithModal('root-package', ExpertApiService.getRootPackageDetails, 'Root Package Details') },
     { category: 'Packages', name: 'Installed Packages', description: 'Gets list of installed Composer packages', technical: 'GET /api/packages/local/', handler: () => handleApiCallWithModal('installed-packages', ExpertApiService.getInstalledPackages, 'Installed Packages', formatSortedPackages) },
     { category: 'Packages', name: 'Package Details', description: 'Gets details of an installed Composer package', technical: 'GET /api/packages/local/{name}', handler: null },
-    { category: 'Packages', name: 'Composer Cloud Data', description: 'Gets data for a Composer Cloud job', technical: 'GET /api/packages/cloud', handler: null },
+    { category: 'Packages', name: 'Composer Cloud Data', description: 'Gets data for a Composer Cloud job', technical: 'GET /api/packages/cloud', handler: () => handleApiCallWithModal('cloud-data', ExpertApiService.getComposerCloudData, 'Composer Cloud Data') },
     { category: 'Packages', name: 'Install from Cloud', description: 'Writes composer.lock and runs composer install', technical: 'PUT /api/packages/cloud', handler: null },
     { category: 'Packages', name: 'Validate Constraint', description: 'Validates a Composer version constraint', technical: 'POST /api/constraint', handler: null },
     
     // Logs APIs
-    { category: 'Logs', name: 'List Log Files', description: 'Gets a list of files in the /var/logs directory', technical: 'GET /api/logs', handler: null },
+    { category: 'Logs', name: 'List Log Files', description: 'Gets a list of files in the /var/logs directory', technical: 'GET /api/logs', handler: () => handleApiCallWithModal('log-files', ExpertApiService.getLogFiles, 'Log Files', formatLogFiles) },
     { category: 'Logs', name: 'Get Log Content', description: 'Get the content of a log file', technical: 'GET /api/logs/{file}', handler: null },
     { category: 'Logs', name: 'Delete Log File', description: 'Deletes a log file', technical: 'DELETE /api/logs/{file}', handler: null }
   ], []);
@@ -256,6 +269,15 @@ export const ExpertTab: React.FC = () => {
     if (formData.withDeletes) payload.withDeletes = formData.withDeletes;
     
     await handleApiCallWithModal('start-migration', () => TaskApiService.startDatabaseMigration(payload), 'Start Database Migration');
+  };
+
+  const handleTaskStatusSubmit = async (status: 'active' | 'aborting') => {
+    try {
+      await handleApiCallWithModal('patch-task-status', () => TaskApiService.patchTaskStatus(status), `Patch Task Status: ${status}`);
+    } catch (error) {
+      // Additional error handling if needed, but handleApiCallWithModal already shows toast
+      console.error('Task status update failed:', error);
+    }
   };
 
   return (
@@ -424,6 +446,13 @@ export const ExpertTab: React.FC = () => {
         onClose={closeJsonModal}
         title={jsonModalState.title}
         data={jsonModalState.data}
+      />
+
+      <TaskStatusModal
+        isOpen={taskStatusModalOpen}
+        onClose={() => setTaskStatusModalOpen(false)}
+        onSubmit={handleTaskStatusSubmit}
+        loading={isLoading('patch-task-status')}
       />
     </>
   );

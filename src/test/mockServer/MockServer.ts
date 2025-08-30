@@ -8,6 +8,7 @@ import { taskHandlers } from './handlers/taskHandlers';
 import { migrationHandlers } from './handlers/migrationHandlers';
 import { serverHandlers } from './handlers/serverHandlers';
 import { packageHandlers } from './handlers/packageHandlers';
+import { logsHandlers } from './handlers/logsHandlers';
 import { scenarioLoader } from './scenarioLoader';
 
 export class MockServer {
@@ -59,6 +60,7 @@ export class MockServer {
     router.get('/server/contao', serverHandlers.getContao(() => this.state));
     router.get('/server/composer', serverHandlers.getComposer(() => this.state));
     router.get('/server/phpinfo', serverHandlers.getPhpInfo(() => this.state));
+    router.get('/server/database', serverHandlers.getDatabase(() => this.state));
 
     // Task endpoints
     router.get('/task', taskHandlers.getTask(() => this.state));
@@ -75,6 +77,10 @@ export class MockServer {
     router.get('/packages/root', packageHandlers.getRootPackage(() => this.state));
     router.get('/packages/local', packageHandlers.getLocalPackages(() => this.state));
     router.get('/packages/local/:name', packageHandlers.getLocalPackage(() => this.state));
+
+    // Logs endpoints
+    router.get('/logs', logsHandlers.getLogs(() => this.state));
+    router.get('/logs/:file', logsHandlers.getLogContent(() => this.state));
 
     // User management endpoints
     router.get('/users', serverHandlers.getUsers(() => this.state));

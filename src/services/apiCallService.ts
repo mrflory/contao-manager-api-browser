@@ -194,6 +194,41 @@ export class ExpertApiService {
    * Get file contents (composer.json or composer.lock)
    */
   static getFiles = api.getFiles;
+
+  /**
+   * Get session status
+   */
+  static getSessionStatus = api.getSessionStatus;
+
+  /**
+   * Get server configuration
+   */
+  static getServerConfig = api.getServerConfig;
+
+  /**
+   * Get PHP information
+   */
+  static getPhpInfo = api.getPhpInfo;
+
+  /**
+   * Get Composer configuration
+   */
+  static getComposerConfig = api.getComposerConfig;
+
+  /**
+   * Get database status
+   */
+  static getDatabaseStatus = api.getDatabaseStatus;
+
+  /**
+   * Get Composer Cloud data
+   */
+  static getComposerCloudData = api.getComposerCloudData;
+
+  /**
+   * Get log files list
+   */
+  static getLogFiles = api.getLogFiles;
 }
 
 /**

@@ -121,6 +121,30 @@ export const api = {
     return makeApiCall('/server/config');
   },
 
+  async getSessionStatus(): Promise<any> {
+    return makeApiCall('/session');
+  },
+
+  async getPhpInfo(): Promise<any> {
+    return makeApiCall('/server/phpinfo');
+  },
+
+  async getComposerConfig(): Promise<any> {
+    return makeApiCall('/server/composer');
+  },
+
+  async getDatabaseStatus(): Promise<any> {
+    return makeApiCall('/server/database');
+  },
+
+  async getComposerCloudData(): Promise<any> {
+    return makeApiCall('/packages/cloud');
+  },
+
+  async getLogFiles(): Promise<any> {
+    return makeApiCall('/logs');
+  },
+
   async getPhpWebConfig(): Promise<any> {
     return makeApiCall('/server/php-web');
   },

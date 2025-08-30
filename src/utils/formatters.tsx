@@ -18,6 +18,13 @@ import {
 import { CodeBlock } from '../components/ui/code-block';
 import { UpdateStatus, TokenInfo } from '../types';
 
+interface LogFile {
+  name: string;
+  size: number;
+  mtime: string;
+  lines: number;
+}
+
 export const formatUpdateStatus = (data: UpdateStatus) => {
   return (
     <VStack gap={4} align="stretch">
@@ -336,6 +343,84 @@ export const formatSortedPackages = (data: any, options?: { priorityPrefix?: str
             ))}
           </Table.Body>
         </Table.Root>
+      </Box>
+    </VStack>
+  );
+};
+
+export const formatLogFiles = (data: LogFile[]) => {
+  if (!Array.isArray(data) || data.length === 0) {
+    return (
+      <Alert.Root status="info">
+        <Alert.Indicator />
+        <Alert.Content>
+          <Alert.Title>No log files found</Alert.Title>
+          <Alert.Description>
+            No log files are available in the /var/logs directory.
+          </Alert.Description>
+        </Alert.Content>
+      </Alert.Root>
+    );
+  }
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  return (
+    <VStack gap={4} align="stretch">
+      <Text fontSize="md" color="gray.600">
+        Found {data.length} log file{data.length !== 1 ? 's' : ''}:
+      </Text>
+      <Box overflowX="auto">
+        <Table.Root variant="outline" size="sm">
+          <Table.Header>
+            <Table.Row>
+              <Table.ColumnHeader>File Name</Table.ColumnHeader>
+              <Table.ColumnHeader>Size</Table.ColumnHeader>
+              <Table.ColumnHeader>Lines</Table.ColumnHeader>
+              <Table.ColumnHeader>Last Modified</Table.ColumnHeader>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {data.map((file, index) => (
+              <Table.Row key={index}>
+                <Table.Cell>
+                  <Code fontSize="sm">{file.name}.log</Code>
+                </Table.Cell>
+                <Table.Cell>{formatFileSize(file.size)}</Table.Cell>
+                <Table.Cell>
+                  <Badge colorPalette="gray" fontSize="xs">{file.lines.toLocaleString()}</Badge>
+                </Table.Cell>
+                <Table.Cell>{formatDate(file.mtime)}</Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
+      </Box>
+      <Box mt={4}>
+        <AccordionRoot collapsible>
+          <AccordionItem value="raw-response-2">
+            <AccordionItemTrigger>
+              <Box flex="1" textAlign="left">
+                Show raw log files data
+              </Box>
+            </AccordionItemTrigger>
+            <AccordionItemContent pb={4}>
+              <CodeBlock language="json" showLineNumbers>
+                {JSON.stringify(data, null, 2)}
+              </CodeBlock>
+            </AccordionItemContent>
+          </AccordionItem>
+        </AccordionRoot>
       </Box>
     </VStack>
   );
