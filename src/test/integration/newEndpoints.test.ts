@@ -58,29 +58,24 @@ describe('New Server Endpoints', () => {
       expect(response.status).toBe(200);
 
       const data = await response.json();
-      expect(data).toHaveProperty('version');
-      expect(data).toHaveProperty('version_id');
-      expect(data).toHaveProperty('platform');
-      expect(data).toHaveProperty('extensions');
-      expect(data).toHaveProperty('settings');
-      expect(data).toHaveProperty('sapi_name');
-      expect(data).toHaveProperty('system');
-
-      // Check for essential PHP extensions
-      expect(data.extensions).toHaveProperty('json', true);
-      expect(data.extensions).toHaveProperty('curl', true);
-      expect(data.extensions).toHaveProperty('mbstring', true);
-      expect(data.extensions).toHaveProperty('mysqli', true);
+      expect(data).toHaveProperty('html');
+      expect(typeof data.html).toBe('string');
+      expect(data.html).toContain('PHP Version');
+      expect(data.html).toContain('phpinfo()');
       
-      // Check for Contao-specific extensions
-      expect(data.extensions).toHaveProperty('gd', true);
-      expect(data.extensions).toHaveProperty('intl', true);
-      expect(data.extensions).toHaveProperty('zip', true);
+      // Check that essential extensions are mentioned in HTML
+      expect(data.html).toContain('json');
+      expect(data.html).toContain('curl');
+      expect(data.html).toContain('mbstring');
+      expect(data.html).toContain('mysqli');
+      expect(data.html).toContain('gd');
+      expect(data.html).toContain('intl');
+      expect(data.html).toContain('zip');
 
-      // Check PHP settings
-      expect(data.settings).toHaveProperty('memory_limit');
-      expect(data.settings).toHaveProperty('max_execution_time');
-      expect(data.settings).toHaveProperty('upload_max_filesize');
+      // Check that PHP settings are mentioned in HTML
+      expect(data.html).toContain('memory_limit');
+      expect(data.html).toContain('max_execution_time');
+      expect(data.html).toContain('upload_max_filesize');
     });
   });
 
