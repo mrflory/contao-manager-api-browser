@@ -626,14 +626,17 @@ export class WorkflowEngine implements WorkflowEngineInterface {
     }
     
     try {
+      const historySteps = this.generateHistorySteps();
+      
       const request: UpdateHistoryEntryRequest = {
         siteUrl: this.currentHistoryEntry.siteUrl,
         ...(status && { status }),
         ...(endTime && { endTime: endTime.toISOString() }),
-        steps: this.generateHistorySteps().map(step => ({
+        steps: historySteps.map(step => ({
           ...step,
           startTime: step.startTime.toISOString(),
-          endTime: step.endTime?.toISOString()
+          ...(step.endTime && { endTime: step.endTime.toISOString() }),
+          status: step.status
         }))
       };
       
@@ -642,7 +645,9 @@ export class WorkflowEngine implements WorkflowEngineInterface {
         request
       );
     } catch (error) {
-      console.warn('Failed to update history entry:', error);
+      console.error('Failed to update history entry:', error);
+      console.error('History entry ID:', this.currentHistoryEntry?.id);
+      console.error('Timeline items:', this.state.timeline.length);
     }
   }
   
