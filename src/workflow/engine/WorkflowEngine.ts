@@ -652,15 +652,17 @@ export class WorkflowEngine implements WorkflowEngineInterface {
   }
   
   private generateHistorySteps(): HistoryStep[] {
-    return this.state.timeline.map(item => ({
-      id: item.id,
-      title: item.title,
-      summary: this.generateStepSummary(item),
-      startTime: item.startTime || new Date(),
-      endTime: item.endTime,
-      status: this.mapTimelineStatusToHistoryStatus(item.status),
-      error: this.getTimelineItemError(item)
-    }));
+    return this.state.timeline
+      .map(item => ({
+        id: item.id,
+        title: item.title,
+        summary: this.generateStepSummary(item),
+        startTime: item.startTime || new Date(),
+        endTime: item.endTime,
+        status: this.mapTimelineStatusToHistoryStatus(item.status),
+        error: this.getTimelineItemError(item)
+      }))
+      .filter(step => step.summary !== ''); // Filter out steps with empty summaries
   }
 
   private mapTimelineStatusToHistoryStatus(status: TimelineItemStatus): WorkflowStepStatus {
@@ -694,45 +696,137 @@ export class WorkflowEngine implements WorkflowEngineInterface {
     const data = record?.result?.data;
     
     switch (true) {
+      // (1) Check pending tasks - No summary needed, not relevant for history
+      case item.id.includes('check-tasks'):
+        return ''; // Return empty string for tasks that don't need history summaries
+        
+      // (2) Check Manager Update - State if update is available or not
+      case item.id.includes('check-manager'):
+        if (data?.selfUpdate) {
+          const current = data.selfUpdate.current_version;
+          const latest = data.selfUpdate.latest_version;
+          if (current && latest && current !== latest) {
+            return `Manager update available: ${current} → ${latest}`;
+          }
+          return `Manager up to date (${current})`;
+        }
+        // Also check for versionComparison data structure
+        if (data?.versionComparison) {
+          const current = data.versionComparison.currentVersion;
+          const latest = data.versionComparison.latestVersion;
+          if (data.versionComparison.needsUpdate) {
+            return `Manager update available: ${current} → ${latest}`;
+          }
+          return `Manager up to date (${current})`;
+        }
+        return 'Manager version check completed';
+        
+      // (3) Update Manager - State if update was performed successfully
+      case item.id.includes('update-manager') || item.id.includes('manager-update'):
+        if (data?.selfUpdate) {
+          const version = data.selfUpdate.latest_version || data.version;
+          return `Manager updated to ${version}`;
+        }
+        return 'Manager update completed';
+        
+      // (4) Composer dry-run - State number of packages to be installed/updated
+      case item.id.includes('composer-dry-run') || (item.id.includes('dry-run') && item.id.includes('composer')):
+        if (data?.operations?.length > 0) {
+          // Try different possible operation field structures
+          const installCount = data.operations.filter((op: any) => 
+            op.summary?.includes('install') || op.summary?.includes('Installing') ||
+            op.details?.includes('install') || op.details?.includes('Installing') ||
+            op.type === 'install'
+          ).length;
+          const updateCount = data.operations.filter((op: any) => 
+            op.summary?.includes('update') || op.summary?.includes('Updating') ||
+            op.details?.includes('update') || op.details?.includes('Updating') ||
+            op.type === 'update'
+          ).length;
+          
+          const parts = [];
+          if (installCount > 0) parts.push(`${installCount} to install`);
+          if (updateCount > 0) parts.push(`${updateCount} to update`);
+          
+          if (parts.length > 0) {
+            return `Dry-run: ${parts.join(', ')}`;
+          }
+          return 'Dry-run: no changes needed';
+        }
+        return 'Dry-run completed';
+        
+      // (5) Composer update - Same summary as dry-run but past tense
+      case item.id.includes('composer-update') || item.id.includes('update-packages'):
+        if (data?.operations?.length > 0) {
+          // Try to filter by completed operations first
+          const completedOps = data.operations.filter((op: any) => op.status === 'complete');
+          const opsToCount = completedOps.length > 0 ? completedOps : data.operations; // Fallback to all operations
+          
+          const installCount = opsToCount.filter((op: any) => 
+            op.summary?.includes('install') || op.summary?.includes('Installing') ||
+            op.details?.includes('install') || op.details?.includes('Installing') ||
+            op.type === 'install'
+          ).length;
+          const updateCount = opsToCount.filter((op: any) => 
+            op.summary?.includes('update') || op.summary?.includes('Updating') ||
+            op.details?.includes('update') || op.details?.includes('Updating') ||
+            op.type === 'update'
+          ).length;
+          
+          const parts = [];
+          if (installCount > 0) parts.push(`${installCount} installed`);
+          if (updateCount > 0) parts.push(`${updateCount} updated`);
+          
+          if (parts.length > 0) {
+            return `Packages: ${parts.join(', ')}`;
+          }
+          return 'No package changes made';
+        }
+        return 'Package update completed';
+        
+      // (6) Check database migrations - State number of operations or "no migration needed"
+      case item.id.includes('check-migrations'):
+        if (data?.operations?.length > 0) {
+          const operationCount = data.operations.length;
+          return `${operationCount} database operations pending`;
+        }
+        return 'No database migrations needed';
+        
+      // (7) Execute database migrations - Same as check but past tense
+      case item.id.includes('execute-migrations') || (item.id.includes('migrations') && !item.id.includes('check')):
+        if (data?.operations?.length > 0) {
+          const completedOps = data.operations.filter((op: any) => op.status === 'complete');
+          return `${completedOps.length} database operations executed`;
+        }
+        return 'No database migrations executed';
+        
+      // (8) Update version info - State new version numbers
+      case item.id.includes('update-versions') || item.id.includes('version-info'):
+        if (data?.versionInfo) {
+          const parts = [];
+          if (data.versionInfo.contaoVersion) {
+            parts.push(`Contao ${data.versionInfo.contaoVersion}`);
+          }
+          if (data.versionInfo.contaoManagerVersion) {
+            parts.push(`Manager ${data.versionInfo.contaoManagerVersion}`);
+          }
+          if (data.versionInfo.phpVersion) {
+            parts.push(`PHP ${data.versionInfo.phpVersion}`);
+          }
+          
+          if (parts.length > 0) {
+            return `Version info updated: ${parts.join(', ')}`;
+          }
+        }
+        return 'Version information updated';
+        
+      // Legacy catch-all patterns for backward compatibility
       case item.id.includes('update-contao') || item.id.includes('contao-update'):
         if (data?.operations?.length > 0) {
           const update = data.operations[0];
           return `Contao updated to ${update.version || 'latest version'}`;
         }
         return 'Contao update completed';
-        
-      case item.id.includes('update-manager') || item.id.includes('manager-update'):
-        if (data?.version) {
-          return `Contao Manager updated to ${data.version}`;
-        }
-        return 'Contao Manager update completed';
-        
-      case item.id.includes('composer-update') || item.id.includes('update-packages'):
-        if (data?.operations?.length > 0) {
-          const updateCount = data.operations.filter((op: any) => op.status === 'complete').length;
-          return updateCount > 0 ? `${updateCount} packages updated` : 'No package updates available';
-        }
-        return 'Package update check completed';
-        
-      case item.id.includes('migrations') || item.id.includes('migration'):
-        if (data?.operations?.length > 0) {
-          const migrationCount = data.operations.length;
-          return `Database migrations executed (${migrationCount} operations)`;
-        }
-        return 'Database migrations completed';
-        
-      case item.id.includes('dry-run'):
-        return 'Dry run completed - changes reviewed';
-        
-      case item.id.includes('check'):
-        if (item.id.includes('contao')) {
-          return 'Contao version check completed';
-        } else if (item.id.includes('manager')) {
-          return 'Manager version check completed';
-        } else if (item.id.includes('task')) {
-          return 'Task status check completed';
-        }
-        return 'System check completed';
         
       default:
         if (item.status === 'complete') {
