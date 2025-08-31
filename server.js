@@ -124,6 +124,81 @@ function logApiCall(siteUrl, method, endpoint, statusCode, requestData = null, r
     }
 }
 
+// History file management functions
+function saveHistoryEntry(siteUrl, historyEntry) {
+    try {
+        const hostname = extractSiteName(siteUrl);
+        const historyFile = path.join(__dirname, 'data', `${hostname}.history.json`);
+        
+        let history = [];
+        
+        // Load existing history if file exists
+        if (fs.existsSync(historyFile)) {
+            const data = fs.readFileSync(historyFile, 'utf8');
+            if (data.trim()) {
+                history = JSON.parse(data);
+            }
+        }
+        
+        // Find existing entry or add new one
+        const existingIndex = history.findIndex(entry => entry.id === historyEntry.id);
+        if (existingIndex !== -1) {
+            history[existingIndex] = historyEntry;
+        } else {
+            history.unshift(historyEntry); // Add to beginning (newest first)
+        }
+        
+        // Keep only last 50 entries
+        if (history.length > 50) {
+            history = history.slice(0, 50);
+        }
+        
+        // Ensure data directory exists
+        const dataDir = path.join(__dirname, 'data');
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+        }
+        
+        // Save back to file
+        fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
+        return true;
+    } catch (error) {
+        console.error('Failed to save history entry:', error.message);
+        return false;
+    }
+}
+
+function loadHistoryForSite(siteUrl) {
+    try {
+        const hostname = extractSiteName(siteUrl);
+        const historyFile = path.join(__dirname, 'data', `${hostname}.history.json`);
+        
+        if (!fs.existsSync(historyFile)) {
+            return [];
+        }
+        
+        const data = fs.readFileSync(historyFile, 'utf8');
+        if (!data.trim()) {
+            return [];
+        }
+        
+        return JSON.parse(data);
+    } catch (error) {
+        console.error('Failed to load history:', error.message);
+        return [];
+    }
+}
+
+function findHistoryEntry(siteUrl, historyId) {
+    try {
+        const history = loadHistoryForSite(siteUrl);
+        return history.find(entry => entry.id === historyId);
+    } catch (error) {
+        console.error('Failed to find history entry:', error.message);
+        return null;
+    }
+}
+
 function addSite(url, token, name = null, authMethod = 'token', user = null, scope = null) {
     const config = loadConfig();
     
@@ -1658,11 +1733,6 @@ app.post('/api/history/create', (req, res) => {
             return res.status(404).json({ error: 'Site not found' });
         }
 
-        // Initialize history array if not exists
-        if (!site.history) {
-            site.history = [];
-        }
-
         // Create new history entry
         const historyEntry = {
             id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9),
@@ -1673,16 +1743,8 @@ app.post('/api/history/create', (req, res) => {
             workflowType
         };
 
-        // Add to beginning of history array
-        site.history.unshift(historyEntry);
-        
-        // Keep only last 50 entries to prevent config file bloat
-        if (site.history.length > 50) {
-            site.history = site.history.slice(0, 50);
-        }
-
-        // Save config
-        if (saveConfig(config)) {
+        // Save to history file
+        if (saveHistoryEntry(siteUrl, historyEntry)) {
             res.json({ success: true, historyEntry });
         } else {
             res.status(500).json({ error: 'Failed to save history entry' });
@@ -1705,12 +1767,12 @@ app.put('/api/history/:id', (req, res) => {
         const config = loadConfig();
         const site = config.sites[siteUrl];
         
-        if (!site || !site.history) {
-            return res.status(404).json({ error: 'Site or history not found' });
+        if (!site) {
+            return res.status(404).json({ error: 'Site not found' });
         }
 
-        // Find history entry by id
-        const historyEntry = site.history.find(entry => entry.id === id);
+        // Find history entry by id in the history file
+        const historyEntry = findHistoryEntry(siteUrl, id);
         if (!historyEntry) {
             return res.status(404).json({ error: 'History entry not found' });
         }
@@ -1720,8 +1782,8 @@ app.put('/api/history/:id', (req, res) => {
         if (endTime) historyEntry.endTime = endTime;
         if (steps) historyEntry.steps = steps;
 
-        // Save config
-        if (saveConfig(config)) {
+        // Save updated entry back to history file
+        if (saveHistoryEntry(siteUrl, historyEntry)) {
             res.json({ success: true, historyEntry });
         } else {
             res.status(500).json({ error: 'Failed to update history entry' });
@@ -1744,8 +1806,8 @@ app.get('/api/history/:siteUrl', (req, res) => {
             return res.status(404).json({ error: 'Site not found' });
         }
 
-        // Return history array (already sorted newest first)
-        const history = site.history || [];
+        // Load history from file (already sorted newest first)
+        const history = loadHistoryForSite(decodedSiteUrl);
         
         res.json({ 
             success: true,

@@ -14,7 +14,7 @@ export interface Site {
   scope?: 'read' | 'update' | 'install' | 'admin'; // Permission scope
   lastUsed: string;
   versionInfo?: VersionInfo;
-  history?: HistoryEntry[]; // Update history entries
+  // Note: History is now stored in separate .history.json files, not in Site object
 }
 
 export interface Config {
