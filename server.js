@@ -93,19 +93,34 @@ function extractSiteName(url) {
     }
 }
 
+// Configuration for excluding response logging for specific endpoints
+const RESPONSE_LOGGING_EXCLUSIONS = [
+    'GET /api/server/phpinfo',
+    'GET /api/server/database'
+];
+
+function shouldExcludeResponseLogging(method, endpoint) {
+    const apiCall = `${method} ${endpoint}`;
+    return RESPONSE_LOGGING_EXCLUSIONS.includes(apiCall);
+}
+
 function logApiCall(siteUrl, method, endpoint, statusCode, requestData = null, responseData = null, error = null) {
     try {
         const hostname = extractSiteName(siteUrl);
         const logFile = path.join(__dirname, 'data', `${hostname}.log`);
         
         const timestamp = new Date().toISOString();
+        
+        // Determine if response should be logged for this endpoint
+        const excludeResponse = shouldExcludeResponseLogging(method, endpoint);
+        
         const logEntry = {
             timestamp,
             method,
             endpoint,
             statusCode,
             requestData: requestData || null,
-            responseData: responseData || null,
+            responseData: excludeResponse ? '[Response logging excluded]' : (responseData || null),
             error: error || null
         };
         
