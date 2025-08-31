@@ -36,7 +36,18 @@ export const getDuration = (startTime?: Date, endTime?: Date): string => {
 /**
  * Formats duration in a human-readable format
  */
-export const formatDuration = (seconds: number): string => {
+export const formatDuration = (startDate: Date | number, endDate?: Date): string => {
+  let seconds: number;
+  
+  if (typeof startDate === 'number') {
+    // If first parameter is number, use it as seconds directly (legacy behavior)
+    seconds = startDate;
+  } else {
+    // Calculate duration between two dates
+    const endTime = endDate || new Date();
+    seconds = Math.floor((endTime.getTime() - startDate.getTime()) / 1000);
+  }
+  
   if (seconds < 60) {
     return `${seconds}s`;
   } else if (seconds < 3600) {

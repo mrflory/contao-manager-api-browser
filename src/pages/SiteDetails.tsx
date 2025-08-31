@@ -23,9 +23,11 @@ import { SiteManagement } from '../components/site-details/SiteManagement';
 import { ExpertTab } from '../components/site-details/ExpertTab';
 import { LogsTab } from '../components/site-details/LogsTab';
 import { PackagesTab } from '../components/site-details/PackagesTab';
+import { HistoryTab } from '../components/site-details/HistoryTab';
 import { UpdateWorkflow } from '../components/UpdateWorkflow';
 import { decodeUrlParam } from '../utils/urlUtils';
 import { useToastNotifications, TOAST_MESSAGES } from '../hooks/useToastNotifications';
+import { SiteContext } from '../hooks/useWorkflowHistory';
 
 const SiteDetails: React.FC = () => {
   const { siteUrl } = useParams<{ siteUrl: string }>();
@@ -118,8 +120,9 @@ const SiteDetails: React.FC = () => {
   }
 
   return (
-    <Container maxW="4xl">
-      <Flex justify="space-between" align="center" mb={8}>
+    <SiteContext.Provider value={{ siteUrl: site.url }}>
+      <Container maxW="4xl">
+        <Flex justify="space-between" align="center" mb={8}>
         <VStack align="start" gap={2}>
           <Editable.Root
             defaultValue={site.name}
@@ -174,6 +177,7 @@ const SiteDetails: React.FC = () => {
             <Tabs.Trigger value="site-info">Site Info</Tabs.Trigger>
             <Tabs.Trigger value="packages">Packages</Tabs.Trigger>
             <Tabs.Trigger value="update">Update</Tabs.Trigger>
+            <Tabs.Trigger value="history">History</Tabs.Trigger>
             <Tabs.Trigger value="expert">Expert</Tabs.Trigger>
             <Tabs.Trigger value="logs">Logs</Tabs.Trigger>
           </Tabs.List>
@@ -205,18 +209,24 @@ const SiteDetails: React.FC = () => {
             </VStack>
           </Tabs.Content>
 
-          {/* Tab 4: Expert */}
+          {/* Tab 4: History */}
+          <Tabs.Content value="history">
+            <HistoryTab site={site} />
+          </Tabs.Content>
+
+          {/* Tab 5: Expert */}
           <Tabs.Content value="expert">
             <ExpertTab />
           </Tabs.Content>
 
-          {/* Tab 5: Logs */}
+          {/* Tab 6: Logs */}
           <Tabs.Content value="logs">
             <LogsTab site={site} />
           </Tabs.Content>
         </Tabs.Root>
       </Box>
     </Container>
+    </SiteContext.Provider>
   );
 };
 

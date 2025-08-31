@@ -272,5 +272,29 @@ export const api = {
   // Files endpoint
   async getFiles(file: 'composer.json' | 'composer.lock'): Promise<string> {
     return makeApiCall(`/files?file=${encodeURIComponent(file)}`);
+  },
+
+  // History endpoints
+  async post<T = any>(endpoint: string, data: any): Promise<{ data: T }> {
+    const response = await makeApiCall(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return { data: response };
+  },
+
+  async put<T = any>(endpoint: string, data: any): Promise<{ data: T }> {
+    const response = await makeApiCall(endpoint, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return { data: response };
+  },
+
+  async get<T = any>(endpoint: string): Promise<{ data: T }> {
+    const response = await makeApiCall(endpoint);
+    return { data: response };
   }
 };

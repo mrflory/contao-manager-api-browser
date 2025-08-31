@@ -13,6 +13,7 @@ import { Checkbox } from './ui/checkbox';
 import { LuPlay as Play, LuPause as Pause, LuRefreshCw as RefreshCw, LuX as X } from 'react-icons/lu';
 import { useToastNotifications, TOAST_MESSAGES } from '../hooks/useToastNotifications';
 import { useUpdateWorkflow, WorkflowTimeline, WorkflowConfig } from '../workflow';
+import { useWorkflowHistory } from '../hooks/useWorkflowHistory';
 
 /**
  * Get descriptive text for the next action when resuming the workflow
@@ -66,6 +67,7 @@ export const UpdateWorkflow: React.FC = () => {
   
   const toast = useToastNotifications();
   const workflow = useUpdateWorkflow(config);
+  const workflowHistory = useWorkflowHistory();
   
   // Reset cancellation state when workflow is cancelled
   useEffect(() => {
@@ -75,6 +77,10 @@ export const UpdateWorkflow: React.FC = () => {
   }, [workflow.isCancelled]);
   
   const handleStartWorkflow = async () => {
+    if (workflow.engine) {
+      // Start history tracking before starting the workflow
+      await workflowHistory.startHistoryTracking(workflow.engine, 'update');
+    }
     await workflow.start();
     toast.showInfo(TOAST_MESSAGES.WORKFLOW_STARTED);
   };

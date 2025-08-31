@@ -1642,6 +1642,123 @@ app.delete('/api/logs/:siteUrl/cleanup', (req, res) => {
     }
 });
 
+// History API endpoints
+app.post('/api/history/create', (req, res) => {
+    try {
+        const { siteUrl, workflowType } = req.body;
+        
+        if (!siteUrl || !workflowType) {
+            return res.status(400).json({ error: 'siteUrl and workflowType are required' });
+        }
+
+        const config = loadConfig();
+        const site = config.sites[siteUrl];
+        
+        if (!site) {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+
+        // Initialize history array if not exists
+        if (!site.history) {
+            site.history = [];
+        }
+
+        // Create new history entry
+        const historyEntry = {
+            id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9),
+            siteUrl,
+            startTime: new Date().toISOString(),
+            status: 'started',
+            steps: [],
+            workflowType
+        };
+
+        // Add to beginning of history array
+        site.history.unshift(historyEntry);
+        
+        // Keep only last 50 entries to prevent config file bloat
+        if (site.history.length > 50) {
+            site.history = site.history.slice(0, 50);
+        }
+
+        // Save config
+        if (saveConfig(config)) {
+            res.json({ success: true, historyEntry });
+        } else {
+            res.status(500).json({ error: 'Failed to save history entry' });
+        }
+    } catch (error) {
+        console.error('Create history error:', error.message);
+        res.status(500).json({ error: 'Failed to create history entry' });
+    }
+});
+
+app.put('/api/history/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        const { siteUrl, status, endTime, steps } = req.body;
+        
+        if (!siteUrl) {
+            return res.status(400).json({ error: 'siteUrl is required' });
+        }
+
+        const config = loadConfig();
+        const site = config.sites[siteUrl];
+        
+        if (!site || !site.history) {
+            return res.status(404).json({ error: 'Site or history not found' });
+        }
+
+        // Find history entry by id
+        const historyEntry = site.history.find(entry => entry.id === id);
+        if (!historyEntry) {
+            return res.status(404).json({ error: 'History entry not found' });
+        }
+
+        // Update fields if provided
+        if (status) historyEntry.status = status;
+        if (endTime) historyEntry.endTime = endTime;
+        if (steps) historyEntry.steps = steps;
+
+        // Save config
+        if (saveConfig(config)) {
+            res.json({ success: true, historyEntry });
+        } else {
+            res.status(500).json({ error: 'Failed to update history entry' });
+        }
+    } catch (error) {
+        console.error('Update history error:', error.message);
+        res.status(500).json({ error: 'Failed to update history entry' });
+    }
+});
+
+app.get('/api/history/:siteUrl', (req, res) => {
+    try {
+        const { siteUrl } = req.params;
+        const decodedSiteUrl = decodeURIComponent(siteUrl);
+        
+        const config = loadConfig();
+        const site = config.sites[decodedSiteUrl];
+        
+        if (!site) {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+
+        // Return history array (already sorted newest first)
+        const history = site.history || [];
+        
+        res.json({ 
+            success: true,
+            history,
+            total: history.length,
+            siteUrl: decodedSiteUrl
+        });
+    } catch (error) {
+        console.error('Get history error:', error.message);
+        res.status(500).json({ error: 'Failed to get history' });
+    }
+});
+
 // Serve React app for all non-API routes
 app.get('/', (req, res) => {
     if (process.env.NODE_ENV === 'production') {

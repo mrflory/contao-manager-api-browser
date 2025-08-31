@@ -5,8 +5,11 @@ import {
   EventHandler, 
   WorkflowEngineState,
   WorkflowContext,
-  WorkflowEngineInterface
+  WorkflowEngineInterface,
+  TimelineItemStatus
 } from './types';
+import { HistoryService, CreateHistoryEntryRequest, UpdateHistoryEntryRequest } from '../../services/historyService';
+import { HistoryEntry, HistoryStep, WorkflowStepStatus } from '../../types';
 
 /**
  * Generic workflow engine that manages timeline-based execution
@@ -23,6 +26,7 @@ export class WorkflowEngine implements WorkflowEngineInterface {
   
   private eventHandlers: Map<WorkflowEvent, Set<EventHandler>> = new Map();
   private context: Map<string, any> = new Map();
+  private currentHistoryEntry: HistoryEntry | null = null;
   
   constructor() {
     // Initialize event handler sets
@@ -127,10 +131,13 @@ export class WorkflowEngine implements WorkflowEngineInterface {
     await this.executeNext();
   }
   
-  stop(): void {
+  async stop(): Promise<void> {
     this.state.isRunning = false;
     this.state.isPaused = false;
     this.state.endTime = new Date();
+    
+    // Update history entry with error status since stop() is usually called on error
+    await this.updateHistoryEntry('error', this.state.endTime);
     
     this.emit('stopped');
   }
@@ -171,6 +178,9 @@ export class WorkflowEngine implements WorkflowEngineInterface {
       // Wait for all cancellations to complete before emitting cancelled event
       await Promise.all(cancelPromises);
       
+      // Update history entry with cancelled status
+      await this.updateHistoryEntry('cancelled', new Date());
+      
       this.emit('cancelled');
     } finally {
       this.state.isCancelling = false;
@@ -181,7 +191,7 @@ export class WorkflowEngine implements WorkflowEngineInterface {
   async executeNext(): Promise<void> {
     if (this.state.isPaused || (!this.state.isRunning && !this.state.isPaused) || this.state.currentIndex >= this.state.timeline.length) {
       if (this.state.currentIndex >= this.state.timeline.length) {
-        this.complete();
+        await this.complete();
       }
       return;
     }
@@ -250,7 +260,7 @@ export class WorkflowEngine implements WorkflowEngineInterface {
       } else if (result.status === 'error') {
         this.state.error = result.error;
         this.emit('item_error', item, result.error);
-        this.stop();
+        await this.stop();
         
       } else if (result.status === 'user_action_required') {
         this.emit('user_action_required', item, result);
@@ -268,7 +278,7 @@ export class WorkflowEngine implements WorkflowEngineInterface {
       };
       
       this.emit('item_error', item, errorMessage);
-      this.stop();
+      await this.stop();
     }
     
     // Record is already in execution history, no need to add again
@@ -401,7 +411,7 @@ export class WorkflowEngine implements WorkflowEngineInterface {
         }
           
         case 'stop':
-          this.stop();
+          await this.stop();
           break;
           
         case 'cancel':
@@ -417,7 +427,7 @@ export class WorkflowEngine implements WorkflowEngineInterface {
       const errorMessage = error instanceof Error ? error.message : 'User action failed';
       this.state.error = errorMessage;
       this.emit('item_error', item, errorMessage);
-      this.stop();
+      await this.stop();
     }
   }
   
@@ -545,11 +555,14 @@ export class WorkflowEngine implements WorkflowEngineInterface {
     this.emit('item_progress', item, data);
   }
   
-  private complete(): void {
+  private async complete(): Promise<void> {
     this.state.isRunning = false;
     this.state.isPaused = false;
     this.state.isComplete = true;
     this.state.endTime = new Date();
+    
+    // Update history entry with completion status
+    await this.updateHistoryEntry('finished', this.state.endTime);
     
     this.emit('completed');
   }
@@ -565,6 +578,7 @@ export class WorkflowEngine implements WorkflowEngineInterface {
       isComplete: false
     };
     this.context.clear();
+    this.currentHistoryEntry = null;
   }
   
   // Get a snapshot of the current state
@@ -590,5 +604,140 @@ export class WorkflowEngine implements WorkflowEngineInterface {
   // Public context access
   getContext(): WorkflowContext {
     return this.getWorkflowContext();
+  }
+  
+  // History tracking methods
+  async startHistoryTracking(siteUrl: string, workflowType: 'update' | 'migration' | 'composer'): Promise<void> {
+    try {
+      const request: CreateHistoryEntryRequest = {
+        siteUrl,
+        workflowType
+      };
+      
+      this.currentHistoryEntry = await HistoryService.createHistoryEntry(request);
+    } catch (error) {
+      console.warn('Failed to create history entry:', error);
+    }
+  }
+  
+  async updateHistoryEntry(status?: 'started' | 'finished' | 'cancelled' | 'error', endTime?: Date): Promise<void> {
+    if (!this.currentHistoryEntry) {
+      return;
+    }
+    
+    try {
+      const request: UpdateHistoryEntryRequest = {
+        siteUrl: this.currentHistoryEntry.siteUrl,
+        ...(status && { status }),
+        ...(endTime && { endTime: endTime.toISOString() }),
+        steps: this.generateHistorySteps().map(step => ({
+          ...step,
+          startTime: step.startTime.toISOString(),
+          endTime: step.endTime?.toISOString()
+        }))
+      };
+      
+      this.currentHistoryEntry = await HistoryService.updateHistoryEntry(
+        this.currentHistoryEntry.id, 
+        request
+      );
+    } catch (error) {
+      console.warn('Failed to update history entry:', error);
+    }
+  }
+  
+  private generateHistorySteps(): HistoryStep[] {
+    return this.state.timeline.map(item => ({
+      id: item.id,
+      title: item.title,
+      summary: this.generateStepSummary(item),
+      startTime: item.startTime || new Date(),
+      endTime: item.endTime,
+      status: this.mapTimelineStatusToHistoryStatus(item.status),
+      error: this.getTimelineItemError(item)
+    }));
+  }
+
+  private mapTimelineStatusToHistoryStatus(status: TimelineItemStatus): WorkflowStepStatus {
+    switch (status) {
+      case 'user_action_required':
+        return 'active'; // Map user_action_required to active for history display
+      default:
+        return status as WorkflowStepStatus;
+    }
+  }
+
+  private getTimelineItemError(item: TimelineItem): string | undefined {
+    // Get error from execution record if available
+    const record = this.state.executionHistory.find(r => r.item.id === item.id);
+    return record?.result?.error;
+  }
+  
+  private generateStepSummary(item: TimelineItem): string {
+    // Generate meaningful summaries based on step type and data
+    if (item.status === 'error') {
+      const error = this.getTimelineItemError(item);
+      return `Error: ${error || 'Unknown error occurred'}`;
+    }
+    
+    if (item.status === 'skipped') {
+      return 'Step skipped';
+    }
+    
+    // Get execution record to access result data
+    const record = this.state.executionHistory.find(r => r.item.id === item.id);
+    const data = record?.result?.data;
+    
+    switch (true) {
+      case item.id.includes('update-contao') || item.id.includes('contao-update'):
+        if (data?.operations?.length > 0) {
+          const update = data.operations[0];
+          return `Contao updated to ${update.version || 'latest version'}`;
+        }
+        return 'Contao update completed';
+        
+      case item.id.includes('update-manager') || item.id.includes('manager-update'):
+        if (data?.version) {
+          return `Contao Manager updated to ${data.version}`;
+        }
+        return 'Contao Manager update completed';
+        
+      case item.id.includes('composer-update') || item.id.includes('update-packages'):
+        if (data?.operations?.length > 0) {
+          const updateCount = data.operations.filter((op: any) => op.status === 'complete').length;
+          return updateCount > 0 ? `${updateCount} packages updated` : 'No package updates available';
+        }
+        return 'Package update check completed';
+        
+      case item.id.includes('migrations') || item.id.includes('migration'):
+        if (data?.operations?.length > 0) {
+          const migrationCount = data.operations.length;
+          return `Database migrations executed (${migrationCount} operations)`;
+        }
+        return 'Database migrations completed';
+        
+      case item.id.includes('dry-run'):
+        return 'Dry run completed - changes reviewed';
+        
+      case item.id.includes('check'):
+        if (item.id.includes('contao')) {
+          return 'Contao version check completed';
+        } else if (item.id.includes('manager')) {
+          return 'Manager version check completed';
+        } else if (item.id.includes('task')) {
+          return 'Task status check completed';
+        }
+        return 'System check completed';
+        
+      default:
+        if (item.status === 'complete') {
+          return `${item.title} completed`;
+        }
+        return item.title;
+    }
+  }
+  
+  getCurrentHistoryEntry(): HistoryEntry | null {
+    return this.currentHistoryEntry;
   }
 }

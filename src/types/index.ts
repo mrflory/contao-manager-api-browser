@@ -14,6 +14,7 @@ export interface Site {
   scope?: 'read' | 'update' | 'install' | 'admin'; // Permission scope
   lastUsed: string;
   versionInfo?: VersionInfo;
+  history?: HistoryEntry[]; // Update history entries
 }
 
 export interface Config {
@@ -116,4 +117,25 @@ export interface MigrationExecutionHistory {
   endTime?: Date;
   status: 'pending' | 'active' | 'complete' | 'error';
   error?: string;
+}
+
+// History Types
+export interface HistoryStep {
+  id: string;
+  title: string;
+  summary: string; // 1-line summary like "contao updated to 5.3.4"
+  startTime: Date;
+  endTime?: Date;
+  status: WorkflowStepStatus;
+  error?: string;
+}
+
+export interface HistoryEntry {
+  id: string;
+  siteUrl: string;
+  startTime: Date;
+  endTime?: Date;
+  status: 'started' | 'finished' | 'cancelled' | 'error';
+  steps: HistoryStep[];
+  workflowType: 'update' | 'migration' | 'composer';
 }
