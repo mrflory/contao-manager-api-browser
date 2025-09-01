@@ -49,6 +49,10 @@ export interface TokenInfo {
   totp_enabled?: boolean;
 }
 
+export interface MaintenanceMode {
+  enabled: boolean;
+}
+
 // Workflow Types
 export type WorkflowStepStatus = 'pending' | 'active' | 'complete' | 'error' | 'skipped' | 'cancelled';
 

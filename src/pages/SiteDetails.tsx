@@ -19,7 +19,6 @@ import { useApiCall } from '../hooks/useApiCall';
 import { SiteApiService } from '../services/apiCallService';
 import { LoadingState } from '../components/display/LoadingState';
 import { SiteInfoTab } from '../components/site-details/SiteInfoTab';
-import { SiteManagement } from '../components/site-details/SiteManagement';
 import { ExpertTab } from '../components/site-details/ExpertTab';
 import { LogsTab } from '../components/site-details/LogsTab';
 import { PackagesTab } from '../components/site-details/PackagesTab';
@@ -184,17 +183,11 @@ const SiteDetails: React.FC = () => {
 
           {/* Tab 1: Site Info */}
           <Tabs.Content value="site-info">
-            <VStack gap={6} align="stretch">
-              <SiteInfoTab site={site} />
-              
-              <Box borderWidth="1px" borderRadius="md" p={6}>
-                <SiteManagement 
-                  site={site}
-                  onSiteUpdated={handleSiteUpdated}
-                  onSiteRemoved={handleSiteRemoved}
-                />
-              </Box>
-            </VStack>
+            <SiteInfoTab 
+              site={site} 
+              onSiteUpdated={handleSiteUpdated}
+              onSiteRemoved={handleSiteRemoved}
+            />
           </Tabs.Content>
 
           {/* Tab 2: Packages */}
