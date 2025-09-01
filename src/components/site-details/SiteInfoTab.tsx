@@ -17,7 +17,8 @@ import {
   LuPause as Pause,
   LuPlay as Play,
   LuShieldAlert as ShieldAlert,
-  LuRefreshCw as RefreshIcon
+  LuRefreshCw as RefreshIcon,
+  LuArrowRight as ArrowRight
 } from 'react-icons/lu';
 import { DataListRoot, DataListItem } from '../ui/data-list';
 import { Site, MaintenanceMode } from '../../types';
@@ -32,13 +33,15 @@ export interface SiteInfoTabProps {
   onSiteUpdated: () => void;
   onSiteRemoved: () => void;
   maintenanceMode?: any; // useApiCall hook result for maintenance mode
+  onNavigateToUpdate?: () => void;
 }
 
 export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({ 
   site, 
   onSiteUpdated, 
   onSiteRemoved,
-  maintenanceMode
+  maintenanceMode,
+  onNavigateToUpdate
 }) => {
   const toast = useToastNotifications();
 
@@ -154,7 +157,9 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
       <SimpleGrid columns={{ base: 1, lg: 2 }} gap={8}>
         {/* Left column: Site Information with Maintenance Toggle */}
         <Box>
-          <Heading size="md" mb={4}>Site Information</Heading>
+          <Box h={10} mb={4} display="flex" alignItems="center">
+            <Heading size="lg">Site Information</Heading>
+          </Box>
           <VStack align="stretch" gap={4}>
             <DataListRoot orientation="horizontal" size="md">
               <DataListItem 
@@ -198,48 +203,65 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
 
         {/* Right column: Version Information with Update Button */}
         <Box>
-          <Flex justify="space-between" align="center" mb={4}>
-            <Heading size="md">Version Information</Heading>
+          <Flex justify="space-between" align="center" h={10} mb={4}>
+            <Heading size="lg">Version Information</Heading>
             <IconButton
               aria-label="Update version information"
               colorPalette="blue"
               variant="ghost"
-              size="sm"
+              size="xs"
               onClick={() => updateVersionInfo.execute()}
               loading={updateVersionInfo.state.loading}
             >
-              <RefreshIcon size={16} />
+              <RefreshIcon size={12} />
             </IconButton>
           </Flex>
-          {site.versionInfo ? (
-            <DataListRoot orientation="horizontal" size="md">
-              <DataListItem 
-                label="Contao Manager" 
-                value={site.versionInfo.contaoManagerVersion || 'N/A'}
-              />
-              <DataListItem 
-                label="PHP" 
-                value={site.versionInfo.phpVersion || 'N/A'}
-              />
-              <DataListItem 
-                label="Contao" 
-                value={site.versionInfo.contaoVersion || 'N/A'}
-              />
-              {site.versionInfo.lastUpdated && (
+          <VStack align="stretch" gap={4}>
+            {site.versionInfo ? (
+              <DataListRoot orientation="horizontal" size="md">
                 <DataListItem 
-                  label="Last Updated" 
-                  value={formatDateTime(site.versionInfo.lastUpdated)}
+                  label="Contao Manager" 
+                  value={site.versionInfo.contaoManagerVersion || 'N/A'}
                 />
-              )}
-            </DataListRoot>
-          ) : (
-            <DataListRoot orientation="horizontal" size="md">
-              <DataListItem 
-                label="Status" 
-                value="No version information available. Click the refresh button to fetch current versions."
-              />
-            </DataListRoot>
-          )}
+                <DataListItem 
+                  label="PHP" 
+                  value={site.versionInfo.phpVersion || 'N/A'}
+                />
+                <DataListItem 
+                  label="Contao" 
+                  value={site.versionInfo.contaoVersion || 'N/A'}
+                />
+                {site.versionInfo.lastUpdated && (
+                  <DataListItem 
+                    label="Last Updated" 
+                    value={formatDateTime(site.versionInfo.lastUpdated)}
+                  />
+                )}
+              </DataListRoot>
+            ) : (
+              <DataListRoot orientation="horizontal" size="md">
+                <DataListItem 
+                  label="Status" 
+                  value="No version information available. Click the refresh button to fetch current versions."
+                />
+              </DataListRoot>
+            )}
+            
+            {/* Go to Update Button */}
+            <Box pt={2}>
+              <Button
+                colorPalette="blue"
+                variant="outline"
+                size="sm"
+                onClick={onNavigateToUpdate}
+                disabled={!onNavigateToUpdate}
+                w="full"
+              >
+                <ArrowRight size={14} />
+                Go to Update Workflow
+              </Button>
+            </Box>
+          </VStack>
         </Box>
       </SimpleGrid>
 

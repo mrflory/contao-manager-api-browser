@@ -31,11 +31,13 @@ import { TaskApiService } from '../services/apiCallService';
 import { MaintenanceMode } from '../types';
 import { LuShieldAlert as ShieldAlert, LuPlay as Play } from 'react-icons/lu';
 import { Badge } from '@chakra-ui/react';
+import { Tooltip } from '../components/ui/tooltip';
 
 const SiteDetails: React.FC = () => {
   const { siteUrl } = useParams<{ siteUrl: string }>();
   const navigate = useNavigate();
   const [config, setConfig] = useState<Config | null>(null);
+  const [activeTab, setActiveTab] = useState("site-info");
   
   const toast = useToastNotifications();
 
@@ -137,7 +139,7 @@ const SiteDetails: React.FC = () => {
 
   return (
     <SiteContext.Provider value={{ siteUrl: site.url }}>
-      <Container maxW="4xl" position="relative" minH="100vh">
+      <Container maxW="4xl">
         <Flex justify="space-between" align="center" mb={8}>
           <VStack align="start" gap={2}>
             <Editable.Root
@@ -181,45 +183,81 @@ const SiteDetails: React.FC = () => {
           </VStack>
           
           {/* Status Badge - Top Right (visible across all tabs) */}
-          <Badge
-            colorPalette={
-              getMaintenanceMode.state.loading || !getMaintenanceMode.state.data
-                ? "gray" 
-                : getMaintenanceMode.state.error 
-                  ? "red" 
+          {getMaintenanceMode.state.error ? (
+            <Tooltip 
+              content={(() => {
+                const error = getMaintenanceMode.state.error;
+                
+                // Handle both string errors and Error objects
+                const errorString = typeof error === 'string' ? error : error?.message;
+                
+                if (errorString) {
+                  // Check if the error string contains JSON with an error field
+                  const bodyMatch = errorString.match(/body: (.+)$/);
+                  if (bodyMatch) {
+                    try {
+                      const errorJson = JSON.parse(bodyMatch[1]);
+                      return errorJson.error || errorString;
+                    } catch {
+                      return errorString;
+                    }
+                  }
+                  return errorString;
+                }
+                return 'Unknown error occurred';
+              })()}
+              showArrow
+            >
+              <Badge
+                colorPalette="red"
+                variant="subtle"
+                size="lg"
+                display="flex"
+                alignItems="center"
+                gap={2}
+              >
+                <ShieldAlert size={16} />
+                API Error {getMaintenanceMode.state.error.status ? `(${getMaintenanceMode.state.error.status})` : ''}
+              </Badge>
+            </Tooltip>
+          ) : (
+            <Badge
+              colorPalette={
+                getMaintenanceMode.state.loading
+                  ? "gray"
                   : getMaintenanceMode.state.data?.enabled 
                     ? "red" 
-                    : "green"
-            }
-            variant="subtle"
-            size="lg"
-            display="flex"
-            alignItems="center"
-            gap={2}
-          >
-            {getMaintenanceMode.state.loading || !getMaintenanceMode.state.data ? (
-              <>Loading...</>
-            ) : getMaintenanceMode.state.error ? (
-              <>
-                <ShieldAlert size={16} />
-                API Error
-              </>
-            ) : getMaintenanceMode.state.data?.enabled ? (
-              <>
-                <ShieldAlert size={16} />
-                Maintenance Active
-              </>
-            ) : (
-              <>
-                <Play size={16} />
-                Site Online
-              </>
-            )}
-          </Badge>
+                    : getMaintenanceMode.state.data
+                      ? "green"
+                      : "gray"
+              }
+              variant="subtle"
+              size="lg"
+              display="flex"
+              alignItems="center"
+              gap={2}
+            >
+              {getMaintenanceMode.state.loading ? (
+                <>Loading...</>
+              ) : getMaintenanceMode.state.data?.enabled ? (
+                <>
+                  <ShieldAlert size={16} />
+                  Maintenance Active
+                </>
+              ) : getMaintenanceMode.state.data ? (
+                <>
+                  <Play size={16} />
+                  Site Online
+                </>
+              ) : (
+                <>Loading...</>
+              )}
+            </Badge>
+          )}
         </Flex>
 
         <Box borderWidth="1px" borderRadius="lg" p={8}>
-          <Tabs.Root colorPalette="blue" variant="line" defaultValue="site-info" lazyMount>
+          <Tabs.Root colorPalette="blue" variant="line" value={activeTab} onValueChange={({ value }) => setActiveTab(value)} lazyMount>
             <Tabs.List>
               <Tabs.Trigger value="site-info">Site Info</Tabs.Trigger>
               <Tabs.Trigger value="packages">Packages</Tabs.Trigger>
@@ -236,6 +274,7 @@ const SiteDetails: React.FC = () => {
                 onSiteUpdated={handleSiteUpdated}
                 onSiteRemoved={handleSiteRemoved}
                 maintenanceMode={getMaintenanceMode}
+                onNavigateToUpdate={() => setActiveTab("update")}
               />
             </Tabs.Content>
 
@@ -268,15 +307,15 @@ const SiteDetails: React.FC = () => {
           </Tabs.Root>
         </Box>
         
-        {/* Back to Sites Button - Bottom Left */}
-        <Box position="absolute" bottom={4} left={0}>
+        {/* Back to Sites Button - Below tab area */}
+        <Flex justify="start" mt={4}>
           <Button
             variant="ghost"
             onClick={() => navigate('/')}
           >
             <ArrowLeft size={16} /> Back to Sites
           </Button>
-        </Box>
+        </Flex>
       </Container>
     </SiteContext.Provider>
   );
