@@ -6,36 +6,44 @@ import {
   Heading,
   Button,
   HStack,
+  Flex,
   Separator,
   Badge,
+  IconButton,
 } from '@chakra-ui/react';
 import { 
   LuExternalLink as ExternalLink, 
   LuSettings as Tool,
   LuPause as Pause,
   LuPlay as Play,
-  LuShieldAlert as ShieldAlert
+  LuShieldAlert as ShieldAlert,
+  LuRefreshCw as RefreshIcon
 } from 'react-icons/lu';
 import { DataListRoot, DataListItem } from '../ui/data-list';
 import { Site, MaintenanceMode } from '../../types';
 import { formatDateTime } from '../../utils/dateUtils';
 import { SiteManagement } from './SiteManagement';
 import { useApiCall } from '../../hooks/useApiCall';
-import { TaskApiService } from '../../services/apiCallService';
+import { TaskApiService, SiteApiService } from '../../services/apiCallService';
+import { useToastNotifications, TOAST_MESSAGES } from '../../hooks/useToastNotifications';
 
 export interface SiteInfoTabProps {
   site: Site;
   onSiteUpdated: () => void;
   onSiteRemoved: () => void;
+  maintenanceMode?: any; // useApiCall hook result for maintenance mode
 }
 
 export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({ 
   site, 
   onSiteUpdated, 
-  onSiteRemoved 
+  onSiteRemoved,
+  maintenanceMode
 }) => {
-  // Maintenance mode state management
-  const getMaintenanceMode = useApiCall<MaintenanceMode>(TaskApiService.getMaintenanceModeStatus, {
+  const toast = useToastNotifications();
+
+  // Use passed maintenance mode state or create local one as fallback
+  const getMaintenanceMode = maintenanceMode || useApiCall<MaintenanceMode>(TaskApiService.getMaintenanceModeStatus, {
     showErrorToast: false, // We'll handle errors in the UI
     errorMessage: 'Failed to get maintenance mode status'
   });
@@ -66,11 +74,23 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
     }
   });
 
-  // Load maintenance mode status on component mount
+  const updateVersionInfo = useApiCall(
+    () => SiteApiService.updateVersionInfo(),
+    {
+      onSuccess: () => {
+        toast.showSuccess(TOAST_MESSAGES.VERSION_INFO_UPDATED);
+        onSiteUpdated();
+      },
+    }
+  );
+
+  // Only load maintenance mode status if not passed from parent
   useEffect(() => {
-    getMaintenanceMode.execute();
+    if (!maintenanceMode) {
+      getMaintenanceMode.execute();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [site.url]); // Only reload when site changes - intentionally excluding getMaintenanceMode to prevent infinite loops
+  }, [site.url, maintenanceMode]); // Only reload when site changes and if no parent state
   // Generate admin URL by replacing contao-manager.phar.php with contao
   const adminUrl = useMemo(() => {
     if (site.url.includes('contao-manager.phar.php')) {
@@ -130,73 +150,67 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
 
   return (
     <VStack gap={8} align="stretch">
-      {/* Top Section: Two-column grid for site and version information */}
+      {/* Information Section: Two-column grid */}
       <SimpleGrid columns={{ base: 1, lg: 2 }} gap={8}>
-        {/* Left column: Site Information */}
+        {/* Left column: Site Information with Maintenance Toggle */}
         <Box>
           <Heading size="md" mb={4}>Site Information</Heading>
-          <DataListRoot orientation="horizontal" size="md">
-            <DataListItem 
-              label="Last Used" 
-              value={formatDateTime(site.lastUsed)}
-            />
-            <DataListItem 
-              label="Authentication" 
-              value={site.authMethod === 'cookie' ? 'Cookie-based' : 'API Token'}
-            />
-            {site.authMethod !== 'cookie' && (
+          <VStack align="stretch" gap={4}>
+            <DataListRoot orientation="horizontal" size="md">
               <DataListItem 
-                label="Token" 
-                value={site.token?.substring(0, 8) + '...' || 'N/A'}
+                label="Last Used" 
+                value={formatDateTime(site.lastUsed)}
               />
-            )}
-            {site.scope && (
               <DataListItem 
-                label="Permission Scope" 
-                value={site.scope}
+                label="Authentication" 
+                value={site.authMethod === 'cookie' ? 'Cookie-based' : 'API Token'}
               />
-            )}
-          </DataListRoot>
-          
-          {/* Maintenance Mode Status Badge */}
-          <Box mt={4}>
-            <Badge
-              colorPalette={
-                hasMaintenanceError 
-                  ? "red" 
-                  : isMaintenanceEnabled 
-                    ? "red" 
-                    : "green"
-              }
-              variant="subtle"
-              size="md"
-              display="flex"
-              alignItems="center"
-              gap={1}
-            >
-              {hasMaintenanceError ? (
-                <>
-                  <ShieldAlert size={14} />
-                  Error fetching status
-                </>
-              ) : isMaintenanceEnabled ? (
-                <>
-                  <ShieldAlert size={14} />
-                  Maintenance Active
-                </>
-              ) : (
-                <>
-                  <Play size={14} />
-                  Site Online
-                </>
+              {site.authMethod !== 'cookie' && (
+                <DataListItem 
+                  label="Token" 
+                  value={site.token?.substring(0, 8) + '...' || 'N/A'}
+                />
               )}
-            </Badge>
-          </Box>
+              {site.scope && (
+                <DataListItem 
+                  label="Permission Scope" 
+                  value={site.scope}
+                />
+              )}
+            </DataListRoot>
+            
+            {/* Maintenance Mode Toggle Button */}
+            <Box pt={2}>
+              <Button
+                colorPalette={isMaintenanceEnabled ? "red" : "orange"}
+                onClick={handleToggleMaintenance}
+                size="sm"
+                loading={isMaintenanceLoading}
+                disabled={isMaintenanceButtonDisabled}
+                w="full"
+              >
+                {isMaintenanceEnabled ? <Play size={14} /> : <Pause size={14} />}
+                {isMaintenanceEnabled ? 'Disable' : 'Enable'} Maintenance Mode
+              </Button>
+            </Box>
+          </VStack>
         </Box>
 
-        {/* Right column: Version Information */}
+        {/* Right column: Version Information with Update Button */}
         <Box>
-          <Heading size="md" mb={4}>Version Information</Heading>
+          <Flex justify="space-between" align="center" mb={4}>
+            <Heading size="md">Version Information</Heading>
+            <IconButton
+              aria-label="Update version information"
+              colorPalette="blue"
+              variant="ghost"
+              size="sm"
+              onClick={() => updateVersionInfo.execute()}
+              loading={updateVersionInfo.state.loading}
+            >
+              <RefreshIcon size={16} />
+            </IconButton>
+          </Flex>
           {site.versionInfo ? (
             <DataListRoot orientation="horizontal" size="md">
               <DataListItem 
@@ -222,7 +236,7 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
             <DataListRoot orientation="horizontal" size="md">
               <DataListItem 
                 label="Status" 
-                value="No version information available. Click 'Update Version Info' to fetch current versions."
+                value="No version information available. Click the refresh button to fetch current versions."
               />
             </DataListRoot>
           )}
@@ -231,9 +245,9 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
 
       <Separator />
 
-      {/* Middle Section: Navigation buttons */}
+      {/* Actions Section - All buttons in single line */}
       <Box>
-        <Heading size="md" mb={4}>Quick Actions</Heading>
+        <Heading size="md" mb={4}>Actions</Heading>
         <HStack gap={4} wrap="wrap">
           <Button
             colorPalette="blue"
@@ -251,27 +265,15 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
             <Tool size={16} />
             Open Contao Admin
           </Button>
-          <Button
-            colorPalette={isMaintenanceEnabled ? "red" : "orange"}
-            onClick={handleToggleMaintenance}
-            size="md"
-            loading={isMaintenanceLoading}
-            disabled={isMaintenanceButtonDisabled}
-          >
-            {isMaintenanceEnabled ? <Play size={16} /> : <Pause size={16} />}
-            {isMaintenanceEnabled ? 'Disable' : 'Enable'} Maintenance Mode
-          </Button>
+          <SiteManagement 
+            site={site}
+            onSiteUpdated={onSiteUpdated}
+            onSiteRemoved={onSiteRemoved}
+            hideVersionUpdate={true}
+            inline={true}
+          />
         </HStack>
       </Box>
-
-      <Separator />
-
-      {/* Bottom Section: Site Management */}
-      <SiteManagement 
-        site={site}
-        onSiteUpdated={onSiteUpdated}
-        onSiteRemoved={onSiteRemoved}
-      />
     </VStack>
   );
 };

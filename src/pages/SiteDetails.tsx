@@ -27,6 +27,10 @@ import { UpdateWorkflow } from '../components/UpdateWorkflow';
 import { decodeUrlParam } from '../utils/urlUtils';
 import { useToastNotifications, TOAST_MESSAGES } from '../hooks/useToastNotifications';
 import { SiteContext } from '../hooks/useWorkflowHistory';
+import { TaskApiService } from '../services/apiCallService';
+import { MaintenanceMode } from '../types';
+import { LuShieldAlert as ShieldAlert, LuPlay as Play } from 'react-icons/lu';
+import { Badge } from '@chakra-ui/react';
 
 const SiteDetails: React.FC = () => {
   const { siteUrl } = useParams<{ siteUrl: string }>();
@@ -59,6 +63,12 @@ const SiteDetails: React.FC = () => {
     }
   );
 
+  // Maintenance mode state management - moved to parent to share across tabs
+  const getMaintenanceMode = useApiCall<MaintenanceMode>(TaskApiService.getMaintenanceModeStatus, {
+    showErrorToast: false, // We'll handle errors in the UI
+    errorMessage: 'Failed to get maintenance mode status'
+  });
+
   useEffect(() => {
     loadConfig.execute();
   }, []);
@@ -67,6 +77,13 @@ const SiteDetails: React.FC = () => {
 
   const decodedSiteUrl = decodeUrlParam(siteUrl || '');
   const site = config?.sites?.[decodedSiteUrl];
+
+  // Load maintenance mode status when site is available
+  useEffect(() => {
+    if (site) {
+      getMaintenanceMode.execute();
+    }
+  }, [site]);
 
   const handleUpdateSiteName = async (newName: string) => {
     if (!site || newName === site.name) return;
@@ -120,105 +137,147 @@ const SiteDetails: React.FC = () => {
 
   return (
     <SiteContext.Provider value={{ siteUrl: site.url }}>
-      <Container maxW="4xl">
+      <Container maxW="4xl" position="relative" minH="100vh">
         <Flex justify="space-between" align="center" mb={8}>
-        <VStack align="start" gap={2}>
-          <Editable.Root
-            defaultValue={site.name}
-            onValueCommit={(details) => handleUpdateSiteName(details.value)}
-            fontSize="3xl"
-            fontWeight="bold"
+          <VStack align="start" gap={2}>
+            <Editable.Root
+              defaultValue={site.name}
+              onValueCommit={(details) => handleUpdateSiteName(details.value)}
+              fontSize="3xl"
+              fontWeight="bold"
+            >
+              <Flex align="center" gap={2}>
+                <Editable.Preview />
+                <Editable.Input />
+                <Editable.Control>
+                  <Editable.EditTrigger asChild>
+                    <IconButton variant="ghost" size="sm">
+                      <Edit />
+                    </IconButton>
+                  </Editable.EditTrigger>
+                  <Editable.CancelTrigger asChild>
+                    <IconButton variant="outline" size="sm">
+                      <X />
+                    </IconButton>
+                  </Editable.CancelTrigger>
+                  <Editable.SubmitTrigger asChild>
+                    <IconButton variant="outline" size="sm">
+                      <Check />
+                    </IconButton>
+                  </Editable.SubmitTrigger>
+                </Editable.Control>
+              </Flex>
+            </Editable.Root>
+            <Link 
+              href={site.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              fontSize="sm"
+              fontFamily="mono"
+              color="gray.600"
+            >
+              {site.url}
+            </Link>
+          </VStack>
+          
+          {/* Status Badge - Top Right (visible across all tabs) */}
+          <Badge
+            colorPalette={
+              getMaintenanceMode.state.loading || !getMaintenanceMode.state.data
+                ? "gray" 
+                : getMaintenanceMode.state.error 
+                  ? "red" 
+                  : getMaintenanceMode.state.data?.enabled 
+                    ? "red" 
+                    : "green"
+            }
+            variant="subtle"
+            size="lg"
+            display="flex"
+            alignItems="center"
+            gap={2}
           >
-            <Flex align="center" gap={2}>
-              <Editable.Preview />
-              <Editable.Input />
-              <Editable.Control>
-                <Editable.EditTrigger asChild>
-                  <IconButton variant="ghost" size="sm">
-                    <Edit />
-                  </IconButton>
-                </Editable.EditTrigger>
-                <Editable.CancelTrigger asChild>
-                  <IconButton variant="outline" size="sm">
-                    <X />
-                  </IconButton>
-                </Editable.CancelTrigger>
-                <Editable.SubmitTrigger asChild>
-                  <IconButton variant="outline" size="sm">
-                    <Check />
-                  </IconButton>
-                </Editable.SubmitTrigger>
-              </Editable.Control>
-            </Flex>
-          </Editable.Root>
-          <Link 
-            href={site.url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            fontSize="sm"
-            fontFamily="mono"
-            color="gray.600"
+            {getMaintenanceMode.state.loading || !getMaintenanceMode.state.data ? (
+              <>Loading...</>
+            ) : getMaintenanceMode.state.error ? (
+              <>
+                <ShieldAlert size={16} />
+                API Error
+              </>
+            ) : getMaintenanceMode.state.data?.enabled ? (
+              <>
+                <ShieldAlert size={16} />
+                Maintenance Active
+              </>
+            ) : (
+              <>
+                <Play size={16} />
+                Site Online
+              </>
+            )}
+          </Badge>
+        </Flex>
+
+        <Box borderWidth="1px" borderRadius="lg" p={8}>
+          <Tabs.Root colorPalette="blue" variant="line" defaultValue="site-info" lazyMount>
+            <Tabs.List>
+              <Tabs.Trigger value="site-info">Site Info</Tabs.Trigger>
+              <Tabs.Trigger value="packages">Packages</Tabs.Trigger>
+              <Tabs.Trigger value="update">Update</Tabs.Trigger>
+              <Tabs.Trigger value="history">History</Tabs.Trigger>
+              <Tabs.Trigger value="expert">Expert</Tabs.Trigger>
+              <Tabs.Trigger value="logs">Logs</Tabs.Trigger>
+            </Tabs.List>
+
+            {/* Tab 1: Site Info */}
+            <Tabs.Content value="site-info">
+              <SiteInfoTab 
+                site={site} 
+                onSiteUpdated={handleSiteUpdated}
+                onSiteRemoved={handleSiteRemoved}
+                maintenanceMode={getMaintenanceMode}
+              />
+            </Tabs.Content>
+
+            {/* Tab 2: Packages */}
+            <Tabs.Content value="packages">
+              <PackagesTab />
+            </Tabs.Content>
+
+            {/* Tab 3: Update */}
+            <Tabs.Content value="update">
+              <VStack gap={6} align="stretch">
+                <UpdateWorkflow />
+              </VStack>
+            </Tabs.Content>
+
+            {/* Tab 4: History */}
+            <Tabs.Content value="history">
+              <HistoryTab site={site} />
+            </Tabs.Content>
+
+            {/* Tab 5: Expert */}
+            <Tabs.Content value="expert">
+              <ExpertTab />
+            </Tabs.Content>
+
+            {/* Tab 6: Logs */}
+            <Tabs.Content value="logs">
+              <LogsTab site={site} />
+            </Tabs.Content>
+          </Tabs.Root>
+        </Box>
+        
+        {/* Back to Sites Button - Bottom Left */}
+        <Box position="absolute" bottom={4} left={0}>
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/')}
           >
-            {site.url}
-          </Link>
-        </VStack>
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/')}
-        >
-          <ArrowLeft size={16} /> Back to Sites
-        </Button>
-      </Flex>
-
-      <Box borderWidth="1px" borderRadius="lg" p={8}>
-        <Tabs.Root colorPalette="blue" variant="line" defaultValue="site-info" lazyMount>
-          <Tabs.List>
-            <Tabs.Trigger value="site-info">Site Info</Tabs.Trigger>
-            <Tabs.Trigger value="packages">Packages</Tabs.Trigger>
-            <Tabs.Trigger value="update">Update</Tabs.Trigger>
-            <Tabs.Trigger value="history">History</Tabs.Trigger>
-            <Tabs.Trigger value="expert">Expert</Tabs.Trigger>
-            <Tabs.Trigger value="logs">Logs</Tabs.Trigger>
-          </Tabs.List>
-
-          {/* Tab 1: Site Info */}
-          <Tabs.Content value="site-info">
-            <SiteInfoTab 
-              site={site} 
-              onSiteUpdated={handleSiteUpdated}
-              onSiteRemoved={handleSiteRemoved}
-            />
-          </Tabs.Content>
-
-          {/* Tab 2: Packages */}
-          <Tabs.Content value="packages">
-            <PackagesTab />
-          </Tabs.Content>
-
-          {/* Tab 3: Update */}
-          <Tabs.Content value="update">
-            <VStack gap={6} align="stretch">
-              <UpdateWorkflow />
-            </VStack>
-          </Tabs.Content>
-
-          {/* Tab 4: History */}
-          <Tabs.Content value="history">
-            <HistoryTab site={site} />
-          </Tabs.Content>
-
-          {/* Tab 5: Expert */}
-          <Tabs.Content value="expert">
-            <ExpertTab />
-          </Tabs.Content>
-
-          {/* Tab 6: Logs */}
-          <Tabs.Content value="logs">
-            <LogsTab site={site} />
-          </Tabs.Content>
-        </Tabs.Root>
-      </Box>
-    </Container>
+            <ArrowLeft size={16} /> Back to Sites
+          </Button>
+        </Box>
+      </Container>
     </SiteContext.Provider>
   );
 };

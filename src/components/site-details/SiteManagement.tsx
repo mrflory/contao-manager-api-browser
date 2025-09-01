@@ -17,12 +17,16 @@ export interface SiteManagementProps {
   site: Site;
   onSiteUpdated: () => void;
   onSiteRemoved: () => void;
+  hideVersionUpdate?: boolean;
+  inline?: boolean;
 }
 
 export const SiteManagement: React.FC<SiteManagementProps> = ({
   site,
   onSiteUpdated,
   onSiteRemoved,
+  hideVersionUpdate = false,
+  inline = false,
 }) => {
   const [showReauthForm, setShowReauthForm] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
@@ -171,41 +175,52 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
     fetchTokenInfo(); // Fetch token info when dialog opens
   };
 
+  const buttons = (
+    <>
+      {!hideVersionUpdate && (
+        <Button
+          colorPalette="blue"
+          onClick={() => updateVersionInfo.execute()}
+          loading={updateVersionInfo.state.loading}
+        >
+          <Settings size={16} /> Update Version Info
+        </Button>
+      )}
+      <Button
+        colorPalette="orange"
+        onClick={handleReauthenticate}
+      >
+        <RefreshCw size={16} /> Reauthenticate
+      </Button>
+      <Button
+        colorPalette="red"
+        onClick={handleRemoveButtonClick}
+      >
+        <Trash2 size={16} /> Remove Site
+      </Button>
+    </>
+  );
+
   return (
     <>
-      <VStack gap={4} align="start">
-        <Heading size="md" color="gray.500">Site Management</Heading>
-        
-        {!showReauthForm ? (
-          <HStack gap={4} wrap="wrap">
-            <Button
-              colorPalette="blue"
-              onClick={() => updateVersionInfo.execute()}
-              loading={updateVersionInfo.state.loading}
-            >
-              <Settings size={16} /> Update Version Info
-            </Button>
-            <Button
-              colorPalette="orange"
-              onClick={handleReauthenticate}
-            >
-              <RefreshCw size={16} /> Reauthenticate
-            </Button>
-            <Button
-              colorPalette="red"
-              onClick={handleRemoveButtonClick}
-            >
-              <Trash2 size={16} /> Remove Site
-            </Button>
-          </HStack>
+      {!showReauthForm ? (
+        inline ? (
+          buttons
         ) : (
+          <HStack gap={4} wrap="wrap">
+            {buttons}
+          </HStack>
+        )
+      ) : (
+        <VStack gap={4} align="start">
+          <Heading size="md" color="gray.500">Site Management</Heading>
           <ReauthenticationForm
             site={site}
             onSuccess={handleReauthSuccess}
             onCancel={handleReauthCancel}
           />
-        )}
-      </VStack>
+        </VStack>
+      )}
 
       <ConfirmationDialog
         isOpen={removeDialogOpen}
