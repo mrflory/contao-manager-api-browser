@@ -633,10 +633,13 @@ export class WorkflowEngine implements WorkflowEngineInterface {
         ...(status && { status }),
         ...(endTime && { endTime: endTime.toISOString() }),
         steps: historySteps.map(step => ({
-          ...step,
-          startTime: step.startTime.toISOString(),
-          ...(step.endTime && { endTime: step.endTime.toISOString() }),
-          status: step.status
+          id: step.id,
+          title: step.title,
+          summary: step.summary,
+          startTime: typeof step.startTime === 'string' ? step.startTime : step.startTime.toISOString(),
+          ...(step.endTime && { endTime: typeof step.endTime === 'string' ? step.endTime : step.endTime.toISOString() }),
+          status: step.status as string,
+          ...(step.error && { error: step.error })
         }))
       };
       

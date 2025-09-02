@@ -189,7 +189,7 @@ const SiteDetails: React.FC = () => {
                 const error = getMaintenanceMode.state.error;
                 
                 // Handle both string errors and Error objects
-                const errorString = typeof error === 'string' ? error : error?.message;
+                const errorString = typeof error === 'string' ? error : 'API Error';
                 
                 if (errorString) {
                   // Check if the error string contains JSON with an error field
@@ -217,7 +217,7 @@ const SiteDetails: React.FC = () => {
                 gap={2}
               >
                 <ShieldAlert size={16} />
-                API Error {getMaintenanceMode.state.error.status ? `(${getMaintenanceMode.state.error.status})` : ''}
+                API Error
               </Badge>
             </Tooltip>
           ) : (
