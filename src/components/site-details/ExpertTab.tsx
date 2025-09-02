@@ -29,6 +29,7 @@ import { MigrationConfigModal } from '../modals/MigrationConfigModal';
 import { TaskStatusModal } from '../modals/TaskStatusModal';
 import { SessionCredentialsModal } from '../modals/SessionCredentialsModal';
 import { TokenCreationModal } from '../modals/TokenCreationModal';
+import { FileSelectionModal } from '../modals/FileSelectionModal';
 
 interface SessionCredentials {
   username?: string;
@@ -59,7 +60,7 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
   const [taskStatusModalOpen, setTaskStatusModalOpen] = useState(false);
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
   const [tokenCreationModalOpen, setTokenCreationModalOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<'composer.json' | 'composer.lock'>('composer.json');
+  const [fileSelectionModalOpen, setFileSelectionModalOpen] = useState(false);
   const [jsonModalState, setJsonModalState] = useState<{
     isOpen: boolean;
     title: string;
@@ -72,12 +73,6 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
     setJsonModalState({ isOpen: false, title: '', data: null });
   };
 
-  const fileOptions = createListCollection({
-    items: [
-      { label: 'composer.json', value: 'composer.json' },
-      { label: 'composer.lock', value: 'composer.lock' }
-    ]
-  });
 
   const categoryOptions = createListCollection({
     items: [
@@ -128,11 +123,11 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
     }
   };
 
-  const handleGetFiles = async () => {
-    setLoading('get-files', true);
+  const handleFileSelectionSubmit = async (file: 'composer.json' | 'composer.lock') => {
+    setLoading('get-file-content', true);
     
     try {
-      const result = await ExpertApiService.getFiles(selectedFile);
+      const result = await ExpertApiService.getFiles(file);
       // For file content, we'll parse it as JSON if it's a JSON file
       let data;
       try {
@@ -144,18 +139,18 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
       
       setJsonModalState({
         isOpen: true,
-        title: `${selectedFile} Content`,
+        title: `${file} Content`,
         data
       });
       
       // Show success toast
-      toast.showApiSuccess('File content retrieved successfully', `Get ${selectedFile}`);
+      toast.showApiSuccess('File content retrieved successfully', `Get ${file}`);
     } catch (error) {
-      console.error(`Error getting ${selectedFile}:`, error);
+      console.error(`Error getting ${file}:`, error);
       // Show error toast notification
-      toast.showApiError(error as Error, `Get ${selectedFile}`);
+      toast.showApiError(error as Error, `Get ${file}`);
     } finally {
-      setLoading('get-files', false);
+      setLoading('get-file-content', false);
     }
   };
 
@@ -167,7 +162,7 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
     { category: 'Session', name: 'Delete Session (Logout)', description: 'Delete the current session', technical: 'DELETE /api/session', handler: () => handleApiCallWithModal('delete-session', ExpertApiService.deleteSession, 'Delete Session (Logout)') },
     
     // Files APIs
-    { category: 'Files', name: 'Get File Content', description: 'Gets the content of composer.json or composer.lock', technical: 'GET /api/files/{file}', handler: null },
+    { category: 'Files', name: 'Get File Content', description: 'Gets the content of composer.json or composer.lock', technical: 'GET /api/files/{file}', handler: () => setFileSelectionModalOpen(true) },
     { category: 'Files', name: 'Write File Content', description: 'Writes content to composer.json or composer.lock', technical: 'PUT /api/files/{file}', handler: null },
     
     // Server Configuration APIs
@@ -267,17 +262,16 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
     { category: 'Logs', name: 'Delete Log File', description: 'Deletes a log file', technical: 'DELETE /api/logs/{file}', handler: null }
   ], []);
 
-  // Filter APIs based on search and category, only show implemented ones
+  // Filter APIs based on search and category, show all APIs
   const filteredApis = useMemo(() => {
     return apiEndpoints.filter(api => {
-      const isImplemented = api.handler !== null;
       const matchesCategory = selectedCategory === 'all' || api.category === selectedCategory;
       const matchesSearch = searchTerm === '' || 
         api.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         api.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         api.technical.toLowerCase().includes(searchTerm.toLowerCase());
       
-      return isImplemented && matchesCategory && matchesSearch;
+      return matchesCategory && matchesSearch;
     });
   }, [apiEndpoints, selectedCategory, searchTerm]);
 
@@ -399,64 +393,35 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
                       </Box>
                     </Table.Cell>
                     <Table.Cell>
-                      <Button
-                        size="xs"
-                        colorPalette="blue"
-                        loading={isLoading(loadingKey)}
-                        onClick={async () => {
-                          setLoading(loadingKey, true);
-                          try {
-                            await api.handler?.();
-                          } catch (error) {
-                            console.error('API call error:', error);
-                          } finally {
-                            setLoading(loadingKey, false);
-                          }
-                        }}
-                      >
-                        <LuPlay size={12} />
-                      </Button>
+                      {api.handler ? (
+                        <Button
+                          size="xs"
+                          colorPalette="blue"
+                          loading={isLoading(loadingKey)}
+                          onClick={async () => {
+                            setLoading(loadingKey, true);
+                            try {
+                              await api.handler?.();
+                            } catch (error) {
+                              console.error('API call error:', error);
+                            } finally {
+                              setLoading(loadingKey, false);
+                            }
+                          }}
+                        >
+                          <LuPlay size={12} />
+                        </Button>
+                      ) : (
+                        <Box fontSize="xs" color="fg.muted" fontStyle="italic">
+                          not implemented
+                        </Box>
+                      )}
                     </Table.Cell>
                   </Table.Row>
                 );
               })}
             </Table.Body>
           </Table.Root>
-        </Box>
-        
-        {/* Special File Selector for composer files */}
-        <Box>
-          <Heading size="md" mb={4}>File Operations</Heading>
-          <HStack gap={4} align="end">
-            <Box flex="1">
-              <SelectRoot
-                value={[selectedFile]}
-                onValueChange={(details) => setSelectedFile(details.value[0] as 'composer.json' | 'composer.lock')}
-                collection={fileOptions}
-              >
-                <SelectTrigger>
-                  <SelectValueText placeholder="Select a file..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem item="composer.json">
-                    <SelectItemText>composer.json</SelectItemText>
-                  </SelectItem>
-                  <SelectItem item="composer.lock">
-                    <SelectItemText>composer.lock</SelectItemText>
-                  </SelectItem>
-                </SelectContent>
-              </SelectRoot>
-            </Box>
-            <Button
-              colorPalette="blue"
-              onClick={handleGetFiles}
-              loading={isLoading('get-files')}
-              minWidth="150px"
-            >
-              <LuPlay size={12} style={{ marginRight: '8px' }} />
-              Get File Content
-            </Button>
-          </HStack>
         </Box>
       </VStack>
 
@@ -512,6 +477,13 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
           scope: site?.scope || 'admin',
           grantType: 'one-time'
         }}
+      />
+
+      <FileSelectionModal
+        isOpen={fileSelectionModalOpen}
+        onClose={() => setFileSelectionModalOpen(false)}
+        onSubmit={handleFileSelectionSubmit}
+        loading={isLoading('get-file-content')}
       />
     </>
   );
