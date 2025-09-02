@@ -315,3 +315,23 @@ export class LogsApiService {
    */
   static cleanupOldLogs = api.cleanupOldLogs;
 }
+
+/**
+ * History API service
+ */
+export class HistoryApiService {
+  /**
+   * Get workflow history for a site
+   */
+  static getHistoryForSite = api.getHistoryForSite;
+
+  /**
+   * Create new history entry
+   */
+  static createHistoryEntry = api.createHistoryEntry;
+
+  /**
+   * Update existing history entry
+   */
+  static updateHistoryEntry = api.updateHistoryEntry;
+}

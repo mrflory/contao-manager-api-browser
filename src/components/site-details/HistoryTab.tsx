@@ -11,8 +11,8 @@ import {
   IconButton,
 } from '@chakra-ui/react';
 import { LuEye as Eye, LuRefreshCw as RefreshCw } from 'react-icons/lu';
-import { Site, HistoryEntry } from '../../types';
-import { HistoryService } from '../../services/historyService';
+import { Site, HistoryEntry, HistoryResponse } from '../../types';
+import { HistoryApiService } from '../../services/apiCallService';
 import { useApiCall } from '../../hooks/useApiCall';
 import { useToastNotifications } from '../../hooks/useToastNotifications';
 import { HistoryDetailsModal } from '../modals/HistoryDetailsModal';
@@ -32,12 +32,13 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
   const loadHistory = useApiCall(
     () => {
       console.log('Loading history for site:', site.url);
-      return HistoryService.getHistoryForSite(site.url);
+      return HistoryApiService.getHistoryForSite(site.url);
     },
     {
       onSuccess: (data: unknown) => {
         console.log('History API response:', data);
-        setHistory(data as HistoryEntry[]);
+        const response = data as HistoryResponse;
+        setHistory(response.history || []);
       },
       onError: (error) => {
         console.error('History loading error:', error);
@@ -192,7 +193,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
                 </Table.Row>
               </Table.Header>
               <Table.Body>
-                {history.map((entry) => (
+                {(history || []).map((entry) => (
                   <Table.Row key={entry.id}>
                     <Table.Cell>
                       <Box fontSize="sm">

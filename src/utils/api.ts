@@ -328,5 +328,26 @@ export const api = {
   async get<T = any>(endpoint: string): Promise<{ data: T }> {
     const response = await makeApiCall(endpoint);
     return { data: response };
+  },
+
+  // History API functions
+  async getHistoryForSite(siteUrl: string): Promise<any> {
+    return makeApiCall(`/history/${encodeURIComponent(siteUrl)}`);
+  },
+
+  async createHistoryEntry(data: { siteUrl: string; workflowType: string }): Promise<any> {
+    return makeApiCall('/history/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async updateHistoryEntry(id: string, data: { siteUrl: string; status?: string; endTime?: string; steps?: any[] }): Promise<any> {
+    return makeApiCall(`/history/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
   }
 };
