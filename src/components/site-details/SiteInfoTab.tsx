@@ -8,7 +8,6 @@ import {
   HStack,
   Flex,
   Separator,
-  Badge,
   IconButton,
 } from '@chakra-ui/react';
 import { 
@@ -16,7 +15,6 @@ import {
   LuSettings as Tool,
   LuPause as Pause,
   LuPlay as Play,
-  LuShieldAlert as ShieldAlert,
   LuRefreshCw as RefreshIcon,
   LuArrowRight as ArrowRight
 } from 'react-icons/lu';
@@ -25,14 +23,14 @@ import { Site, MaintenanceMode } from '../../types';
 import { formatDateTime } from '../../utils/dateUtils';
 import { SiteManagement } from './SiteManagement';
 import { useApiCall } from '../../hooks/useApiCall';
-import { TaskApiService, SiteApiService } from '../../services/apiCallService';
+import { TaskApiService, SiteApiService, ExpertApiService } from '../../services/apiCallService';
 import { useToastNotifications, TOAST_MESSAGES } from '../../hooks/useToastNotifications';
 
 export interface SiteInfoTabProps {
   site: Site;
   onSiteUpdated: () => void;
   onSiteRemoved: () => void;
-  maintenanceMode?: any; // useApiCall hook result for maintenance mode
+  maintenanceMode?: ReturnType<typeof useApiCall<MaintenanceMode>>; // useApiCall hook result for maintenance mode
   onNavigateToUpdate?: () => void;
 }
 
@@ -45,11 +43,14 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
 }) => {
   const toast = useToastNotifications();
 
-  // Use passed maintenance mode state or create local one as fallback
-  const getMaintenanceMode = maintenanceMode || useApiCall<MaintenanceMode>(TaskApiService.getMaintenanceModeStatus, {
+  // Always create the hook, but conditionally use it
+  const localMaintenanceMode = useApiCall<MaintenanceMode>(TaskApiService.getMaintenanceModeStatus, {
     showErrorToast: false, // We'll handle errors in the UI
     errorMessage: 'Failed to get maintenance mode status'
   });
+  
+  // Use passed maintenance mode state or local one as fallback
+  const getMaintenanceMode = maintenanceMode || localMaintenanceMode;
 
   const enableMaintenance = useApiCall<MaintenanceMode>(TaskApiService.enableMaintenanceMode, {
     showSuccessToast: true,
@@ -87,6 +88,29 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
     }
   );
 
+  const generateOneTimeToken = useApiCall(
+    () => ExpertApiService.generateUserToken(
+      site.user?.username || 'admin', 
+      'contao-manager-api', 
+      'admin', 
+      'one-time'
+    ),
+    {
+      onSuccess: (data: unknown) => {
+        const tokenData = data as { url?: string; token?: string };
+        if (tokenData?.url) {
+          // Automatically open the one-time login URL in a new tab
+          window.open(tokenData.url, '_blank', 'noopener,noreferrer');
+          toast.showApiSuccess('Auto-login URL generated and opened', 'Open Contao Manager');
+        } else {
+          toast.showApiError('Token generated but no URL received', 'Open Contao Manager');
+        }
+      },
+      showErrorToast: true,
+      errorMessage: 'Failed to generate auto-login token'
+    }
+  );
+
   // Only load maintenance mode status if not passed from parent
   useEffect(() => {
     if (!maintenanceMode) {
@@ -105,8 +129,8 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
   }, [site.url]);
 
   const handleOpenManager = useCallback(() => {
-    window.open(site.url, '_blank', 'noopener,noreferrer');
-  }, [site.url]);
+    generateOneTimeToken.execute();
+  }, [generateOneTimeToken]);
 
   const handleOpenAdmin = useCallback(() => {
     window.open(adminUrl, '_blank', 'noopener,noreferrer');
@@ -274,6 +298,7 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
           <Button
             colorPalette="blue"
             onClick={handleOpenManager}
+            loading={generateOneTimeToken.state.loading}
             size="md"
           >
             <ExternalLink size={16} />
