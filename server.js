@@ -1,12 +1,24 @@
+require('dotenv').config(); // Load environment variables first
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const TokenEncryptionService = require('./src/services/tokenEncryption');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const TOKEN_FILE = path.join(__dirname, 'data', 'config.json');
+
+// Initialize encryption service
+let tokenEncryption = null;
+try {
+    tokenEncryption = new TokenEncryptionService();
+} catch (error) {
+    console.error('Failed to initialize token encryption service:', error.message);
+    console.error('Please set TOKEN_MASTER_KEY in your .env file');
+    process.exit(1);
+}
 
 app.use(cors());
 app.use(express.json());
@@ -58,6 +70,16 @@ function loadConfig() {
                         site.scope = 'admin';
                         migrationNeeded = true;
                     }
+                    
+                    // Decrypt encrypted tokens for runtime use
+                    if (site.token && tokenEncryption.isTokenEncrypted(site.token)) {
+                        try {
+                            site.token = tokenEncryption.decryptToken(site.token, siteUrl);
+                        } catch (error) {
+                            console.error(`Failed to decrypt token for site ${siteUrl}:`, error.message);
+                            delete site.token; // Remove invalid encrypted token
+                        }
+                    }
                 });
                 
                 if (migrationNeeded) {
@@ -76,7 +98,26 @@ function loadConfig() {
 
 function saveConfig(config) {
     try {
-        fs.writeFileSync(TOKEN_FILE, JSON.stringify(config, null, 2));
+        // Create a deep copy to avoid modifying the original config
+        const configToSave = JSON.parse(JSON.stringify(config));
+        
+        // Encrypt tokens before saving
+        if (configToSave.sites) {
+            Object.keys(configToSave.sites).forEach(siteUrl => {
+                const site = configToSave.sites[siteUrl];
+                if (site.token && typeof site.token === 'string') {
+                    // Only encrypt if token is a plain string (not already encrypted)
+                    try {
+                        site.token = tokenEncryption.encryptToken(site.token, siteUrl);
+                    } catch (error) {
+                        console.error(`Failed to encrypt token for site ${siteUrl}:`, error.message);
+                        // Keep original token if encryption fails
+                    }
+                }
+            });
+        }
+        
+        fs.writeFileSync(TOKEN_FILE, JSON.stringify(configToSave, null, 2));
         return true;
     } catch (error) {
         console.error('Error saving config:', error.message);
@@ -92,6 +133,7 @@ function extractSiteName(url) {
         return url;
     }
 }
+
 
 // Configuration for excluding response logging for specific endpoints
 const RESPONSE_LOGGING_EXCLUSIONS = [
@@ -312,7 +354,6 @@ app.get('/api/config', (req, res) => {
             hasActiveSite: !!activeSite
         };
         
-        console.log('Config response:', JSON.stringify(response, null, 2));
         res.json(response);
     } catch (error) {
         console.error('Error in /api/config:', error);
