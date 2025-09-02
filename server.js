@@ -96,7 +96,9 @@ function extractSiteName(url) {
 // Configuration for excluding response logging for specific endpoints
 const RESPONSE_LOGGING_EXCLUSIONS = [
     'GET /api/server/phpinfo',
-    'GET /api/server/database'
+    'GET /api/server/database',
+    'GET /api/files/composer.json',
+    'GET /api/files/composer.lock'
 ];
 
 function shouldExcludeResponseLogging(method, endpoint) {
