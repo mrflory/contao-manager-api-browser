@@ -335,3 +335,43 @@ export class HistoryApiService {
    */
   static updateHistoryEntry = api.updateHistoryEntry;
 }
+
+/**
+ * Authentication API service
+ */
+export class AuthApiService {
+  /**
+   * Validate OAuth token
+   */
+  static validateToken = api.validateToken;
+
+  /**
+   * Save OAuth token for a site
+   */
+  static saveToken = api.saveToken;
+
+  /**
+   * Authenticate with username/password (cookie auth)
+   */
+  static cookieAuth = api.cookieAuth;
+
+  /**
+   * Check cookie session status
+   */
+  static cookieSessionCheck = api.cookieSessionCheck;
+
+  /**
+   * Logout from cookie session
+   */
+  static cookieLogout = api.cookieLogout;
+
+  /**
+   * Save site configuration after cookie authentication
+   */
+  static saveSiteCookie = api.saveSiteCookie;
+
+  /**
+   * Get current session/token info
+   */
+  static getTokenInfo = api.getTokenInfo;
+}

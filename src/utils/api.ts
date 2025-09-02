@@ -349,5 +349,58 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
+  },
+
+  // Authentication API functions
+  async validateToken(data: { url: string; token: string }): Promise<any> {
+    return makeApiCall('/validate-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async saveToken(data: { token: string; managerUrl: string }): Promise<any> {
+    return makeApiCall('/save-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async cookieAuth(data: { managerUrl: string; credentials: { username: string; password: string; totp?: string } }): Promise<any> {
+    return makeApiCall('/cookie-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async cookieSessionCheck(data: { managerUrl: string }): Promise<any> {
+    return makeApiCall('/cookie-session-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async cookieLogout(data: { managerUrl: string }): Promise<any> {
+    return makeApiCall('/cookie-logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async saveSiteCookie(data: { managerUrl: string; user: any; authMethod: string; scope: string; isReauth?: boolean }): Promise<any> {
+    return makeApiCall('/save-site-cookie', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async getTokenInfo(): Promise<any> {
+    return makeApiCall('/token-info');
   }
 };

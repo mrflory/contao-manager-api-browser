@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthService } from '../services/authService';
+import { AuthUtils } from '../utils/authUtils';
+import { AuthApiService } from '../services/apiCallService';
 import { SiteApiService } from '../services/apiCallService';
 import { useToastNotifications, TOAST_MESSAGES } from './useToastNotifications';
 import { OAuthScope } from '../types/authTypes';
@@ -73,11 +74,11 @@ export const useAuth = (options: UseAuthOptions = {}) => {
     setState(prev => ({ ...prev, isAuthenticating: true }));
 
     try {
-      const redirectUri = AuthService.buildOAuthRedirectUri();
+      const redirectUri = AuthUtils.buildOAuthRedirectUri();
       
       toast.showInfo(TOAST_MESSAGES.REDIRECTING_AUTH);
 
-      AuthService.initiateOAuth(managerUrl, state.scope, redirectUri);
+      AuthUtils.initiateOAuth(managerUrl, state.scope, redirectUri);
     } catch (error) {
       setState(prev => ({ ...prev, isAuthenticating: false }));
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -91,7 +92,7 @@ export const useAuth = (options: UseAuthOptions = {}) => {
 
     try {
       toast.showInfo(TOAST_MESSAGES.REDIRECTING_AUTH);
-      AuthService.initiateReauth(managerUrl, state.scope);
+      AuthUtils.initiateReauth(managerUrl, state.scope);
     } catch (error) {
       setState(prev => ({ ...prev, isAuthenticating: false }));
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -101,10 +102,10 @@ export const useAuth = (options: UseAuthOptions = {}) => {
   }, [state.scope, toast, options]);
 
   const handleOAuthCallback = useCallback(() => {
-    if (AuthService.isOAuthCallback()) {
-      const result = AuthService.extractTokenFromHash();
+    if (AuthUtils.isOAuthCallback()) {
+      const result = AuthUtils.extractTokenFromHash();
       
-      if (result.success && result.token) {
+      if (result && result.token) {
         setState(prev => ({ 
           ...prev, 
           extractedToken: result.token!, 
@@ -113,24 +114,24 @@ export const useAuth = (options: UseAuthOptions = {}) => {
         }));
         
         toast.showSuccess(TOAST_MESSAGES.TOKEN_RECEIVED);
-        AuthService.clearOAuthHash();
+        AuthUtils.clearOAuthHash();
       } else {
-        toast.showApiError(result.error || 'Failed to extract token', 'Authentication');
-        options.onAuthError?.(result.error || 'Failed to extract token');
+        toast.showApiError('Failed to extract token from OAuth callback', 'Authentication');
+        options.onAuthError?.('Failed to extract token from OAuth callback');
       }
     }
   }, [toast, options]);
 
   const handleReauthCallback = useCallback(async () => {
-    if (AuthService.isReauthCallback()) {
-      const result = AuthService.extractTokenFromHash();
+    if (AuthUtils.isReauthCallback()) {
+      const result = AuthUtils.extractTokenFromHash();
       
-      if (result.success && result.token) {
+      if (result && result.token) {
         await saveReauthToken(result.token);
-        AuthService.clearOAuthHash();
+        AuthUtils.clearOAuthHash();
       } else {
-        toast.showApiError(result.error || 'Failed to extract token', 'Reauthentication');
-        options.onAuthError?.(result.error || 'Failed to extract token');
+        toast.showApiError('Failed to extract token from reauthentication callback', 'Reauthentication');
+        options.onAuthError?.('Failed to extract token from reauthentication callback');
       }
     }
   }, [toast, options]);
@@ -147,16 +148,16 @@ export const useAuth = (options: UseAuthOptions = {}) => {
     setState(prev => ({ ...prev, loading: true }));
 
     try {
-      const urlToUse = managerUrl || AuthService.getStoredManagerUrl();
+      const urlToUse = managerUrl || AuthUtils.getStoredManagerUrl();
       if (!urlToUse) {
         throw new Error('Manager URL not found. Please start over.');
       }
 
-      const result = await SiteApiService.saveToken(state.token, urlToUse);
+      const result = await AuthApiService.saveToken({ token: state.token, managerUrl: urlToUse });
       
       if (result.success) {
         toast.showSuccess(TOAST_MESSAGES.SITE_ADDED);
-        AuthService.cleanupOAuthData();
+        AuthUtils.cleanupOAuthData();
         
         options.onAuthSuccess?.(state.token);
         
@@ -178,7 +179,7 @@ export const useAuth = (options: UseAuthOptions = {}) => {
   }, [state.token, toast, navigate, options]);
 
   const saveReauthToken = useCallback(async (token: string) => {
-    const siteUrl = AuthService.getStoredReauthSiteUrl();
+    const siteUrl = AuthUtils.getStoredReauthSiteUrl();
     if (!siteUrl) {
       toast.showError({
         title: 'Error',
@@ -190,7 +191,7 @@ export const useAuth = (options: UseAuthOptions = {}) => {
     setState(prev => ({ ...prev, loading: true }));
 
     try {
-      const result = await SiteApiService.saveToken(token, siteUrl);
+      const result = await AuthApiService.saveToken({ token: token, managerUrl: siteUrl });
       
       if (result.success) {
         // Ensure the reauthenticated site is set as active
@@ -201,7 +202,7 @@ export const useAuth = (options: UseAuthOptions = {}) => {
         options.onAuthSuccess?.(token);
         
         // Clean up OAuth data AFTER the success callback has used it
-        AuthService.cleanupOAuthData();
+        AuthUtils.cleanupOAuthData();
       } else {
         throw new Error(result.error || 'Failed to save new token');
       }

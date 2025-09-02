@@ -24,7 +24,10 @@ export function useWorkflowHistory() {
     },
     
     updateHistoryEntry: async (engine: any, status?: 'started' | 'finished' | 'cancelled' | 'error', endTime?: Date) => {
-      await engine.updateHistoryEntry(status, endTime);
+      // Don't await - history updates should not block workflow
+      engine.updateHistoryEntry(status, endTime).catch((error: any) => {
+        console.warn('History update failed in useWorkflowHistory hook - non-fatal:', error);
+      });
     }
   };
 }

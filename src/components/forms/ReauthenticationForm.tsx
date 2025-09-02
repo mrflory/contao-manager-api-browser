@@ -13,7 +13,7 @@ import { CookieAuthForm } from './CookieAuthForm';
 import { Field } from '../ui/field';
 import { useToastNotifications } from '../../hooks/useToastNotifications';
 import { useAuth } from '../../hooks/useAuth';
-import { AuthService } from '../../services/authService';
+import { AuthApiService } from '../../services/apiCallService';
 import { OAuthScope, AuthenticationMethod, CookieAuthCredentials } from '../../types/authTypes';
 
 export interface ReauthenticationFormProps {
@@ -48,31 +48,23 @@ export const ReauthenticationForm: React.FC<ReauthenticationFormProps> = ({
     setCookieAuthLoading(true);
 
     try {
-      const result = await AuthService.authenticateCookie(site.url, credentials);
+      const result = await AuthApiService.cookieAuth({ managerUrl: site.url, credentials });
       
       if (result.success) {
         // Update site configuration with new cookie authentication
-        const response = await fetch('/api/save-site-cookie', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            managerUrl: site.url,
-            user: result.user,
-            authMethod: 'cookie',
-            scope: scope,
-            isReauth: true // Flag to indicate this is a reauthentication
-          })
+        const configResult = await AuthApiService.saveSiteCookie({
+          managerUrl: site.url,
+          user: result.user,
+          authMethod: 'cookie',
+          scope: scope,
+          isReauth: true // Flag to indicate this is a reauthentication
         });
 
-        const data = await response.json();
-
-        if (data.success) {
+        if (configResult.success) {
           showApiSuccess('Site reauthenticated successfully!', 'Cookie Authentication');
           onSuccess();
         } else {
-          showApiError(data.error || 'Failed to save site configuration', 'Cookie Authentication');
+          showApiError(configResult.error || 'Failed to save site configuration', 'Cookie Authentication');
         }
       } else {
         showApiError(result.error || 'Authentication failed', 'Cookie Authentication');

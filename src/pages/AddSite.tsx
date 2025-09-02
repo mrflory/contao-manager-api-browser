@@ -18,7 +18,8 @@ import { Field } from '../components/ui/field';
 import { useAuth } from '../hooks/useAuth';
 import { useToastNotifications } from '../hooks/useToastNotifications';
 import { OAuthScope, AuthenticationMethod, CookieAuthCredentials } from '../types/authTypes';
-import { AuthService } from '../services/authService';
+import { AuthUtils } from '../utils/authUtils';
+import { AuthApiService } from '../services/apiCallService';
 import { encodeUrlParam } from '../utils/urlUtils';
 
 const AddSite: React.FC = () => {
@@ -31,7 +32,7 @@ const AddSite: React.FC = () => {
   
   // Detect reauthentication BEFORE useAuth hook processes the callback
   const [isReauthFlow] = useState(() => {
-    return AuthService.isReauthCallback();
+    return AuthUtils.isReauthCallback();
   });
 
   // Extract site URL from hash during component initialization (before hash is cleared)
@@ -99,26 +100,18 @@ const AddSite: React.FC = () => {
         return;
       }
 
-      const result = await AuthService.authenticateCookie(url, credentials);
+      const result = await AuthApiService.cookieAuth({ managerUrl: url, credentials });
       
       if (result.success) {
         // Authentication successful, now save site configuration
-        const response = await fetch('/api/save-site-cookie', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            managerUrl: url,
-            user: result.user,
-            authMethod: 'cookie',
-            scope: cookieScope
-          })
+        const configResult = await AuthApiService.saveSiteCookie({
+          managerUrl: url,
+          user: result.user,
+          authMethod: 'cookie',
+          scope: cookieScope
         });
 
-        const data = await response.json();
-
-        if (data.success) {
+        if (configResult.success) {
           showApiSuccess(
             isReauthFlow ? 'Site reauthenticated successfully!' : 'Site added successfully!',
             'Cookie Authentication'
@@ -131,7 +124,7 @@ const AddSite: React.FC = () => {
             navigate('/');
           }
         } else {
-          showApiError(data.error || 'Failed to save site configuration', 'Cookie Authentication');
+          showApiError(configResult.error || 'Failed to save site configuration', 'Cookie Authentication');
         }
       } else {
         showApiError(result.error || 'Authentication failed', 'Cookie Authentication');

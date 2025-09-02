@@ -1,0 +1,67 @@
+{
+  "sites": {
+    "https://fs-informatik.de/contao-manager.phar.php": {
+      "name": "FS Informatik",
+      "url": "https://fs-informatik.de/contao-manager.phar.php",
+      "token": "85d90219294be497227338b4052e4804",
+      "lastUsed": "2025-08-25T13:47:52.510Z",
+      "versionInfo": {
+        "contaoManagerVersion": "1.10.5",
+        "phpVersion": "8.4.8",
+        "contaoVersion": "5.5.16",
+        "lastUpdated": "2025-08-25T13:54:34.896Z"
+      },
+      "authMethod": "token",
+      "scope": "admin"
+    },
+    "https://keybird.info/contao-manager.phar.php": {
+      "name": "keybird.info",
+      "url": "https://keybird.info/contao-manager.phar.php",
+      "token": "e97d2599a578de54131db4fc8e3d0ef9",
+      "lastUsed": "2025-08-08T20:06:36.127Z",
+      "versionInfo": {
+        "contaoManagerVersion": null,
+        "phpVersion": "8.4.7-nmm1",
+        "contaoVersion": "5.5.10",
+        "lastUpdated": "2025-06-10T21:21:03.300Z"
+      },
+      "authMethod": "token",
+      "scope": "admin"
+    },
+    "http://contao45.floimausland.de/contao-manager.phar.php": {
+      "name": "contao45.floimausland.de",
+      "url": "http://contao45.floimausland.de/contao-manager.phar.php",
+      "authMethod": "token",
+      "lastUsed": "2025-09-01T20:02:03.554Z",
+      "user": {
+        "username": "florian",
+        "scope": "admin",
+        "limited": false,
+        "totp_enabled": false
+      },
+      "scope": "admin",
+      "versionInfo": {
+        "contaoManagerVersion": "1.10.5",
+        "phpVersion": "8.4.8",
+        "contaoVersion": "5.3.37",
+        "lastUpdated": "2025-08-27T21:40:24.419Z"
+      },
+      "token": "47d33fd66953c59a42f0fe7461f14deb"
+    },
+    "http://localhost:3001/contao-manager.phar.php": {
+      "name": "localhost",
+      "url": "http://localhost:3001/contao-manager.phar.php",
+      "authMethod": "token",
+      "lastUsed": "2025-09-01T19:30:30.797Z",
+      "token": "test-token-123",
+      "scope": "admin",
+      "versionInfo": {
+        "contaoManagerVersion": "1.9.4",
+        "phpVersion": "8.2.15",
+        "contaoVersion": "5.5.11",
+        "lastUpdated": "2025-09-01T15:27:59.573Z"
+      }
+    }
+  },
+  "activeSite": "http://contao45.floimausland.de/contao-manager.phar.php"
+}
