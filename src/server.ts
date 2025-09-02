@@ -214,6 +214,7 @@ const proxyEndpoints = [
     '/api/logs'
 ];
 
+
 // Create proxy routes for all HTTP methods
 proxyEndpoints.forEach(endpoint => {
     const methods: ('get' | 'post' | 'put' | 'patch' | 'delete')[] = ['get', 'post', 'put', 'patch', 'delete'];
@@ -280,17 +281,28 @@ app.post('/api/history/create', (req: ApiRequest, res) => {
 });
 
 app.put('/api/history/:id', (req: ApiRequest, res) => {
+    console.log('[HISTORY UPDATE] Request received:', {
+        id: req.params.id,
+        body: req.body,
+        contentType: req.headers['content-type'],
+        bodyType: typeof req.body
+    });
+    
     try {
         const { id } = req.params;
         const historyEntry = historyService.updateHistoryEntry(id, req.body);
         
+        console.log('[HISTORY UPDATE] Service result:', historyEntry ? 'Success' : 'Not found');
+        
         if (historyEntry) {
             res.json({ success: true, historyEntry });
         } else {
+            console.log('[HISTORY UPDATE] History entry not found for ID:', id);
             res.status(404).json({ error: 'History entry not found' });
         }
     } catch (error) {
-        console.error('Update history error:', error);
+        console.error('[HISTORY UPDATE] Error caught:', error);
+        console.error('[HISTORY UPDATE] Error stack:', error instanceof Error ? error.stack : 'No stack');
         res.status(500).json({ error: 'Failed to update history entry' });
     }
 });

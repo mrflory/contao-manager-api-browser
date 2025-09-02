@@ -14,8 +14,9 @@
   "scripts": {
     "start": "NODE_ENV=production node dist-server/server.js",
     "start:js": "NODE_ENV=production node server.js",
-    "dev": "nodemon --ignore data/config.json server.js",
-    "dev:ts": "nodemon --exec ts-node src/server.ts --ignore data/config.json",
+    "dev": "nodemon --ignore 'data/*' server.js",
+    "dev:ts": "nodemon --exec ts-node src/server.ts --ignore 'data/*'",
+    "dev:ts:stable": "ts-node src/server.ts",
     "dev:react": "vite",
     "dev:full": "concurrently \"npm run dev\" \"npm run dev:react\"",
     "dev:full:ts": "concurrently \"npm run dev:ts\" \"npm run dev:react\"",

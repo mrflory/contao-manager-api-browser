@@ -8,8 +8,8 @@ import {
   WorkflowEngineInterface,
   TimelineItemStatus
 } from './types';
-import { HistoryService, CreateHistoryEntryRequest, UpdateHistoryEntryRequest } from '../../services/historyService';
-import { HistoryEntry, HistoryStep, WorkflowStepStatus } from '../../types';
+import { HistoryApiService } from '../../services/apiCallService';
+import { HistoryEntry, HistoryStep, WorkflowStepStatus, CreateHistoryRequest, UpdateHistoryRequest } from '../../types';
 
 /**
  * Generic workflow engine that manages timeline-based execution
@@ -137,7 +137,10 @@ export class WorkflowEngine implements WorkflowEngineInterface {
     this.state.endTime = new Date();
     
     // Update history entry with error status since stop() is usually called on error
-    await this.updateHistoryEntry('error', this.state.endTime);
+    // Don't await - history updates should not block workflow completion
+    this.updateHistoryEntry('error', this.state.endTime).catch(error => {
+      console.warn('History update failed during stop() - this is non-fatal:', error);
+    });
     
     this.emit('stopped');
   }
@@ -179,7 +182,10 @@ export class WorkflowEngine implements WorkflowEngineInterface {
       await Promise.all(cancelPromises);
       
       // Update history entry with cancelled status
-      await this.updateHistoryEntry('cancelled', new Date());
+      // Don't await - history updates should not block workflow completion
+      this.updateHistoryEntry('cancelled', new Date()).catch(error => {
+        console.warn('History update failed during cancel() - this is non-fatal:', error);
+      });
       
       this.emit('cancelled');
     } finally {
@@ -562,7 +568,10 @@ export class WorkflowEngine implements WorkflowEngineInterface {
     this.state.endTime = new Date();
     
     // Update history entry with completion status
-    await this.updateHistoryEntry('finished', this.state.endTime);
+    // Don't await - history updates should not block workflow completion
+    this.updateHistoryEntry('finished', this.state.endTime).catch(error => {
+      console.warn('History update failed during complete() - this is non-fatal:', error);
+    });
     
     this.emit('completed');
   }
@@ -609,48 +618,77 @@ export class WorkflowEngine implements WorkflowEngineInterface {
   // History tracking methods
   async startHistoryTracking(siteUrl: string, workflowType: 'update' | 'migration' | 'composer'): Promise<void> {
     try {
-      const request: CreateHistoryEntryRequest = {
+      const request: CreateHistoryRequest = {
         siteUrl,
         workflowType
       };
       
-      this.currentHistoryEntry = await HistoryService.createHistoryEntry(request);
+      const response = await HistoryApiService.createHistoryEntry(request);
+      this.currentHistoryEntry = response.historyEntry;
     } catch (error) {
       console.warn('Failed to create history entry:', error);
     }
   }
   
   async updateHistoryEntry(status?: 'started' | 'finished' | 'cancelled' | 'error', endTime?: Date): Promise<void> {
-    if (!this.currentHistoryEntry) {
-      return;
-    }
     
+    // Wrap entire method in try-catch to ensure it never throws
     try {
-      const historySteps = this.generateHistorySteps();
+      if (!this.currentHistoryEntry) {
+        return;
+      }
       
-      const request: UpdateHistoryEntryRequest = {
-        siteUrl: this.currentHistoryEntry.siteUrl,
-        ...(status && { status }),
-        ...(endTime && { endTime: endTime.toISOString() }),
-        steps: historySteps.map(step => ({
-          id: step.id,
-          title: step.title,
-          summary: step.summary,
-          startTime: typeof step.startTime === 'string' ? step.startTime : step.startTime.toISOString(),
-          ...(step.endTime && { endTime: typeof step.endTime === 'string' ? step.endTime : step.endTime.toISOString() }),
-          status: step.status as string,
-          ...(step.error && { error: step.error })
-        }))
-      };
-      
-      this.currentHistoryEntry = await HistoryService.updateHistoryEntry(
-        this.currentHistoryEntry.id, 
-        request
-      );
-    } catch (error) {
-      console.error('Failed to update history entry:', error);
-      console.error('History entry ID:', this.currentHistoryEntry?.id);
-      console.error('Timeline items:', this.state.timeline.length);
+      try {
+        const historySteps = this.generateHistorySteps();
+        
+        const request: UpdateHistoryRequest = {
+          siteUrl: this.currentHistoryEntry.siteUrl,
+          ...(status && { status }),
+          ...(endTime && { endTime: endTime.toISOString() }),
+          steps: historySteps.map(step => {
+            const stepData: any = {
+              id: step.id,
+              name: step.title, // API expects 'name' instead of 'title'
+              startTime: typeof step.startTime === 'string' ? step.startTime : step.startTime.toISOString(),
+              status: step.status as 'pending' | 'running' | 'completed' | 'failed'
+            };
+            
+            if (step.endTime) {
+              stepData.endTime = typeof step.endTime === 'string' ? step.endTime : step.endTime.toISOString();
+            }
+            
+            if (step.error) {
+              stepData.error = step.error;
+            }
+            
+            if (step.summary) {
+              stepData.data = { summary: step.summary };
+            }
+            
+            return stepData;
+          })
+        };
+        
+        console.log('Updating history entry with:', {
+          id: this.currentHistoryEntry.id,
+          request
+        });
+        
+        const response = await HistoryApiService.updateHistoryEntry(
+          this.currentHistoryEntry.id, 
+          request
+        );
+        this.currentHistoryEntry = response.historyEntry;
+        console.log('History entry updated successfully');
+      } catch (error) {
+        console.warn('Failed to update history entry (non-fatal):', error);
+        console.warn('History entry ID:', this.currentHistoryEntry?.id);
+        console.warn('Timeline items:', this.state.timeline.length);
+        // Don't throw the error - history updates should not break the workflow
+      }
+    } catch (outerError) {
+      // Absolutely ensure this method never throws
+      console.warn('Outer catch in updateHistoryEntry - this should never happen:', outerError);
     }
   }
   

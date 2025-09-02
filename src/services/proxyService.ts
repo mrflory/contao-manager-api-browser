@@ -55,9 +55,6 @@ export class ProxyService {
         }
 
         console.log(`[API REQUEST] ${method} ${activeSite.url}${endpoint}`);
-        if (data) {
-            console.log('[API REQUEST BODY]', JSON.stringify(data, null, 2));
-        }
 
         let response: AxiosResponse;
         let requestError: Error | null = null;
@@ -66,7 +63,6 @@ export class ProxyService {
         if (activeSite.authMethod === 'cookie' && cookieHeader) {
             // For cookie authentication, forward cookies from the client request
             console.log('[API REQUEST] Using cookie authentication');
-            console.log('[API REQUEST] Client cookies:', cookieHeader || 'none');
             
             config.headers = {
                 ...config.headers,
@@ -98,7 +94,7 @@ export class ProxyService {
                 response = await axios(config as any);
                 console.log('[API REQUEST] Contao-Manager-Auth worked');
             } catch (error) {
-                console.log('[API REQUEST] Contao-Manager-Auth failed, trying Authorization Bearer');
+                console.log('[API REQUEST] Contao-Manager-Auth failed, trying Authorization Bearer fallback');
                 // Fallback to Authorization Bearer header
                 try {
                     config.headers = {
@@ -116,25 +112,7 @@ export class ProxyService {
         }
 
         console.log(`[API RESPONSE] Status: ${response.status}`);
-        console.log('[API RESPONSE] Headers:', response.headers);
-        
-        // Log response data safely
-        let responseDataForLog: any = null;
-        if (response.data !== undefined) {
-            try {
-                const dataStr = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
-                console.log('[API RESPONSE] Data:', dataStr);
-                console.log('[API RESPONSE] Data type:', typeof response.data);
-                console.log('[API RESPONSE] Data length:', dataStr.length);
-                responseDataForLog = response.data;
-            } catch (e) {
-                console.log('[API RESPONSE] Data (stringify failed):', response.data);
-                console.log('[API RESPONSE] Data type:', typeof response.data);
-                responseDataForLog = response.data;
-            }
-        } else {
-            console.log('[API RESPONSE] No data in response');
-        }
+        let responseDataForLog: any = response.data;
 
         // Log the API call
         this.loggingService.logApiCall(
