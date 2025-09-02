@@ -171,6 +171,11 @@ export class ExpertApiService {
   static deleteToken = api.deleteToken;
 
   /**
+   * Generate a one-time token for a user
+   */
+  static generateUserToken = api.generateUserToken;
+
+  /**
    * Get database backups
    */
   static getDatabaseBackups = api.getDatabaseBackups;
@@ -199,6 +204,16 @@ export class ExpertApiService {
    * Get session status
    */
   static getSessionStatus = api.getSessionStatus;
+
+  /**
+   * Create session (login)
+   */
+  static createSession = api.createSession;
+
+  /**
+   * Delete session (logout)
+   */
+  static deleteSession = api.deleteSession;
 
   /**
    * Get server configuration

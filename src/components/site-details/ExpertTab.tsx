@@ -27,15 +27,38 @@ import { ApiResultModal, JsonDisplayModal } from '../modals/ApiResultModal';
 import { TaskSelectionModal } from '../modals/TaskSelectionModal';
 import { MigrationConfigModal } from '../modals/MigrationConfigModal';
 import { TaskStatusModal } from '../modals/TaskStatusModal';
-import { formatDatabaseBackups, formatSortedPackages, formatUpdateStatus, formatTokenInfo, formatLogFiles, formatPhpInfo } from '../../utils/formatters';
+import { SessionCredentialsModal } from '../modals/SessionCredentialsModal';
+import { TokenCreationModal } from '../modals/TokenCreationModal';
 
-export const ExpertTab: React.FC = () => {
+interface SessionCredentials {
+  username?: string;
+  password?: string;
+  totp?: string;
+  token?: string;
+}
+
+interface TokenCreationForm {
+  username: string;
+  clientId: string;
+  scope: string;
+  grantType: string;
+}
+import { formatDatabaseBackups, formatSortedPackages, formatUpdateStatus, formatTokenInfo, formatLogFiles, formatPhpInfo } from '../../utils/formatters';
+import { Site } from '../../types';
+
+interface ExpertTabProps {
+  site?: Site;
+}
+
+export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
   const { modalState, openModal, closeModal } = useModalState();
   const { isLoading, setLoading } = useLoadingStates();
   const toast = useToastNotifications();
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [taskStatusModalOpen, setTaskStatusModalOpen] = useState(false);
+  const [sessionModalOpen, setSessionModalOpen] = useState(false);
+  const [tokenCreationModalOpen, setTokenCreationModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<'composer.json' | 'composer.lock'>('composer.json');
   const [jsonModalState, setJsonModalState] = useState<{
     isOpen: boolean;
@@ -139,9 +162,9 @@ export const ExpertTab: React.FC = () => {
   // Define all APIs from swagger.yaml
   const apiEndpoints = useMemo(() => [
     // Session APIs
-    { category: 'Session', name: 'Create Session (Login)', description: 'Create a new session with credentials or token', technical: 'POST /api/session', handler: null },
+    { category: 'Session', name: 'Create Session (Login)', description: 'Create a new session with credentials or token', technical: 'POST /api/session', handler: () => setSessionModalOpen(true) },
     { category: 'Session', name: 'Get Session Status', description: 'Returns information about the current session', technical: 'GET /api/session', handler: () => handleApiCallWithModal('session-status', ExpertApiService.getSessionStatus, 'Session Status') },
-    { category: 'Session', name: 'Delete Session (Logout)', description: 'Delete the current session', technical: 'DELETE /api/session', handler: null },
+    { category: 'Session', name: 'Delete Session (Logout)', description: 'Delete the current session', technical: 'DELETE /api/session', handler: () => handleApiCallWithModal('delete-session', ExpertApiService.deleteSession, 'Delete Session (Logout)') },
     
     // Files APIs
     { category: 'Files', name: 'Get File Content', description: 'Gets the content of composer.json or composer.lock', technical: 'GET /api/files/{file}', handler: null },
@@ -190,7 +213,7 @@ export const ExpertTab: React.FC = () => {
         setLoading('token-list', false);
       }
     } },
-    { category: 'Users', name: 'Create Token', description: 'Create a new token', technical: 'POST /api/users/{username}/tokens', handler: null },
+    { category: 'Users', name: 'Create Token', description: 'Create a new token', technical: 'POST /api/users/{username}/tokens', handler: () => setTokenCreationModalOpen(true) },
     { category: 'Users', name: 'Get Token Info', description: 'Get information about current token', technical: 'GET /api/users/{username}/tokens/{id}', handler: () => handleApiCallWithModal('token-info', ExpertApiService.getTokenInfo, 'Token Information', formatTokenInfo) },
     { category: 'Users', name: 'Delete Token', description: 'Delete a token', technical: 'DELETE /api/users/{username}/tokens/{id}', handler: null },
     
@@ -278,6 +301,23 @@ export const ExpertTab: React.FC = () => {
       // Additional error handling if needed, but handleApiCallWithModal already shows toast
       console.error('Task status update failed:', error);
     }
+  };
+
+  const handleSessionCredentialsSubmit = async (credentials: SessionCredentials) => {
+    await handleApiCallWithModal('create-session', () => ExpertApiService.createSession(credentials), 'Create Session (Login)');
+  };
+
+  const handleTokenCreationSubmit = async (formData: TokenCreationForm) => {
+    await handleApiCallWithModal(
+      'create-token', 
+      () => ExpertApiService.generateUserToken(
+        formData.username, 
+        formData.clientId, 
+        formData.scope, 
+        formData.grantType || undefined
+      ), 
+      'Create Token'
+    );
   };
 
   return (
@@ -453,6 +493,25 @@ export const ExpertTab: React.FC = () => {
         onClose={() => setTaskStatusModalOpen(false)}
         onSubmit={handleTaskStatusSubmit}
         loading={isLoading('patch-task-status')}
+      />
+
+      <SessionCredentialsModal
+        isOpen={sessionModalOpen}
+        onClose={() => setSessionModalOpen(false)}
+        onSubmit={handleSessionCredentialsSubmit}
+        loading={isLoading('create-session')}
+      />
+
+      <TokenCreationModal
+        isOpen={tokenCreationModalOpen}
+        onClose={() => setTokenCreationModalOpen(false)}
+        onSubmit={handleTokenCreationSubmit}
+        loading={isLoading('create-token')}
+        initialValues={{
+          username: site?.user?.username || '',
+          scope: site?.scope || 'admin',
+          grantType: 'one-time'
+        }}
       />
     </>
   );

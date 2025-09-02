@@ -1287,7 +1287,7 @@ app.get('/api/server/database', async (req, res) => {
     }
 });
 
-// Session endpoint
+// Session endpoints
 app.get('/api/session', async (req, res) => {
     try {
         console.log('[SESSION-STATUS] Starting request');
@@ -1297,6 +1297,57 @@ app.get('/api/session', async (req, res) => {
         console.error('[SESSION-STATUS] Error:', error.message);
         console.error('[SESSION-STATUS] Full error:', error);
         res.status(500).json({ error: 'Failed to get session status: ' + error.message });
+    }
+});
+
+app.post('/api/session', async (req, res) => {
+    try {
+        console.log('[SESSION-CREATE] Starting request');
+        
+        // Handle different request body types based on authentication method and request content
+        let requestBody = req.body;
+        let logSafeBody;
+        
+        if (req.body.token) {
+            // Token-based session creation (one-time login token)
+            console.log('[SESSION-CREATE] Using token-based session creation');
+            logSafeBody = { token: '[REDACTED]' };
+        } else if (req.body.username && req.body.password) {
+            // Username/password-based session creation
+            console.log('[SESSION-CREATE] Using username/password session creation');
+            logSafeBody = {
+                username: req.body.username,
+                password: '[REDACTED]',
+                totp: req.body.totp || 'undefined'
+            };
+        } else {
+            console.log('[SESSION-CREATE] Invalid request body - missing required fields');
+            return res.status(400).json({ 
+                error: 'Invalid request body. Either "token" or both "username" and "password" are required.' 
+            });
+        }
+        
+        console.log('[SESSION-CREATE] Request body:', JSON.stringify(logSafeBody));
+        
+        // For token-based sites, we still need to proxy the request but it will handle token auth differently
+        const response = await proxyToContaoManager('/api/session', 'POST', requestBody, req);
+        handleApiResponse('SESSION-CREATE', response, res);
+    } catch (error) {
+        console.error('[SESSION-CREATE] Error:', error.message);
+        console.error('[SESSION-CREATE] Full error:', error);
+        res.status(500).json({ error: 'Failed to create session: ' + error.message });
+    }
+});
+
+app.delete('/api/session', async (req, res) => {
+    try {
+        console.log('[SESSION-DELETE] Starting request');
+        const response = await proxyToContaoManager('/api/session', 'DELETE', null, req);
+        handleApiResponse('SESSION-DELETE', response, res);
+    } catch (error) {
+        console.error('[SESSION-DELETE] Error:', error.message);
+        console.error('[SESSION-DELETE] Full error:', error);
+        res.status(500).json({ error: 'Failed to delete session: ' + error.message });
     }
 });
 
@@ -1349,6 +1400,45 @@ app.delete('/api/users/:username/tokens/:id', async (req, res) => {
         console.error('[DELETE-TOKEN] Error:', error.message);
         console.error('[DELETE-TOKEN] Full error:', error);
         res.status(500).json({ error: 'Failed to delete token: ' + error.message });
+    }
+});
+
+app.post('/api/users/:username/tokens', async (req, res) => {
+    try {
+        const username = req.params.username;
+        const requestBody = req.body || {};
+        
+        // Validate required fields
+        if (!requestBody.client_id) {
+            console.log('[CREATE-TOKEN] Missing required field: client_id');
+            return res.status(400).json({ 
+                error: 'Missing required field: client_id' 
+            });
+        }
+        
+        if (!requestBody.scope) {
+            console.log('[CREATE-TOKEN] Missing required field: scope');
+            return res.status(400).json({ 
+                error: 'Missing required field: scope' 
+            });
+        }
+        
+        // Log request details (without sensitive data)
+        const logSafeBody = {
+            client_id: requestBody.client_id,
+            scope: requestBody.scope,
+            grant_type: requestBody.grant_type || 'undefined'
+        };
+        
+        console.log(`[CREATE-TOKEN] Starting request for user: ${username}`);
+        console.log('[CREATE-TOKEN] Request body:', JSON.stringify(logSafeBody));
+        
+        const response = await proxyToContaoManager(`/api/users/${username}/tokens`, 'POST', requestBody, req);
+        handleApiResponse('CREATE-TOKEN', response, res);
+    } catch (error) {
+        console.error('[CREATE-TOKEN] Error:', error.message);
+        console.error('[CREATE-TOKEN] Full error:', error);
+        res.status(500).json({ error: 'Failed to create token: ' + error.message });
     }
 });
 

@@ -297,7 +297,7 @@ const SiteDetails: React.FC = () => {
 
             {/* Tab 5: Expert */}
             <Tabs.Content value="expert">
-              <ExpertTab />
+              <ExpertTab site={site} />
             </Tabs.Content>
 
             {/* Tab 6: Logs */}

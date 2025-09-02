@@ -125,6 +125,20 @@ export const api = {
     return makeApiCall('/session');
   },
 
+  async createSession(credentials: { username?: string; password?: string; totp?: string; token?: string }): Promise<any> {
+    return makeApiCall('/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials)
+    });
+  },
+
+  async deleteSession(): Promise<any> {
+    return makeApiCall('/session', {
+      method: 'DELETE'
+    });
+  },
+
   async getPhpInfo(): Promise<any> {
     return makeApiCall('/server/phpinfo');
   },
@@ -169,6 +183,24 @@ export const api = {
   async deleteToken(username: string, tokenId: string): Promise<any> {
     return makeApiCall(`/users/${username}/tokens/${tokenId}`, {
       method: 'DELETE'
+    });
+  },
+
+  async generateUserToken(username: string, clientId: string = 'contao-manager-api', scope: string = 'admin', grantType?: string): Promise<any> {
+    const payload: any = {
+      client_id: clientId,
+      scope: scope
+    };
+    
+    // Only add grant_type if specified
+    if (grantType) {
+      payload.grant_type = grantType;
+    }
+
+    return makeApiCall(`/users/${username}/tokens`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
   },
 

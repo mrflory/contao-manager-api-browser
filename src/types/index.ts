@@ -5,11 +5,18 @@ export interface VersionInfo {
   lastUpdated?: string;
 }
 
+export interface UserInfo {
+  username?: string;
+  scope?: 'read' | 'update' | 'install' | 'admin';
+  limited?: boolean;
+  totp_enabled?: boolean;
+}
+
 export interface Site {
   name: string;
   url: string;
   token?: string; // Optional for cookie auth
-  user?: Record<string, unknown>; // For cookie auth
+  user?: UserInfo; // For cookie auth
   authMethod?: 'token' | 'cookie'; // Authentication method
   scope?: 'read' | 'update' | 'install' | 'admin'; // Permission scope
   lastUsed: string;
