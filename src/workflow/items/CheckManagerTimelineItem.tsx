@@ -1,5 +1,6 @@
+import React from 'react';
 import { BaseTimelineItem } from '../engine/BaseTimelineItem';
-import { TimelineResult, WorkflowContext } from '../engine/types';
+import { TimelineResult, UserAction, WorkflowContext } from '../engine/types';
 import { api } from '../../utils/api';
 import { UpdateManagerTimelineItem } from './UpdateManagerTimelineItem';
 
@@ -62,13 +63,12 @@ export class CheckManagerTimelineItem extends BaseTimelineItem {
         if (this.context?.engine) {
           this.context.engine.emitProgress(this, { 
             status: 'active', 
-            message: 'Manager update required, adding update task to workflow',
+            message: 'Manager update available, waiting for user confirmation',
             selfUpdate
           });
         }
-        // Manager needs update - inject UpdateManagerTimelineItem
-        const updateManagerItem = new UpdateManagerTimelineItem();
-        return this.injectNextItems([updateManagerItem], versionData);
+        // Manager needs update - require user confirmation
+        return this.handleManagerUpdateConfirmation(versionData);
       } else {
         // Emit completion progress update
         if (this.context?.engine) {
@@ -85,5 +85,53 @@ export class CheckManagerTimelineItem extends BaseTimelineItem {
     } catch (error) {
       return this.setError(error instanceof Error ? error.message : 'Failed to check manager updates');
     }
+  }
+  
+  private handleManagerUpdateConfirmation(versionData: any): TimelineResult {
+    const actions: UserAction[] = [
+      {
+        id: 'continue',
+        label: 'Update Manager',
+        description: 'Proceed with the Contao Manager update',
+        variant: 'primary',
+        execute: async () => ({ 
+          action: 'continue',
+          additionalItems: [new UpdateManagerTimelineItem()]
+        })
+      },
+      {
+        id: 'skip',
+        label: 'Skip Manager Update',
+        description: 'Skip manager update and continue with workflow',
+        variant: 'secondary',
+        execute: async () => ({ action: 'continue' })
+      },
+      {
+        id: 'cancel',
+        label: 'Cancel Workflow',
+        description: 'Cancel the entire workflow',
+        variant: 'danger',
+        execute: async () => ({ action: 'cancel' })
+      }
+    ];
+    
+    const uiContent = this.renderManagerUpdateInfo(versionData);
+    return this.requireUserAction(actions, uiContent, versionData);
+  }
+  
+  private renderManagerUpdateInfo(versionData: any): React.ReactNode {
+    const { versionComparison } = versionData;
+    
+    return (
+      <div>
+        <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+          Manager Update Available
+        </div>
+        <div>
+          Contao Manager can be updated from version {versionComparison.currentVersion} to {versionComparison.latestVersion}. 
+          You can choose to update now or skip this step.
+        </div>
+      </div>
+    );
   }
 }
