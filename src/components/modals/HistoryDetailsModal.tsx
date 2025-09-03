@@ -102,10 +102,10 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
               <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
                 <Box flex="1" mr={3}>
                   <Text fontWeight="medium" fontSize="sm">
-                    {index + 1}. {step.title}
+                    {index + 1}. {step.name}
                   </Text>
                   <Text fontSize="sm" color="gray.600" mt={1} lineHeight="1.4">
-                    {step.summary}
+                    {step.data?.summary || step.summary || 'No summary available'}
                   </Text>
                 </Box>
                 <Badge
