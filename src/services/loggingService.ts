@@ -59,7 +59,7 @@ export class LoggingService {
                 statusCode,
                 requestData: requestData || null,
                 responseData: excludeResponse ? '[Response logging excluded]' : (responseData || null),
-                error: error || null
+                error: error || undefined
             };
             
             const logLine = JSON.stringify(logEntry) + '\n';

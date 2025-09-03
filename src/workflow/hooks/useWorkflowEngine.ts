@@ -107,7 +107,7 @@ export function useWorkflowEngine(initialItems?: TimelineItem[]) {
       workflowEngine.off('item_progress', updateProgress);
       workflowEngine.off('user_action_required', updateProgress);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- initialItems should only be used on mount
   
   // Methods
   const start = useCallback(async () => {

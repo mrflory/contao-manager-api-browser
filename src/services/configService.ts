@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { AppConfig, SiteConfig, VersionInfo, AuthMethod } from '../types';
-import TokenEncryptionService = require('./tokenEncryption');
+import TokenEncryptionService from './tokenEncryption';
 
 export class ConfigService {
     private readonly tokenFile: string;

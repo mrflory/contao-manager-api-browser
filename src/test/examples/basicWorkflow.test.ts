@@ -27,8 +27,8 @@ describe('Basic Workflow Example', () => {
     testContext = await setupTestEnvironment();
     
     // Configure the API module to use our test server
-    const { api } = require('../../utils/api');
-    const { createTestApiClient } = require('../utils/testHelpers');
+    const { api } = await import('../../utils/api');
+    const { createTestApiClient } = await import('../utils/testHelpers');
     const apiClient = createTestApiClient(testContext.baseURL);
     Object.assign(api, apiClient);
   });

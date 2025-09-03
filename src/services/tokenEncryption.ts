@@ -91,4 +91,5 @@ class TokenEncryptionService {
     }
 }
 
-export = TokenEncryptionService;
+export { TokenEncryptionService };
+export default TokenEncryptionService;

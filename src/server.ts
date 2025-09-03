@@ -1,7 +1,7 @@
-require('dotenv').config(); // Load environment variables first
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
 
 // Services
 import { ConfigService } from './services/configService';
@@ -46,7 +46,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Configuration endpoints
-app.get('/api/config', (req: Request, res: Response) => {
+app.get('/api/config', (_req: Request, res: Response) => {
     try {
         console.log('Loading config for /api/config endpoint');
         const config = configService.getConfig();
@@ -74,23 +74,23 @@ app.post('/api/set-active-site', (req: ApiRequest, res: Response) => {
     
     if (configService.setActiveSite(url)) {
         const activeSite = configService.getActiveSite();
-        res.json({ success: true, activeSite });
+        return res.json({ success: true, activeSite });
     } else {
-        res.status(404).json({ error: 'Site not found' });
+        return res.status(404).json({ error: 'Site not found' });
     }
 });
 
-app.delete('/api/sites/:url', (req: ApiRequest, res) => {
+app.delete('/api/sites/:url', (req: ApiRequest, res: Response) => {
     const url = decodeURIComponent(req.params.url);
     
     if (configService.removeSite(url)) {
-        res.json({ success: true });
+        return res.json({ success: true });
     } else {
-        res.status(404).json({ error: 'Site not found' });
+        return res.status(404).json({ error: 'Site not found' });
     }
 });
 
-app.post('/api/update-site-name', ErrorHandler.asyncWrapper(async (req: ApiRequest, res) => {
+app.post('/api/update-site-name', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     const { url, name } = req.body;
     
     if (!url || !name) {
@@ -98,14 +98,14 @@ app.post('/api/update-site-name', ErrorHandler.asyncWrapper(async (req: ApiReque
     }
     
     if (configService.updateSiteName(url, name)) {
-        res.json({ success: true });
+        return res.json({ success: true });
     } else {
-        res.status(404).json({ error: 'Site not found' });
+        return res.status(404).json({ error: 'Site not found' });
     }
 }));
 
 // Authentication endpoints
-app.get('/api/token-info', ErrorHandler.asyncWrapper(async (req: ApiRequest, res) => {
+app.get('/api/token-info', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     const tokenInfo = await authService.getTokenInfo(req.headers.cookie);
     res.json({
         success: true,
@@ -113,17 +113,17 @@ app.get('/api/token-info', ErrorHandler.asyncWrapper(async (req: ApiRequest, res
     });
 }));
 
-app.post('/api/save-token', ErrorHandler.asyncWrapper(async (req: ApiRequest, res) => {
+app.post('/api/save-token', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     const result = await authService.saveToken(req.body);
     res.json(result);
 }));
 
-app.post('/api/validate-token', ErrorHandler.asyncWrapper(async (req: ApiRequest, res) => {
+app.post('/api/validate-token', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     const result = await authService.validateToken(req.body);
     res.json(result);
 }));
 
-app.post('/api/cookie-auth', ErrorHandler.asyncWrapper(async (req: ApiRequest, res) => {
+app.post('/api/cookie-auth', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     const result = await authService.cookieAuth(req.body);
     
     if (result.success) {
@@ -135,19 +135,19 @@ app.post('/api/cookie-auth', ErrorHandler.asyncWrapper(async (req: ApiRequest, r
     }
 }));
 
-app.post('/api/cookie-session-check', ErrorHandler.asyncWrapper(async (req: ApiRequest, res) => {
+app.post('/api/cookie-session-check', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     const { managerUrl } = req.body;
     const result = await authService.cookieSessionCheck(managerUrl, req.headers.cookie || '');
     res.json(result);
 }));
 
-app.post('/api/cookie-logout', ErrorHandler.asyncWrapper(async (req: ApiRequest, res) => {
+app.post('/api/cookie-logout', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     const { managerUrl } = req.body;
     const result = await authService.cookieLogout(managerUrl, req.headers.cookie || '');
     res.json(result);
 }));
 
-app.post('/api/save-site-cookie', ErrorHandler.asyncWrapper(async (req: ApiRequest, res) => {
+app.post('/api/save-site-cookie', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     const result = authService.saveSiteCookie(req.body);
     res.json(result);
 }));
@@ -156,7 +156,7 @@ app.post('/api/save-site-cookie', ErrorHandler.asyncWrapper(async (req: ApiReque
 app.post('/api/update-status', 
     authMiddleware.requireActiveSite,
     scopeMiddleware.dynamicScopeCheck,
-    ErrorHandler.asyncWrapper(async (req: ApiRequest, res) => {
+    ErrorHandler.asyncWrapper(async (_req: ApiRequest, res: Response) => {
         const result = await proxyService.updateStatus();
         res.json(result);
     })
@@ -165,7 +165,7 @@ app.post('/api/update-status',
 app.post('/api/update-version-info', 
     authMiddleware.requireActiveSite,
     scopeMiddleware.dynamicScopeCheck,
-    ErrorHandler.asyncWrapper(async (req: ApiRequest, res) => {
+    ErrorHandler.asyncWrapper(async (_req: ApiRequest, res: Response) => {
         const result = await proxyService.updateVersionInfo();
         res.json({ 
             success: true, 
@@ -223,7 +223,7 @@ proxyEndpoints.forEach(endpoint => {
         app[method](endpoint, 
             authMiddleware.requireAuth,
             scopeMiddleware.dynamicScopeCheck,
-            ErrorHandler.asyncWrapper(async (req: ApiRequest, res) => {
+            ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
                 const response = await proxyService.proxyToContaoManager(
                     req.path, 
                     req.method as any, 
@@ -239,7 +239,7 @@ proxyEndpoints.forEach(endpoint => {
 });
 
 // Local logs endpoints (our own logging system)
-app.get('/api/logs/:siteUrl', (req: ApiRequest, res) => {
+app.get('/api/logs/:siteUrl', (req: ApiRequest, res: Response) => {
     try {
         const siteUrl = decodeURIComponent(req.params.siteUrl);
         const result = loggingService.readLogs(siteUrl);
@@ -250,7 +250,7 @@ app.get('/api/logs/:siteUrl', (req: ApiRequest, res) => {
     }
 });
 
-app.delete('/api/logs/:siteUrl/cleanup', (req: ApiRequest, res) => {
+app.delete('/api/logs/:siteUrl/cleanup', (req: ApiRequest, res: Response) => {
     try {
         const siteUrl = decodeURIComponent(req.params.siteUrl);
         const result = loggingService.cleanupLogs(siteUrl);
@@ -265,7 +265,7 @@ app.delete('/api/logs/:siteUrl/cleanup', (req: ApiRequest, res) => {
 });
 
 // History API endpoints
-app.post('/api/history/create', (req: ApiRequest, res) => {
+app.post('/api/history/create', (req: ApiRequest, res: Response) => {
     try {
         const historyEntry = historyService.createHistoryEntry(req.body);
         
@@ -280,7 +280,7 @@ app.post('/api/history/create', (req: ApiRequest, res) => {
     }
 });
 
-app.put('/api/history/:id', (req: ApiRequest, res) => {
+app.put('/api/history/:id', (req: ApiRequest, res: Response) => {
     console.log('[HISTORY UPDATE] Request received:', {
         id: req.params.id,
         body: req.body,
@@ -307,7 +307,7 @@ app.put('/api/history/:id', (req: ApiRequest, res) => {
     }
 });
 
-app.get('/api/history/:siteUrl', (req: ApiRequest, res) => {
+app.get('/api/history/:siteUrl', (req: ApiRequest, res: Response) => {
     try {
         const { siteUrl } = req.params;
         const decodedSiteUrl = decodeURIComponent(siteUrl);
@@ -321,7 +321,7 @@ app.get('/api/history/:siteUrl', (req: ApiRequest, res) => {
 });
 
 // Serve React app for all non-API routes
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
     if (process.env.NODE_ENV === 'production') {
         res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
     } else {
@@ -338,9 +338,9 @@ app.get('/*splat', (req, res) => {
     
     // Serve React app for all other routes
     if (process.env.NODE_ENV === 'production') {
-        res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
+        return res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
     } else {
-        res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+        return res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
     }
 });
 

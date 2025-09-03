@@ -59,7 +59,7 @@ class EnhancedMockServer extends MockServer {
         
         // Reset migration cycle counter for multiple migration cycles scenarios
         if (scenario.includes('multiple-migration-cycles')) {
-          const { migrationHandlers } = require('./handlers/migrationHandlers');
+          const { migrationHandlers } = await import('./handlers/migrationHandlers');
           migrationHandlers.resetMigrationCycles();
         }
         console.log(`\n🎭 Scenario changed to: ${scenario}`);
@@ -77,7 +77,7 @@ class EnhancedMockServer extends MockServer {
       (this as any).currentScenarioName = null;
       
       // Reset migration cycle counter
-      const { migrationHandlers } = require('./handlers/migrationHandlers');
+      const { migrationHandlers } = await import('./handlers/migrationHandlers');
       migrationHandlers.resetMigrationCycles();
       
       console.log('\n🔄 State reset to default');

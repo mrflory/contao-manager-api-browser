@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
 export class ErrorHandler {
-    public static handle(error: Error, req: Request, res: Response, next: NextFunction): void {
+    public static handle(error: Error, _req: Request, res: Response, next: NextFunction): void {
         console.error('Error occurred:', error.message);
         console.error('Stack trace:', error.stack);
         

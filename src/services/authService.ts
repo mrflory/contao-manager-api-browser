@@ -1,6 +1,5 @@
 import axios, { AxiosResponse } from 'axios';
 import { 
-    AuthCredentials, 
     TokenValidationRequest, 
     TokenValidationResponse, 
     CookieAuthRequest, 
@@ -9,8 +8,7 @@ import {
     SaveSiteCookieRequest,
     SessionInfo,
     ScopeHierarchy,
-    EndpointPermissions,
-    Scope
+    EndpointPermissions
 } from '../types';
 import { ConfigService } from './configService';
 import { LoggingService } from './loggingService';

@@ -43,7 +43,7 @@ export class AuthMiddleware {
         next();
     };
 
-    public optionalAuth = (req: Request, res: Response, next: NextFunction): void => {
+    public optionalAuth = (req: Request, _res: Response, next: NextFunction): void => {
         const activeSite = this.configService.getActiveSite();
         
         // Add activeSite to request (may be null)
