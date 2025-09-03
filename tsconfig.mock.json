@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.backend.json",
+  "include": [
+    "src/test/mockServer/**/*.ts"
+  ],
+  "exclude": []
+}

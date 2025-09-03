@@ -28,7 +28,7 @@
     "test:react19-compat": "node scripts/test-react19-compat.js",
     "test:chakra-v3-compat": "node scripts/test-chakra-v3-compat.js",
     "test:build": "npm run build && npm run preview",
-    "mock:server": "ts-node --project tsconfig.backend.json src/test/mockServer/start.ts"
+    "mock:server": "ts-node --project tsconfig.mock.json src/test/mockServer/start.ts"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.21.0",
