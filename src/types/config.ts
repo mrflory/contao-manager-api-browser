@@ -46,3 +46,25 @@ export interface ScopeHierarchy {
 export interface EndpointPermissions {
   [endpoint: string]: string;
 }
+
+// Legacy type aliases for backward compatibility
+export type Config = AppConfig;
+export type Site = SiteConfig;
+
+// Additional types needed by the API layer
+export interface UpdateStatus {
+  composer?: any;
+  selfUpdate?: any;
+  errors?: {
+    composer?: string;
+    selfUpdate?: string;
+  };
+}
+
+export interface TokenInfo {
+  valid?: boolean;
+  scope?: string;
+  username?: string;
+  expires?: string | number;
+  [key: string]: any;
+}

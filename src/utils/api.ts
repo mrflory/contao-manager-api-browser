@@ -360,14 +360,6 @@ export const api = {
     });
   },
 
-  async saveToken(data: { token: string; managerUrl: string }): Promise<any> {
-    return makeApiCall('/save-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-  },
-
   async cookieAuth(data: { managerUrl: string; credentials: { username: string; password: string; totp?: string } }): Promise<any> {
     return makeApiCall('/cookie-auth', {
       method: 'POST',
@@ -398,9 +390,5 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-  },
-
-  async getTokenInfo(): Promise<any> {
-    return makeApiCall('/token-info');
   }
 };
