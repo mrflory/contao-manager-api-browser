@@ -2,19 +2,19 @@ import { Request, Response } from 'express';
 import { MockState } from '../types';
 
 export const packageHandlers = {
-  getRootPackage: (getState: () => MockState) => (req: Request, res: Response) => {
+  getRootPackage: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
-    res.json(state.rootPackage);
+    return res.json(state.rootPackage);
   },
 
-  getLocalPackages: (getState: () => MockState) => (req: Request, res: Response) => {
+  getLocalPackages: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     // Add the root package with key "root"
     const packages = {
       root: state.rootPackage,
       ...state.localPackages
     };
-    res.json(packages);
+    return res.json(packages);
   },
 
   getLocalPackage: (getState: () => MockState) => (req: Request, res: Response) => {
@@ -23,20 +23,20 @@ export const packageHandlers = {
     const decodedName = decodeURIComponent(name);
     
     if (decodedName === 'root') {
-      res.json(state.rootPackage);
+      return res.json(state.rootPackage);
     } else if (state.localPackages[decodedName]) {
-      res.json(state.localPackages[decodedName]);
+      return res.json(state.localPackages[decodedName]);
     } else {
-      res.status(404).json({
+      return res.status(404).json({
         title: 'Package not found',
         detail: `Package '${decodedName}' is not installed`
       });
     }
   },
 
-  getCloudData: (getState: () => MockState) => (req: Request, res: Response) => {
+  getCloudData: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
-    res.json({
+    return res.json({
       composerJson: state.rootPackage,
       composerLock: {
         '_readme': ['This file locks the dependencies of your project to a known state'],
@@ -55,9 +55,10 @@ export const packageHandlers = {
     });
   },
 
-  putCloudData: (getState: () => MockState) => (req: Request, res: Response) => {
-    const state = getState();
-    const { composerLock, composerJson } = req.body;
+  putCloudData: (_getState: () => MockState) => (req: Request, res: Response) => {
+    // Note: state is not currently used but available if needed
+    // const state = getState();
+    const { composerLock } = req.body;
 
     if (!composerLock) {
       return res.status(400).json({
@@ -69,10 +70,11 @@ export const packageHandlers = {
     // Create a task to simulate composer install from cloud data
     const mockServer = (global as any).__MOCK_SERVER__;
     if (mockServer) {
-      const taskData = {
+      // Task data structure for cloud install
+      /* const taskData = {
         name: 'composer/install',
         config: { fromCloud: true }
-      };
+      }; */
       
       // This would trigger the task creation process
       return res.status(200).json({
@@ -86,6 +88,6 @@ export const packageHandlers = {
       });
     }
 
-    res.status(200).json({ success: true });
+    return res.status(200).json({ success: true });
   }
 };

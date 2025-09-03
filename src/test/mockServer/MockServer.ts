@@ -1,7 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import { Server } from 'http';
-import { MockState, Scenario, TaskData, MigrationData } from './types';
+import { MockState, Scenario } from './types';
 import { createDefaultState } from './state';
 import { taskHandlers } from './handlers/taskHandlers';
 import { migrationHandlers } from './handlers/migrationHandlers';
@@ -41,7 +41,7 @@ export class MockServer {
     this.app.use(express.json());
     
     // Logging middleware for debugging
-    this.app.use((req: Request, res: Response, next) => {
+    this.app.use((req: Request, _res: Response, next) => {
       const queryString = Object.keys(req.query).length > 0 ? '?' + new URLSearchParams(req.query as any).toString() : '';
       console.log(`[MOCK] ${req.method} ${req.path}${queryString}`, 
         req.body ? JSON.stringify(req.body) : '');
@@ -138,16 +138,16 @@ export class MockServer {
     });
 
     // Maintenance mode endpoints
-    router.get('/contao/maintenance-mode', (req: Request, res: Response) => {
+    router.get('/contao/maintenance-mode', (_req: Request, res: Response) => {
       res.json({ enabled: this.state.maintenanceMode.enabled });
     });
 
-    router.put('/contao/maintenance-mode', (req: Request, res: Response) => {
+    router.put('/contao/maintenance-mode', (_req: Request, res: Response) => {
       this.state.maintenanceMode.enabled = true;
       res.json({ enabled: true });
     });
 
-    router.delete('/contao/maintenance-mode', (req: Request, res: Response) => {
+    router.delete('/contao/maintenance-mode', (_req: Request, res: Response) => {
       this.state.maintenanceMode.enabled = false;
       res.json({ enabled: false });
     });
@@ -156,7 +156,7 @@ export class MockServer {
     router.get('/contao/backup', serverHandlers.getBackups(() => this.state));
 
     // Session endpoints (mock)
-    router.get('/session', (req: Request, res: Response) => {
+    router.get('/session', (_req: Request, res: Response) => {
       const users = this.state.users || [];
       if (users.length > 0) {
         res.json(users[0]); // Return first user as logged in
@@ -181,13 +181,13 @@ export class MockServer {
       
       this.loadScenario(scenarioData);
       this.currentScenarioName = scenario;
-      res.json({ success: true, scenario: scenario, description: scenarioData.description });
+      return res.json({ success: true, scenario: scenario, description: scenarioData.description });
     });
 
-    this.app.post('/mock/reset', (req: Request, res: Response) => {
+    this.app.post('/mock/reset', (_req: Request, res: Response) => {
       this.state = createDefaultState();
       this.currentScenarioName = null;
-      res.json({ success: true, message: 'State reset to default' });
+      return res.json({ success: true, message: 'State reset to default' });
     });
     this.app.use('/contao-manager.phar.php/api', router);
 

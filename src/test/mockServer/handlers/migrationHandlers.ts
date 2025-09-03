@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { MockState, MigrationData, MigrationOperation } from '../types';
+import { MockState, MigrationOperation } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 export const migrationHandlers = {
-  getMigration: (getState: () => MockState) => (req: Request, res: Response) => {
+  getMigration: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     if (!state.currentMigration) {
       return res.status(204).send();
@@ -17,9 +17,10 @@ export const migrationHandlers = {
           res.json(state.currentMigration);
         }
       }, latency);
-    } else {
-      res.json(state.currentMigration);
+      return;
     }
+    
+    return res.json(state.currentMigration);
   },
 
   putMigration: (getState: () => MockState) => (req: Request, res: Response) => {
@@ -92,10 +93,10 @@ export const migrationHandlers = {
       }
     }, duration);
 
-    res.status(201).json(state.currentMigration);
+    return res.status(201).json(state.currentMigration);
   },
 
-  deleteMigration: (getState: () => MockState) => (req: Request, res: Response) => {
+  deleteMigration: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     if (!state.currentMigration) {
       return res.status(400).json({
@@ -125,7 +126,7 @@ export const migrationHandlers = {
       }
     }
 
-    res.status(200).json({ deleted: true });
+    return res.status(200).json({ deleted: true });
   },
 
   // Reset migration cycle counter (used by scenario loading)

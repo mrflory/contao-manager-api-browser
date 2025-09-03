@@ -30,7 +30,7 @@ class EnhancedMockServer extends MockServer {
       res.redirect(redirectUrl);
     });
     // Add scenario status endpoint
-    this.getApp().get('/mock/status', (req, res) => {
+    this.getApp().get('/mock/status', (_req: any, res: any) => {
       res.json({ 
         currentScenario: this.getCurrentScenarioName(),
         status: 'running',
@@ -39,7 +39,7 @@ class EnhancedMockServer extends MockServer {
     });
 
     // Override the mock scenario endpoint to track current scenario
-    this.getApp().post('/mock/scenario', async (req, res) => {
+    this.getApp().post('/mock/scenario', async (req: any, res: any) => {
       const { scenario } = req.body;
       if (!scenario) {
         return res.status(400).json({ error: 'Scenario name required' });
@@ -72,7 +72,7 @@ class EnhancedMockServer extends MockServer {
     });
 
     // Override reset to clear current scenario
-    this.getApp().post('/mock/reset', (req, res) => {
+    this.getApp().post('/mock/reset', async (_req: any, res: any) => {
       this.reset();
       (this as any).currentScenarioName = null;
       
@@ -85,7 +85,7 @@ class EnhancedMockServer extends MockServer {
     });
 
     // Add enhanced frontend with scenario display
-    this.getApp().get('/', (req, res) => {
+    this.getApp().get('/', (_req: any, res: any) => {
       const html = this.getEnhancedFrontendHTML();
       res.send(html);
     });
@@ -99,7 +99,7 @@ class EnhancedMockServer extends MockServer {
   }
 
   // Override OAuth handling to implement proper authorization dialog
-  protected handleOAuthRequest(req: any, res: any): void {
+  protected override handleOAuthRequest(req: any, res: any): void {
     console.log(`[ENHANCED] Handling OAuth request with query:`, req.query);
     
     const { response_type, client_id, redirect_uri, scope, state } = req.query;
@@ -300,7 +300,7 @@ class EnhancedMockServer extends MockServer {
   }
 
   // Override the regular interface to show enhanced version
-  protected serveContaoManagerInterface(res: any): void {
+  protected override serveContaoManagerInterface(res: any): void {
     const html = `<!DOCTYPE html>
 <html>
 <head><title>Enhanced Contao Manager Mock</title></head>

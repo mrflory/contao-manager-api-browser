@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import { MockState } from '../types';
 
 export const logsHandlers = {
-  getLogs: (getState: () => MockState) => {
-    return (req: Request, res: Response) => {
+  getLogs: (_getState: () => MockState) => {
+    return (_req: Request, res: Response) => {
       console.log('[MOCK] GET /api/logs - Fetching log files list');
       
       // Mock log files data based on swagger.yaml LogFile schema
@@ -40,11 +40,11 @@ export const logsHandlers = {
         }
       ];
       
-      res.status(200).json(mockLogFiles);
+      return res.status(200).json(mockLogFiles);
     };
   },
 
-  getLogContent: (getState: () => MockState) => {
+  getLogContent: (_getState: () => MockState) => {
     return (req: Request, res: Response) => {
       const { file } = req.params;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
@@ -62,7 +62,7 @@ export const logsHandlers = {
         }
       }));
       
-      res.status(200).json(mockLogEntries);
+      return res.status(200).json(mockLogEntries);
     };
   }
 };

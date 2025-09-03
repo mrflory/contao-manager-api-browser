@@ -38,7 +38,8 @@
     "src/services/**/*.ts",
     "src/middleware/**/*.ts",
     "src/types/**/*.ts",
-    "src/server.ts"
+    "src/server.ts",
+    "src/test/mockServer/**/*.ts"
   ],
   "exclude": [
     "node_modules",

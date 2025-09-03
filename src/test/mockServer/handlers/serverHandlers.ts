@@ -13,7 +13,7 @@ const handleError = (res: Response, errorType: keyof typeof realResponseData.err
 };
 
 export const serverHandlers = {
-  getSelfUpdate: (getState: () => MockState) => (req: Request, res: Response) => {
+  getSelfUpdate: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     // Simulate auth error if configured
     if (state.scenarios?.authErrors) {
@@ -28,22 +28,23 @@ export const serverHandlers = {
           res.json(state.selfUpdate);
         }
       }, latency);
-    } else {
-      res.json(state.selfUpdate);
+      return;
     }
+    
+    return res.json(state.selfUpdate);
   },
 
-  getConfig: (getState: () => MockState) => (req: Request, res: Response) => {
+  getConfig: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
-    res.json(state.serverConfig);
+    return res.json(state.serverConfig);
   },
 
-  getPhpWeb: (getState: () => MockState) => (req: Request, res: Response) => {
+  getPhpWeb: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
-    res.json(state.phpWeb);
+    return res.json(state.phpWeb);
   },
 
-  getContao: (getState: () => MockState) => (req: Request, res: Response) => {
+  getContao: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     // Simulate auth error if configured
     if (state.scenarios?.authErrors) {
@@ -58,26 +59,27 @@ export const serverHandlers = {
           res.json(state.contaoInfo || realResponseData.contaoConfig);
         }
       }, latency);
-    } else {
-      res.json(state.contaoInfo || realResponseData.contaoConfig);
+      return;
     }
+    
+    return res.json(state.contaoInfo || realResponseData.contaoConfig);
   },
 
-  getPhpCli: (getState: () => MockState) => (req: Request, res: Response) => {
+  getPhpCli: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
-    res.json({
+    return res.json({
       version: state.phpWeb.version,
       version_id: state.phpWeb.version_id,
       problem: state.phpWeb.problem
     });
   },
 
-  getComposer: (getState: () => MockState) => (req: Request, res: Response) => {
+  getComposer: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     
     // Check if composer update failure scenario is active
     if (state.scenarios?.taskFailures?.['composer/update']) {
-      res.json({
+      return res.json({
         json: {
           found: true,
           valid: false,
@@ -94,7 +96,7 @@ export const serverHandlers = {
         }
       });
     } else {
-      res.json({
+      return res.json({
         json: {
           found: true,
           valid: true
@@ -110,8 +112,8 @@ export const serverHandlers = {
     }
   },
 
-  getDatabase: (getState: () => MockState) => (req: Request, res: Response) => {
-    res.json({
+  getDatabase: (_getState: () => MockState) => (_req: Request, res: Response) => {
+    return res.json({
       url: 'mysql://user:pass@localhost/contao_db',
       pattern: '^mysql:\\/\\/[^:]+:[^@]+@[^:\\/]+(?::\\d+)?\\/\\w+$',
       status: {
@@ -122,13 +124,13 @@ export const serverHandlers = {
     });
   },
 
-  getAdminUser: (getState: () => MockState) => (req: Request, res: Response) => {
-    res.json({
+  getAdminUser: (_getState: () => MockState) => (_req: Request, res: Response) => {
+    return res.json({
       hasUser: true
     });
   },
 
-  getPhpInfo: (getState: () => MockState) => (req: Request, res: Response) => {
+  getPhpInfo: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     
     // Return HTML content similar to actual phpinfo() output
@@ -210,18 +212,18 @@ export const serverHandlers = {
 </html>`;
 
     // Return JSON with HTML content as expected by the API specification
-    res.json({
+    return res.json({
       html: phpInfoHtml
     });
   },
 
   // User management endpoints
-  getUsers: (getState: () => MockState) => (req: Request, res: Response) => {
+  getUsers: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     if (state.scenarios?.authErrors) {
       return handleError(res, 'unauthorized');
     }
-    res.json(state.users || realResponseData.users);
+    return res.json(state.users || realResponseData.users);
   },
 
   getUser: (getState: () => MockState) => (req: Request, res: Response) => {
@@ -239,11 +241,11 @@ export const serverHandlers = {
       return handleError(res, 'notFound');
     }
     
-    res.json(user);
+    return res.json(user);
   },
 
   // Package endpoints
-  getPackagesLocal: (getState: () => MockState) => (req: Request, res: Response) => {
+  getPackagesLocal: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     if (state.scenarios?.authErrors) {
       return handleError(res, 'unauthorized');
@@ -259,19 +261,20 @@ export const serverHandlers = {
           res.json(packages);
         }
       }, latency);
-    } else {
-      res.json(packages);
+      return;
     }
+    
+    return res.json(packages);
   },
 
-  getPackagesRoot: (getState: () => MockState) => (req: Request, res: Response) => {
+  getPackagesRoot: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     if (state.scenarios?.authErrors) {
       return handleError(res, 'unauthorized');
     }
 
     const rootPackage = state.rootPackage || realResponseData.packages.root;
-    res.json(rootPackage);
+    return res.json(rootPackage);
   },
 
   getPackageLocal: (getState: () => MockState) => (req: Request, res: Response) => {
@@ -289,24 +292,24 @@ export const serverHandlers = {
       return handleError(res, 'notFound');
     }
     
-    res.json(packageInfo);
+    return res.json(packageInfo);
   },
 
   // Backup endpoints
-  getBackups: (getState: () => MockState) => (req: Request, res: Response) => {
+  getBackups: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     if (state.scenarios?.authErrors) {
       return handleError(res, 'unauthorized');
     }
 
     const backups = state.backups || realResponseData.backups;
-    res.json(backups);
+    return res.json(backups);
   },
 
   // Enhanced 404 handler for missing endpoints
-  notFound: (req: Request, res: Response) => {
+  notFound: (_req: Request, res: Response) => {
     const errorResponse = realResponseData.errorResponses.notFound;
-    res.status(errorResponse.status).send(errorResponse.body);
+    return res.status(errorResponse.status).send(errorResponse.body);
   },
 
   // Enhanced error handlers for specific scenarios

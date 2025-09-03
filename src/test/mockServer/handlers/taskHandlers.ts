@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { realResponseData } from '../realResponseData';
 
 export const taskHandlers = {
-  getTask: (getState: () => MockState) => (req: Request, res: Response) => {
+  getTask: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     if (!state.currentTask) {
       return res.status(204).send();
@@ -18,9 +18,10 @@ export const taskHandlers = {
           res.json(state.currentTask);
         }
       }, latency);
-    } else {
-      res.json(state.currentTask);
+      return;
     }
+    
+    return res.json(state.currentTask);
   },
 
   putTask: (getState: () => MockState) => (req: Request, res: Response) => {
@@ -87,7 +88,7 @@ export const taskHandlers = {
       }
     }, duration);
 
-    res.status(200).json(task);
+    return res.status(200).json(task);
   },
 
   patchTask: (getState: () => MockState) => (req: Request, res: Response) => {
@@ -111,10 +112,10 @@ export const taskHandlers = {
       }, 500);
     }
 
-    res.json(state.currentTask);
+    return res.json(state.currentTask);
   },
 
-  deleteTask: (getState: () => MockState) => (req: Request, res: Response) => {
+  deleteTask: (getState: () => MockState) => (_req: Request, res: Response) => {
     const state = getState();
     if (!state.currentTask) {
       return res.status(400).json({
@@ -136,7 +137,7 @@ export const taskHandlers = {
       state.currentTask = null;
     }
 
-    res.status(200).json({ deleted: true });
+    return res.status(200).json({ deleted: true });
   }
 };
 
@@ -162,21 +163,21 @@ function getTaskOperations(taskName: string, config: any) {
       summary: realResponseData.taskOperations.composerUpdate.summary,
       details: realResponseData.taskOperations.composerUpdate.details,
       console: realResponseData.taskOperations.composerUpdate.console,
-      status: config?.dry_run ? 'complete' : 'pending'
+      status: (config?.dry_run ? 'complete' : 'active') as 'active' | 'complete' | 'error' | 'stopped'
     });
   } else if (taskName === 'composer/install') {
     operations.push({
       summary: realResponseData.taskOperations.composerInstall.summary,
       details: realResponseData.taskOperations.composerInstall.details,
       console: realResponseData.taskOperations.composerInstall.console,
-      status: 'pending'
+      status: 'active' as 'active' | 'complete' | 'error' | 'stopped'
     });
   } else if (taskName === 'contao/migrate') {
     operations.push({
       summary: realResponseData.taskOperations.contaoMigrate.summary,
       details: realResponseData.taskOperations.contaoMigrate.details,
       console: realResponseData.taskOperations.contaoMigrate.console,
-      status: 'pending'
+      status: 'active' as 'active' | 'complete' | 'error' | 'stopped'
     });
   } else if (taskName === 'manager/self-update') {
     operations.push({
@@ -187,7 +188,7 @@ Found new version: 1.9.5 (current: 1.9.4)
 Downloading https://github.com/contao/contao-manager/releases/download/1.9.5/contao-manager.phar.php
 Progress: [████████████████████████████████] 100% (2.5 MB/2.5 MB)
 Verifying SHA256 checksum: 8f2a3c4d5e6f7a8b9c0d1e2f3a4b5c6d...`,
-      status: 'pending'
+      status: 'active' as 'active' | 'complete' | 'error' | 'stopped'
     }, {
       summary: 'Installing manager update',
       details: 'Backing up current version and installing update',
@@ -196,21 +197,21 @@ Moving new version to contao-manager.phar.php
 Setting file permissions (644)
 Manager update completed successfully!
 Version updated from 1.9.4 to 1.9.5`,
-      status: 'pending'
+      status: 'active' as 'active' | 'complete' | 'error' | 'stopped'
     });
   } else if (taskName === 'contao/backup-create') {
     operations.push({
       summary: 'Creating database backup',
       details: 'Dumping database to backup file',
       console: 'mysqldump --single-transaction --routines --triggers contao_db > backup_2024-06-18_17-30-45.sql\nBackup created successfully (15.7 MB)',
-      status: 'pending'
+      status: 'active' as 'active' | 'complete' | 'error' | 'stopped'
     });
   } else if (taskName === 'contao/rebuild-cache') {
     operations.push({
       summary: 'Clearing Symfony cache',
       details: 'Removing cache files and warming up',
       console: 'bin/console cache:clear --env=prod\nCache cleared successfully\nbin/console cache:warmup --env=prod\nCache warmed up successfully',
-      status: 'pending'
+      status: 'active' as 'active' | 'complete' | 'error' | 'stopped'
     });
   }
 
