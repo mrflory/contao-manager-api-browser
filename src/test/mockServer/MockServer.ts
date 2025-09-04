@@ -8,6 +8,8 @@ import { migrationHandlers } from './handlers/migrationHandlers';
 import { serverHandlers } from './handlers/serverHandlers';
 import { packageHandlers } from './handlers/packageHandlers';
 import { logsHandlers } from './handlers/logsHandlers';
+import { filesHandlers } from './handlers/filesHandlers';
+import { snapshotsHandlers } from './handlers/snapshotsHandlers';
 import { scenarioLoader } from './scenarioLoader';
 
 export class MockServer {
@@ -80,6 +82,16 @@ export class MockServer {
     // Logs endpoints
     router.get('/logs', logsHandlers.getLogs(() => this.state));
     router.get('/logs/:file', logsHandlers.getLogContent(() => this.state));
+
+    // Files endpoints
+    router.get('/files/:filename', filesHandlers.getFile(() => this.state));
+
+    // Snapshots endpoints (Note: These will be proxied to the main server in real scenarios)
+    router.post('/snapshots/create', snapshotsHandlers.createSnapshot(() => this.state));
+    router.get('/snapshots/list/:siteUrl', snapshotsHandlers.listSnapshots(() => this.state));
+    router.get('/snapshots/:snapshotId/:filename', snapshotsHandlers.downloadSnapshot(() => this.state));
+    router.delete('/snapshots/:snapshotId', snapshotsHandlers.deleteSnapshot(() => this.state));
+    router.post('/snapshots/cleanup/:siteUrl', snapshotsHandlers.cleanupSnapshots(() => this.state));
 
     // User management endpoints
     router.get('/users', serverHandlers.getUsers(() => this.state));
@@ -187,6 +199,7 @@ export class MockServer {
     this.app.post('/mock/reset', (_req: Request, res: Response) => {
       this.state = createDefaultState();
       this.currentScenarioName = null;
+      snapshotsHandlers.resetSnapshots();
       return res.json({ success: true, message: 'State reset to default' });
     });
     this.app.use('/contao-manager.phar.php/api', router);

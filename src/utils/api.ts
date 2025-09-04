@@ -303,7 +303,24 @@ export const api = {
 
   // Files endpoint
   async getFiles(file: 'composer.json' | 'composer.lock'): Promise<string> {
-    return makeApiCall(`/files?file=${encodeURIComponent(file)}`);
+    console.log(`[CLIENT] Making file API call to: /files/${encodeURIComponent(file)}`);
+    
+    const response = await fetch(`${API_BASE}/files/${encodeURIComponent(file)}`);
+    
+    console.log(`[CLIENT] File API response status: ${response.status}`);
+    console.log(`[CLIENT] File API response headers:`, Object.fromEntries(response.headers.entries()));
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[CLIENT] File API error response text:`, errorText);
+      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+    }
+
+    // Always get text content for files, regardless of content-type header
+    const text = await response.text();
+    console.log(`[CLIENT] File API response text length:`, text.length);
+    console.log(`[CLIENT] File API response text preview:`, text.substring(0, 200));
+    return text;
   },
 
   // History endpoints
@@ -389,6 +406,41 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
+    });
+  },
+
+  // Snapshot endpoints
+  async createSnapshot(data: { siteUrl: string; workflowId?: string; stepId?: string }): Promise<any> {
+    return makeApiCall('/snapshots/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+
+  async downloadSnapshot(snapshotId: string, filename: 'composer.json' | 'composer.lock'): Promise<Blob> {
+    const response = await fetch(`${API_BASE}/snapshots/${encodeURIComponent(snapshotId)}/${filename}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.blob();
+  },
+
+  async listSnapshots(siteUrl: string): Promise<any> {
+    return makeApiCall(`/snapshots/list/${encodeURIComponent(siteUrl)}`);
+  },
+
+  async deleteSnapshot(snapshotId: string): Promise<any> {
+    return makeApiCall(`/snapshots/${encodeURIComponent(snapshotId)}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async cleanupSnapshots(siteUrl: string, keepLast: number = 10): Promise<any> {
+    return makeApiCall(`/snapshots/cleanup/${encodeURIComponent(siteUrl)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keepLast })
     });
   }
 };

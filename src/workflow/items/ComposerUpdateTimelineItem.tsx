@@ -28,6 +28,57 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
     this.setActive();
     
     try {
+      // Create snapshot before composer update (only if proceeding, not if skipped)
+      let snapshotId: string | null = null;
+      try {
+        console.log('[COMPOSER UPDATE] Creating composer file snapshot before update...');
+        
+        // Get site information from workflow context
+        const activeSite = this.context?.get('activeSite');
+        const siteUrl = activeSite?.url;
+        const workflowId = this.context?.get('workflowId');
+        
+        console.log('[COMPOSER UPDATE] Context debug:', {
+          hasContext: !!this.context,
+          hasActiveSite: !!activeSite,
+          activeSiteUrl: siteUrl,
+          workflowId: workflowId
+        });
+        
+        if (!siteUrl) {
+          throw new Error('No active site URL found in context');
+        }
+        
+        // Let the server fetch the files and create the snapshot
+        const snapshotData = {
+          siteUrl,
+          workflowId: workflowId,
+          stepId: this.id
+        };
+          
+          const snapshotResponse = await api.createSnapshot(snapshotData);
+          
+          if (snapshotResponse?.success && snapshotResponse?.snapshot) {
+            snapshotId = snapshotResponse.snapshot.id;
+            console.log(`[COMPOSER UPDATE] Snapshot created successfully: ${snapshotId}`);
+            
+            // Update timeline item data with snapshot reference
+            this.data = {
+              ...this.data,
+              snapshot: {
+                id: snapshotId,
+                timestamp: snapshotResponse.snapshot.timestamp,
+                files: snapshotResponse.snapshot.files
+              }
+            };
+        } else {
+          console.warn('[COMPOSER UPDATE] Failed to create snapshot, proceeding with update anyway');
+        }
+      } catch (snapshotError) {
+        console.warn('[COMPOSER UPDATE] Snapshot creation failed, proceeding with update:', snapshotError);
+        // Don't fail the entire update if snapshot creation fails
+      }
+      
       // Start the composer update task
       await api.setTaskData({ 
         name: 'composer/update', 

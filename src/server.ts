@@ -7,6 +7,7 @@ import path from 'path';
 import { ConfigService } from './services/configService';
 import { LoggingService } from './services/loggingService';
 import { HistoryService } from './services/historyService';
+import { SnapshotService } from './services/snapshotService';
 import { AuthService } from './services/authService';
 import { ProxyService } from './services/proxyService';
 
@@ -24,6 +25,7 @@ const PORT = process.env.PORT || 3000;
 const configService = new ConfigService();
 const loggingService = new LoggingService();
 const historyService = new HistoryService();
+const snapshotService = new SnapshotService();
 const authService = new AuthService(configService, loggingService);
 const proxyService = new ProxyService(configService, loggingService, authService);
 
@@ -317,6 +319,182 @@ app.get('/api/history/:siteUrl', (req: ApiRequest, res: Response) => {
     } catch (error) {
         console.error('Get history error:', error);
         res.status(500).json({ error: 'Failed to get history' });
+    }
+});
+
+// Snapshot API endpoints  
+app.post('/api/snapshots/create', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
+    try {
+        const { siteUrl, workflowId, stepId } = req.body;
+        
+        console.log('[SNAPSHOT API] Request data:', {
+            siteUrl,
+            workflowId,
+            stepId
+        });
+        
+        if (!siteUrl) {
+            return res.status(400).json({ error: 'siteUrl is required' });
+        }
+        
+        // Fetch composer files from the server itself
+        console.log('[SNAPSHOT API] Fetching composer files from:', siteUrl);
+        let composerJson: string | null = null;
+        let composerLock: string | null = null;
+        
+        try {
+            // Use the existing proxy service to fetch files
+            const composerJsonResponse = await proxyService.proxyToContaoManager('/api/files/composer.json', 'GET');
+            console.log('[SNAPSHOT API] composer.json response:', {
+                status: composerJsonResponse.status,
+                dataType: typeof composerJsonResponse.data,
+                dataLength: composerJsonResponse.data ? (typeof composerJsonResponse.data === 'string' ? composerJsonResponse.data.length : JSON.stringify(composerJsonResponse.data).length) : 0,
+                dataPreview: typeof composerJsonResponse.data === 'string' ? composerJsonResponse.data.substring(0, 100) : JSON.stringify(composerJsonResponse.data).substring(0, 100)
+            });
+            if (composerJsonResponse.status === 200 && composerJsonResponse.data) {
+                const isEmptyObject = typeof composerJsonResponse.data === 'object' && Object.keys(composerJsonResponse.data).length === 0;
+                if (!isEmptyObject) {
+                    composerJson = typeof composerJsonResponse.data === 'string' 
+                        ? composerJsonResponse.data 
+                        : JSON.stringify(composerJsonResponse.data, null, 2);
+                }
+                console.log('[SNAPSHOT API] Processing composer.json:', {
+                    hasContent: !!composerJson,
+                    contentLength: composerJson?.length || 0,
+                    isEmptyObject,
+                    skippedDueToEmptyObject: isEmptyObject
+                });
+            }
+        } catch (error) {
+            console.warn('[SNAPSHOT API] Could not fetch composer.json:', error);
+        }
+        
+        try {
+            const composerLockResponse = await proxyService.proxyToContaoManager('/api/files/composer.lock', 'GET');
+            console.log('[SNAPSHOT API] composer.lock response:', {
+                status: composerLockResponse.status,
+                dataType: typeof composerLockResponse.data,
+                dataLength: composerLockResponse.data ? (typeof composerLockResponse.data === 'string' ? composerLockResponse.data.length : JSON.stringify(composerLockResponse.data).length) : 0,
+                dataPreview: typeof composerLockResponse.data === 'string' ? composerLockResponse.data.substring(0, 100) : JSON.stringify(composerLockResponse.data).substring(0, 100)
+            });
+            if (composerLockResponse.status === 200 && composerLockResponse.data) {
+                const isEmptyObject = typeof composerLockResponse.data === 'object' && Object.keys(composerLockResponse.data).length === 0;
+                if (!isEmptyObject) {
+                    composerLock = typeof composerLockResponse.data === 'string' 
+                        ? composerLockResponse.data 
+                        : JSON.stringify(composerLockResponse.data, null, 2);
+                }
+                console.log('[SNAPSHOT API] Processing composer.lock:', {
+                    hasContent: !!composerLock,
+                    contentLength: composerLock?.length || 0,
+                    isEmptyObject,
+                    skippedDueToEmptyObject: isEmptyObject
+                });
+            }
+        } catch (error) {
+            console.warn('[SNAPSHOT API] Could not fetch composer.lock:', error);
+        }
+        
+        if (!composerJson && !composerLock) {
+            return res.status(400).json({ error: 'Could not fetch composer.json or composer.lock files' });
+        }
+        
+        console.log('[SNAPSHOT API] Fetched files:', {
+            hasComposerJson: !!composerJson,
+            composerJsonLength: composerJson?.length || 0,
+            hasComposerLock: !!composerLock,
+            composerLockLength: composerLock?.length || 0
+        });
+        
+        const snapshot = await snapshotService.createSnapshot({
+            siteUrl,
+            composerJson: composerJson || undefined,
+            composerLock: composerLock || undefined,
+            workflowId,
+            stepId
+        });
+        
+        if (snapshot) {
+            return res.json({ success: true, snapshot });
+        } else {
+            return res.status(500).json({ error: 'Failed to create snapshot' });
+        }
+    } catch (error) {
+        console.error('Create snapshot error:', error);
+        return res.status(500).json({ error: 'Failed to create snapshot' });
+    }
+}));
+
+app.get('/api/snapshots/list/:siteUrl', (req: ApiRequest, res: Response) => {
+    try {
+        const { siteUrl } = req.params;
+        const decodedSiteUrl = decodeURIComponent(siteUrl);
+        
+        const result = snapshotService.listSnapshotsForSite(decodedSiteUrl);
+        return res.json(result);
+    } catch (error) {
+        console.error('List snapshots error:', error);
+        return res.status(500).json({ error: 'Failed to list snapshots' });
+    }
+});
+
+app.get('/api/snapshots/:snapshotId/:filename', (req: ApiRequest, res: Response) => {
+    try {
+        const { snapshotId, filename } = req.params;
+        
+        // Validate filename
+        if (filename !== 'composer.json' && filename !== 'composer.lock') {
+            return res.status(400).json({ error: 'Invalid filename. Must be composer.json or composer.lock' });
+        }
+        
+        const fileBuffer = snapshotService.getSnapshot(snapshotId, filename as 'composer.json' | 'composer.lock');
+        
+        if (!fileBuffer) {
+            return res.status(404).json({ error: 'Snapshot file not found' });
+        }
+        
+        // Set appropriate headers for file download
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${snapshotId}-${filename}"`);
+        return res.send(fileBuffer);
+        
+    } catch (error) {
+        console.error('Get snapshot error:', error);
+        return res.status(500).json({ error: 'Failed to get snapshot' });
+    }
+});
+
+app.delete('/api/snapshots/:snapshotId', (req: ApiRequest, res: Response) => {
+    try {
+        const { snapshotId } = req.params;
+        
+        const success = snapshotService.deleteSnapshot(snapshotId);
+        
+        if (success) {
+            return res.json({ success: true });
+        } else {
+            return res.status(404).json({ error: 'Snapshot not found' });
+        }
+    } catch (error) {
+        console.error('Delete snapshot error:', error);
+        return res.status(500).json({ error: 'Failed to delete snapshot' });
+    }
+});
+
+app.post('/api/snapshots/cleanup/:siteUrl', (req: ApiRequest, res: Response) => {
+    try {
+        const { siteUrl } = req.params;
+        const decodedSiteUrl = decodeURIComponent(siteUrl);
+        const { keepLast = 10 } = req.body;
+        
+        const result = snapshotService.cleanupOldSnapshots(decodedSiteUrl, keepLast);
+        return res.json({ success: true, ...result });
+    } catch (error) {
+        console.error('Cleanup snapshots error:', error);
+        return res.status(500).json({ 
+            success: false,
+            error: `Failed to cleanup snapshots: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
     }
 });
 

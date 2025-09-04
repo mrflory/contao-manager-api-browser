@@ -665,6 +665,15 @@ export class WorkflowEngine implements WorkflowEngineInterface {
               stepData.data = { summary: step.summary };
             }
             
+            // Include timeline item data (e.g., snapshot information)
+            const record = this.state.executionHistory.find(r => r.item.id === step.id);
+            if (record?.item?.data && Object.keys(record.item.data).length > 0) {
+              stepData.data = {
+                ...stepData.data,
+                ...record.item.data
+              };
+            }
+            
             return stepData;
           })
         };

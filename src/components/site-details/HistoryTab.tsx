@@ -9,12 +9,15 @@ import {
   Table,
   Badge,
   IconButton,
+  HStack,
+  Link,
 } from '@chakra-ui/react';
 import { LuEye as Eye, LuRefreshCw as RefreshCw } from 'react-icons/lu';
 import { Site, HistoryEntry, HistoryResponse } from '../../types';
 import { HistoryApiService } from '../../services/apiCallService';
 import { useApiCall } from '../../hooks/useApiCall';
 import { useToastNotifications } from '../../hooks/useToastNotifications';
+import { api } from '../../utils/api';
 import { HistoryDetailsModal } from '../modals/HistoryDetailsModal';
 import { formatDateTime, formatDuration } from '../../utils/dateUtils';
 
@@ -79,6 +82,43 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedEntry(null);
+  };
+
+  const handleDownloadSnapshot = async (snapshotId: string, filename: 'composer.json' | 'composer.lock') => {
+    try {
+      const blob = await api.downloadSnapshot(snapshotId, filename);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${snapshotId}-${filename}`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      
+      toast.showSuccess({
+        title: 'Download Started',
+        description: `Downloading ${filename} snapshot`
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.showError({
+        title: 'Download Failed',
+        description: `Failed to download ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  };
+
+  const getSnapshotFromHistoryEntry = (entry: HistoryEntry) => {
+    // Look for composer update step that has snapshot data
+    const composerStep = entry.steps.find(step => 
+      step.id === 'composer-update' && step.data?.snapshot
+    );
+    return composerStep?.data?.snapshot || null;
   };
 
   const getStatusBadgeColor = (status: HistoryEntry['status']) => {
@@ -189,6 +229,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
                   <Table.ColumnHeader>Type</Table.ColumnHeader>
                   <Table.ColumnHeader>Status</Table.ColumnHeader>
                   <Table.ColumnHeader>Duration</Table.ColumnHeader>
+                  <Table.ColumnHeader>Snapshots</Table.ColumnHeader>
                   <Table.ColumnHeader>Actions</Table.ColumnHeader>
                 </Table.Row>
               </Table.Header>
@@ -224,6 +265,41 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
                       </Box>
                     </Table.Cell>
                     <Table.Cell>
+                      {(() => {
+                        const snapshot = getSnapshotFromHistoryEntry(entry);
+                        if (!snapshot) {
+                          return (
+                            <Box fontSize="xs" color="gray.400" fontStyle="italic">
+                              No snapshots
+                            </Box>
+                          );
+                        }
+                        
+                        return (
+                          <HStack gap={3}>
+                            {snapshot.files['composer.json']?.exists && (
+                              <Link
+                                fontSize="xs"
+                                onClick={() => handleDownloadSnapshot(snapshot.id, 'composer.json')}
+                                title="Download composer.json snapshot"
+                              >
+                                composer.json
+                              </Link>
+                            )}
+                            {snapshot.files['composer.lock']?.exists && (
+                              <Link
+                                fontSize="xs"
+                                onClick={() => handleDownloadSnapshot(snapshot.id, 'composer.lock')}
+                                title="Download composer.lock snapshot"
+                              >
+                                composer.lock
+                              </Link>
+                            )}
+                          </HStack>
+                        );
+                      })()}
+                    </Table.Cell>
+                    <Table.Cell>
                       <IconButton
                         size="sm"
                         variant="ghost"
@@ -247,6 +323,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           historyEntry={selectedEntry}
+          onDownloadSnapshot={handleDownloadSnapshot}
         />
       )}
     </>

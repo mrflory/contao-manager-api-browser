@@ -6,6 +6,8 @@ import {
   Text,
   Badge,
   Separator,
+  HStack,
+  Link,
 } from '@chakra-ui/react';
 import { DialogRoot, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogCloseTrigger } from '../ui/dialog';
 import { DataListRoot, DataListItem } from '../ui/data-list';
@@ -16,12 +18,14 @@ export interface HistoryDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   historyEntry: HistoryEntry;
+  onDownloadSnapshot?: (snapshotId: string, filename: 'composer.json' | 'composer.lock') => void;
 }
 
 export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
   isOpen,
   onClose,
   historyEntry,
+  onDownloadSnapshot,
 }) => {
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -130,6 +134,35 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
                   <Text fontSize="sm" color="red.700" fontWeight="medium">
                     Error: {step.error}
                   </Text>
+                </Box>
+              )}
+              
+              {/* Snapshot Downloads */}
+              {step.data?.snapshot && onDownloadSnapshot && (
+                <Box mt={3} p={2} bg="gray.100" borderRadius="sm">
+                  <Text fontSize="xs" fontWeight="medium" color="gray.600" mb={2}>
+                    Available Snapshots:
+                  </Text>
+                  <HStack gap={3}>
+                    {step.data.snapshot.files?.['composer.json']?.exists && (
+                      <Link
+                        fontSize="xs"
+                        onClick={() => onDownloadSnapshot(step.data.snapshot.id, 'composer.json')}
+                        title="Download composer.json snapshot"
+                      >
+                        composer.json
+                      </Link>
+                    )}
+                    {step.data.snapshot.files?.['composer.lock']?.exists && (
+                      <Link
+                        fontSize="xs"
+                        onClick={() => onDownloadSnapshot(step.data.snapshot.id, 'composer.lock')}
+                        title="Download composer.lock snapshot"
+                      >
+                        composer.lock
+                      </Link>
+                    )}
+                  </HStack>
                 </Box>
               )}
               

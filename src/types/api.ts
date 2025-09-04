@@ -87,3 +87,37 @@ export interface UpdateHistoryRequest {
   endTime?: string;
   steps?: WorkflowStep[];
 }
+
+export interface SnapshotMetadata {
+  id: string;
+  siteUrl: string;
+  timestamp: string;
+  files: {
+    'composer.json'?: {
+      size: number;
+      exists: boolean;
+    };
+    'composer.lock'?: {
+      size: number;
+      exists: boolean;
+    };
+  };
+  workflowId?: string;
+  stepId?: string;
+}
+
+export interface CreateSnapshotRequest {
+  siteUrl: string;
+  composerJson?: string;
+  composerLock?: string;
+  workflowId?: string;
+  stepId?: string;
+}
+
+export interface SnapshotListResponse {
+  success: boolean;
+  snapshots: SnapshotMetadata[];
+  total: number;
+  siteUrl: string;
+  error?: string;
+}

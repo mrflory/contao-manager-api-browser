@@ -20,6 +20,17 @@ export function useWorkflowHistory() {
   
   return {
     startHistoryTracking: async (engine: any, workflowType: 'update' | 'migration' | 'composer') => {
+      // Populate the workflow engine's context with site information
+      const context = engine.getContext();
+      context.set('activeSite', { url: siteUrl });
+      context.set('workflowId', `${workflowType}-${Date.now()}`);
+      
+      console.log('[WORKFLOW-HISTORY] Populated engine context with:', {
+        activeSiteUrl: siteUrl,
+        workflowType,
+        workflowId: context.get('workflowId')
+      });
+      
       await engine.startHistoryTracking(siteUrl, workflowType);
     },
     

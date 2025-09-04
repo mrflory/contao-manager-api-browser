@@ -18,6 +18,7 @@ data/config.json
 # Site-specific API call logs
 data/*.log
 data/*.history.json
+data/snapshots/*
 
 # Logs
 logs/
