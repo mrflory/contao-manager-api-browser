@@ -12,6 +12,7 @@ export abstract class BaseTimelineItem implements TimelineItem {
   public startTime?: Date;
   public endTime?: Date;
   protected context?: WorkflowContext;
+  protected data?: any;
   
   constructor(id: string, title: string, description: string) {
     this.id = id;

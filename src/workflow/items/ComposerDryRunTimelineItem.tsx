@@ -1,8 +1,9 @@
 import React from 'react';
-import { Alert } from '@chakra-ui/react';
+import { Alert, VStack } from '@chakra-ui/react';
 import { BaseTimelineItem } from '../engine/BaseTimelineItem';
 import { TimelineResult, UserAction, WorkflowContext } from '../engine/types';
 import { api } from '../../utils/api';
+import { ComposerOperations } from '../../components/workflow/ComposerOperations';
 
 /**
  * Timeline item for running composer dry-run
@@ -132,6 +133,10 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
   }
   
   private handleDryRunComplete(taskData?: any): TimelineResult {
+    // Store the task data for later use (when step completes/is skipped)
+    if (taskData) {
+      this.data = taskData;
+    }
     
     const actions: UserAction[] = [
       {
@@ -157,23 +162,30 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
       }
     ];
     
-    const uiContent = this.renderDryRunResults();
+    const uiContent = this.renderDryRunResults(taskData);
     const result = this.requireUserAction(actions, uiContent, taskData);
     
     return result;
   }
   
-  private renderDryRunResults(): React.ReactNode {
+  private renderDryRunResults(taskData?: any): React.ReactNode {
     return (
-      <Alert.Root status="success">
-        <Alert.Indicator />
-        <Alert.Content>
-          <Alert.Title>Dry-run completed successfully!</Alert.Title>
-          <Alert.Description>
-            The composer dry-run has finished. You can review the results below to see what changes would be made.
-          </Alert.Description>
-        </Alert.Content>
-      </Alert.Root>
+      <VStack align="stretch" gap={4}>
+        <Alert.Root status="success">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>Dry-run completed successfully!</Alert.Title>
+            <Alert.Description>
+              The composer dry-run has finished. You can review the results below to see what changes would be made.
+            </Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+        
+        {/* Show composer operations if available */}
+        {taskData?.operations && (
+          <ComposerOperations data={taskData} stepId={this.id} />
+        )}
+      </VStack>
     );
   }
   

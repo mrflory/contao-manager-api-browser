@@ -33,6 +33,16 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
       try {
         console.log('[COMPOSER UPDATE] Creating composer file snapshot before update...');
         
+        // Emit progress update for snapshot creation start
+        if (this.context?.engine) {
+          this.context.engine.emitProgress(this, {
+            status: 'active',
+            message: 'Creating snapshot of composer files...',
+            type: 'snapshot_creation',
+            progress: { current: 0, total: 1 }
+          });
+        }
+        
         // Get site information from workflow context
         const activeSite = this.context?.get('activeSite');
         const siteUrl = activeSite?.url;
@@ -62,6 +72,16 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
             snapshotId = snapshotResponse.snapshot.id;
             console.log(`[COMPOSER UPDATE] Snapshot created successfully: ${snapshotId}`);
             
+            // Emit progress update for snapshot creation complete
+            if (this.context?.engine) {
+              this.context.engine.emitProgress(this, {
+                status: 'active',
+                message: `Snapshot created successfully (${Object.keys(snapshotResponse.snapshot.files || {}).length} files)`,
+                type: 'snapshot_complete',
+                progress: { current: 1, total: 1 }
+              });
+            }
+            
             // Update timeline item data with snapshot reference
             this.data = {
               ...this.data,
@@ -73,9 +93,27 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
             };
         } else {
           console.warn('[COMPOSER UPDATE] Failed to create snapshot, proceeding with update anyway');
+          // Emit progress update for snapshot failure
+          if (this.context?.engine) {
+            this.context.engine.emitProgress(this, {
+              status: 'active',
+              message: 'Snapshot creation failed, proceeding with update',
+              type: 'snapshot_failed'
+            });
+          }
         }
       } catch (snapshotError) {
         console.warn('[COMPOSER UPDATE] Snapshot creation failed, proceeding with update:', snapshotError);
+        
+        // Emit progress update for snapshot error
+        if (this.context?.engine) {
+          this.context.engine.emitProgress(this, {
+            status: 'active',
+            message: 'Snapshot creation failed, proceeding with update',
+            type: 'snapshot_error',
+            error: snapshotError instanceof Error ? snapshotError.message : 'Unknown error'
+          });
+        }
         // Don't fail the entire update if snapshot creation fails
       }
       
@@ -84,6 +122,15 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
         name: 'composer/update', 
         config: { dry_run: false } 
       });
+      
+      // Emit progress update for composer update start
+      if (this.context?.engine) {
+        this.context.engine.emitProgress(this, {
+          status: 'active',
+          message: 'Starting composer update...',
+          type: 'composer_update_start'
+        });
+      }
       
       // Start polling for task completion
       return this.startPolling();
@@ -142,9 +189,15 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
               console.warn('Failed to clean up task data:', cleanupError);
             }
             
-            // Create UI content showing the composer operations
+            // Merge snapshot information into final task data
+            const finalData = {
+              ...taskData,
+              snapshot: this.data?.snapshot // Include snapshot info if it exists
+            };
+            
+            // Create UI content showing the composer operations with snapshot info
             const uiContent = taskData.operations ? (
-              <ComposerOperations data={taskData} />
+              <ComposerOperations data={finalData} />
             ) : null;
             
             // Set the item status to complete and return proper result
@@ -153,7 +206,7 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
             
             resolve({
               status: 'success',
-              data: taskData,
+              data: finalData,
               uiContent
             });
             

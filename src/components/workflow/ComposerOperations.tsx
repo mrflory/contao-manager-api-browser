@@ -148,6 +148,25 @@ export const ComposerOperations: React.FC<ComposerOperationsProps> = memo(({ dat
         />
       </HStack>
       
+      {/* Snapshot information display */}
+      {data.snapshot && (
+        <Box p={3} borderWidth="1px" borderRadius="md" bg={cardBg} borderColor="green.200">
+          <HStack align="center" gap={2}>
+            <Text fontSize="sm" fontWeight="semibold" color="green.600">
+              ✓ Snapshot Created
+            </Text>
+            <Text fontSize="xs" color={mutedColor}>
+              {Object.keys(data.snapshot.files || {}).length} files backed up at {new Date(data.snapshot.timestamp).toLocaleTimeString()}
+            </Text>
+          </HStack>
+          {data.snapshot.files && Object.keys(data.snapshot.files).length > 0 && (
+            <Text fontSize="xs" color={mutedColor} mt={1}>
+              Files: {Object.keys(data.snapshot.files).join(', ')}
+            </Text>
+          )}
+        </Box>
+      )}
+      
       {data.sponsor && renderSponsor(data.sponsor)}
       
       {/* Package Summary for successful operations */}

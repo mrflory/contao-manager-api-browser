@@ -258,6 +258,13 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
                 </HStack>
               )}
 
+              {/* Active progress message display */}
+              {item.status === 'active' && executionRecord?.result?.data && (
+                <Text fontSize="sm" color="blue.600">
+                  {executionRecord.result.data.summary || executionRecord.result.data.message || 'In progress...'}
+                </Text>
+              )}
+
               {/* Error display */}
               {item.status === 'error' && executionRecord?.result?.error && (
                 <Text 
@@ -299,8 +306,8 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
               {(item.status === 'active' || item.status === 'complete' || item.status === 'error' || item.status === 'user_action_required') && 
                executionRecord?.result?.data && (
                 <>
-                  {/* Composer operations display */}
-                  {isComposerTimelineItem(item, executionRecord.result.data) && (
+                  {/* Composer operations display - only show if no uiContent is provided */}
+                  {!executionRecord?.result?.uiContent && isComposerTimelineItem(item, executionRecord.result.data) && (
                     <VStack align="stretch" gap={3}>
                       <ComposerOperations data={executionRecord.result.data} />
                       <Separator />
