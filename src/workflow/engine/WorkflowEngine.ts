@@ -649,12 +649,12 @@ export class WorkflowEngine implements WorkflowEngineInterface {
             const stepData: any = {
               id: step.id,
               name: step.title, // API expects 'name' instead of 'title'
-              startTime: typeof step.startTime === 'string' ? step.startTime : step.startTime.toISOString(),
+              startTime: typeof step.startTime === 'string' ? step.startTime : (step.startTime as unknown as Date)?.toISOString(),
               status: step.status as 'pending' | 'running' | 'completed' | 'failed'
             };
             
             if (step.endTime) {
-              stepData.endTime = typeof step.endTime === 'string' ? step.endTime : step.endTime.toISOString();
+              stepData.endTime = typeof step.endTime === 'string' ? step.endTime : (step.endTime as unknown as Date)?.toISOString();
             }
             
             if (step.error) {
@@ -665,12 +665,12 @@ export class WorkflowEngine implements WorkflowEngineInterface {
               stepData.data = { summary: step.summary };
             }
             
-            // Include timeline item data (e.g., snapshot information)
+            // Include execution result data (e.g., snapshot information)
             const record = this.state.executionHistory.find(r => r.item.id === step.id);
-            if (record?.item?.data && Object.keys(record.item.data).length > 0) {
+            if (record?.result?.data && Object.keys(record.result.data).length > 0) {
               stepData.data = {
                 ...stepData.data,
-                ...record.item.data
+                ...record.result.data
               };
             }
             
@@ -705,10 +705,12 @@ export class WorkflowEngine implements WorkflowEngineInterface {
     return this.state.timeline
       .map(item => ({
         id: item.id,
+        name: item.title,
         title: item.title,
+        description: item.description,
         summary: this.generateStepSummary(item),
-        startTime: item.startTime || new Date(),
-        endTime: item.endTime,
+        startTime: item.startTime ? (typeof item.startTime === 'string' ? item.startTime : item.startTime.toISOString()) : new Date().toISOString(),
+        endTime: item.endTime ? (typeof item.endTime === 'string' ? item.endTime : item.endTime.toISOString()) : undefined,
         status: this.mapTimelineStatusToHistoryStatus(item.status),
         error: this.getTimelineItemError(item)
       }))
@@ -717,10 +719,20 @@ export class WorkflowEngine implements WorkflowEngineInterface {
 
   private mapTimelineStatusToHistoryStatus(status: TimelineItemStatus): WorkflowStepStatus {
     switch (status) {
+      case 'active':
+        return 'running';
+      case 'complete':
+        return 'completed';
+      case 'error':
+        return 'failed';
       case 'user_action_required':
-        return 'active'; // Map user_action_required to active for history display
+        return 'running'; // Map user_action_required to running for history display
+      case 'skipped':
+      case 'cancelled':
+        return 'failed'; // Map skipped/cancelled to failed for history display
+      case 'pending':
       default:
-        return status as WorkflowStepStatus;
+        return 'pending';
     }
   }
 

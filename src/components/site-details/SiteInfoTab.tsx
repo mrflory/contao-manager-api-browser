@@ -197,7 +197,7 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
               {site.authMethod !== 'cookie' && (
                 <DataListItem 
                   label="Token" 
-                  value={site.token?.substring(0, 8) + '...' || 'N/A'}
+                  value={typeof site.token === 'string' ? site.token.substring(0, 8) + '...' : 'N/A'}
                 />
               )}
               {site.scope && (

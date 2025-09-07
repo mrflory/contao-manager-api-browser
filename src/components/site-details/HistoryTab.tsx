@@ -20,6 +20,7 @@ import { HistoryApiService } from '../../services/apiCallService';
 import { useApiCall } from '../../hooks/useApiCall';
 import { useToastNotifications } from '../../hooks/useToastNotifications';
 import { HistoryDetailsModal } from '../modals/HistoryDetailsModal';
+import { ConfirmationDialog } from '../modals/ConfirmationDialog';
 import { formatDateTime, formatDuration } from '../../utils/dateUtils';
 import { ComposerFilesDialog } from '../ui/ComposerFilesDialog';
 
@@ -31,6 +32,8 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<HistoryEntry | null>(null);
   const [composerDialogState, setComposerDialogState] = useState<{
     isOpen: boolean;
     snapshotId: string | null;
@@ -96,13 +99,16 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
     setComposerDialogState({ isOpen: true, snapshotId, filename });
   };
 
-  const handleDeleteEntry = async (entryId: string) => {
-    if (!window.confirm('Are you sure you want to delete this history entry? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteButtonClick = (entry: HistoryEntry) => {
+    setEntryToDelete(entry);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteEntry = async () => {
+    if (!entryToDelete) return;
 
     try {
-      await HistoryApiService.deleteHistoryEntry(site.url, entryId);
+      await HistoryApiService.deleteHistoryEntry(site.url, entryToDelete.id);
       toast.showSuccess({
         title: 'Entry Deleted',
         description: 'History entry has been deleted successfully'
@@ -115,6 +121,9 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
         title: 'Delete Failed',
         description: `Failed to delete history entry: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
+    } finally {
+      setDeleteConfirmOpen(false);
+      setEntryToDelete(null);
     }
   };
 
@@ -131,30 +140,36 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
     return Object.values(snapshot.files).filter((file: any) => file?.exists).length;
   };
 
-  const getStatusBadgeColor = (status: HistoryEntry['status']) => {
+  const getStatusBadgeColor = (status: HistoryEntry['status'] | string) => {
     switch (status) {
+      case 'completed':
       case 'finished':
         return 'green';
+      case 'failed':
       case 'error':
         return 'red';
       case 'cancelled':
         return 'orange';
       case 'started':
+      case 'running':
         return 'blue';
       default:
         return 'gray';
     }
   };
 
-  const getStatusText = (status: HistoryEntry['status']) => {
+  const getStatusText = (status: HistoryEntry['status'] | string) => {
     switch (status) {
+      case 'completed':
       case 'finished':
         return 'Finished';
+      case 'failed':
       case 'error':
         return 'Error';
       case 'cancelled':
         return 'Cancelled';
       case 'started':
+      case 'running':
         return 'Running';
       default:
         return status;
@@ -306,18 +321,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
                         
                         {(() => {
                           const snapshot = getSnapshotFromHistoryEntry(entry);
-                          if (!snapshot || getSnapshotFileCount(snapshot) === 0) {
-                            return (
-                              <IconButton
-                                size="sm"
-                                variant="ghost"
-                                disabled
-                                title="No files available"
-                              >
-                                <MoreVertical size={16} />
-                              </IconButton>
-                            );
-                          }
+                          const hasSnapshotFiles = snapshot && getSnapshotFileCount(snapshot) > 0;
                           
                           return (
                             <Menu.Root>
@@ -333,26 +337,30 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
                               <Portal>
                                 <Menu.Positioner>
                                   <Menu.Content>
-                                    {snapshot.files['composer.json']?.exists && (
-                                      <Menu.Item 
-                                        value="view-composer-json" 
-                                        onClick={() => handleViewComposerFile(snapshot.id, 'composer.json')}
-                                      >
-                                        View composer.json
-                                      </Menu.Item>
+                                    {hasSnapshotFiles && (
+                                      <>
+                                        {snapshot!.files['composer.json']?.exists && (
+                                          <Menu.Item 
+                                            value="view-composer-json" 
+                                            onClick={() => handleViewComposerFile(snapshot!.id, 'composer.json')}
+                                          >
+                                            View composer.json
+                                          </Menu.Item>
+                                        )}
+                                        {snapshot!.files['composer.lock']?.exists && (
+                                          <Menu.Item 
+                                            value="view-composer-lock" 
+                                            onClick={() => handleViewComposerFile(snapshot!.id, 'composer.lock')}
+                                          >
+                                            View composer.lock
+                                          </Menu.Item>
+                                        )}
+                                        <Menu.Separator />
+                                      </>
                                     )}
-                                    {snapshot.files['composer.lock']?.exists && (
-                                      <Menu.Item 
-                                        value="view-composer-lock" 
-                                        onClick={() => handleViewComposerFile(snapshot.id, 'composer.lock')}
-                                      >
-                                        View composer.lock
-                                      </Menu.Item>
-                                    )}
-                                    <Menu.Separator />
                                     <Menu.Item 
                                       value="delete-entry" 
-                                      onClick={() => handleDeleteEntry(entry.id)}
+                                      onClick={() => handleDeleteButtonClick(entry)}
                                       color="red.500"
                                       _hover={{ bg: 'red.50' }}
                                     >
@@ -394,6 +402,21 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
           title={`${composerDialogState.filename} - Package Details`}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setEntryToDelete(null);
+        }}
+        onConfirm={handleDeleteEntry}
+        title="Delete History Entry"
+        message={entryToDelete ? `Are you sure you want to delete this history entry from "${formatDateTime(entryToDelete.startTime)}"? This action cannot be undone.` : ''}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        confirmColorPalette="red"
+      />
     </>
   );
 };

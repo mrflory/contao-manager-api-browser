@@ -28,7 +28,7 @@ export const ReauthenticationForm: React.FC<ReauthenticationFormProps> = ({
   onCancel,
 }) => {
   const [authMethod, setAuthMethod] = useState<AuthenticationMethod>(site.authMethod || 'token');
-  const [scope, setScope] = useState<OAuthScope>(site.scope || 'admin');
+  const [scope, setScope] = useState<OAuthScope>((site.scope as OAuthScope) || 'admin');
   const [cookieAuthLoading, setCookieAuthLoading] = useState(false);
   
   const { showApiError, showApiSuccess } = useToastNotifications();

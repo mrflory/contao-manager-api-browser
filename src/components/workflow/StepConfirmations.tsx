@@ -43,7 +43,7 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
   const cardBg = useColorModeValue('white', 'gray.800');
 
   const renderPendingTasksConfirmation = () => {
-    if (step.id !== 'check-tasks' || step.status !== 'error' || !hasPendingTasksError) {
+    if (step.id !== 'check-tasks' || step.status !== 'failed' || !hasPendingTasksError) {
       return null;
     }
 
@@ -65,9 +65,9 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
                   </Text>
                   <Badge 
                     colorPalette={
-                      step.data.status === 'complete' ? 'green' :
-                      step.data.status === 'active' ? 'blue' :
-                      step.data.status === 'error' ? 'red' : 'gray'
+                      (step.data.status === 'complete' || step.data.status === 'completed') ? 'green' :
+                      (step.data.status === 'active' || step.data.status === 'running') ? 'blue' :
+                      (step.data.status === 'error' || step.data.status === 'failed') ? 'red' : 'gray'
                     }
                     size="sm"
                   >
@@ -105,17 +105,17 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
                 </Text>
                 <Badge 
                   colorPalette={
-                    step.data.migrationStatus.status === 'active' ? 'blue' :
+                    (step.data.migrationStatus.status === 'active' || step.data.migrationStatus.status === 'running') ? 'blue' :
                     step.data.migrationStatus.status === 'pending' ? 'gray' :
-                    step.data.migrationStatus.status === 'complete' ? 'green' :
-                    step.data.migrationStatus.status === 'error' ? 'red' : 'gray'
+                    (step.data.migrationStatus.status === 'complete' || step.data.migrationStatus.status === 'completed') ? 'green' :
+                    (step.data.migrationStatus.status === 'error' || step.data.migrationStatus.status === 'failed') ? 'red' : 'gray'
                   }
                   size="sm"
                 >
-                  {step.data.migrationStatus.status === 'active' ? 'Running' :
+                  {(step.data.migrationStatus.status === 'active' || step.data.migrationStatus.status === 'running') ? 'Running' :
                    step.data.migrationStatus.status === 'pending' ? 'Pending' :
-                   step.data.migrationStatus.status === 'complete' ? 'Complete' :
-                   step.data.migrationStatus.status === 'error' ? 'Error' :
+                   (step.data.migrationStatus.status === 'complete' || step.data.migrationStatus.status === 'completed') ? 'Complete' :
+                   (step.data.migrationStatus.status === 'error' || step.data.migrationStatus.status === 'failed') ? 'Error' :
                    step.data.migrationStatus.status}
                 </Badge>
               </HStack>
@@ -256,7 +256,7 @@ export const StepConfirmations: React.FC<StepConfirmationsProps> = ({
   };
 
   const renderDryRunConfirmation = () => {
-    if (step.id !== 'composer-dry-run' || step.status !== 'complete' || !hasDryRunComplete) {
+    if (step.id !== 'composer-dry-run' || step.status !== 'completed' || !hasDryRunComplete) {
       return null;
     }
 

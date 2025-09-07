@@ -132,7 +132,7 @@ export const formatTokenInfo = (data: { success: boolean; tokenInfo: TokenInfo; 
 
   const tokenInfo = data.tokenInfo;
   const scopeOrder = ['read', 'update', 'install', 'admin'];
-  const currentLevel = scopeOrder.indexOf(tokenInfo.scope);
+  const currentLevel = scopeOrder.indexOf(tokenInfo.scope || 'read');
 
   return (
     <VStack gap={4} align="stretch">

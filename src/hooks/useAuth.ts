@@ -153,7 +153,7 @@ export const useAuth = (options: UseAuthOptions = {}) => {
         throw new Error('Manager URL not found. Please start over.');
       }
 
-      const result = await AuthApiService.saveToken({ token: state.token, managerUrl: urlToUse });
+      const result = await AuthApiService.saveToken(state.token, urlToUse);
       
       if (result.success) {
         toast.showSuccess(TOAST_MESSAGES.SITE_ADDED);
@@ -191,7 +191,7 @@ export const useAuth = (options: UseAuthOptions = {}) => {
     setState(prev => ({ ...prev, loading: true }));
 
     try {
-      const result = await AuthApiService.saveToken({ token: token, managerUrl: siteUrl });
+      const result = await AuthApiService.saveToken(token, siteUrl);
       
       if (result.success) {
         // Ensure the reauthenticated site is set as active

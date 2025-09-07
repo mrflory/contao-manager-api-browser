@@ -6,16 +6,13 @@ import { WorkflowStep } from '../types';
  */
 export const getStepIconName = (step: WorkflowStep): string => {
   switch (step.status) {
-    case 'active':
+    case 'running':
       return 'spinner';
-    case 'complete':
+    case 'completed':
       return 'check';
-    case 'error':
+    case 'failed':
       return 'x';
-    case 'skipped':
-      return 'minus';
-    case 'cancelled':
-      return 'x';
+    case 'pending':
     default:
       return 'circle';
   }
@@ -26,16 +23,13 @@ export const getStepIconName = (step: WorkflowStep): string => {
  */
 export const getStatusBadgeColor = (step: WorkflowStep): string => {
   switch (step.status) {
-    case 'active':
+    case 'running':
       return 'blue';
-    case 'complete':
+    case 'completed':
       return 'green';
-    case 'error':
+    case 'failed':
       return 'red';
-    case 'skipped':
-      return 'gray';
-    case 'cancelled':
-      return 'orange';
+    case 'pending':
     default:
       return 'gray';
   }
@@ -46,16 +40,13 @@ export const getStatusBadgeColor = (step: WorkflowStep): string => {
  */
 export const getStatusBadgeText = (step: WorkflowStep): string => {
   switch (step.status) {
-    case 'active':
+    case 'running':
       return 'In Progress';
-    case 'complete':
+    case 'completed':
       return 'Complete';
-    case 'error':
+    case 'failed':
       return 'Error';
-    case 'skipped':
-      return 'Skipped';
-    case 'cancelled':
-      return 'Cancelled';
+    case 'pending':
     default:
       return 'Pending';
   }

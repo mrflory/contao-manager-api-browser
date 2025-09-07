@@ -22,7 +22,7 @@ export interface HistoryEntry {
   siteUrl: string;
   startTime: string;
   endTime?: string;
-  status: 'started' | 'completed' | 'failed' | 'cancelled';
+  status: 'started' | 'completed' | 'failed' | 'cancelled' | 'finished' | 'error';
   steps: WorkflowStep[];
   workflowType: string;
 }
@@ -30,6 +30,9 @@ export interface HistoryEntry {
 export interface WorkflowStep {
   id: string;
   name: string;
+  title: string;
+  description: string;
+  summary?: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
   startTime?: string;
   endTime?: string;
@@ -121,3 +124,11 @@ export interface SnapshotListResponse {
   siteUrl: string;
   error?: string;
 }
+
+export interface MaintenanceMode {
+  enabled: boolean;
+}
+
+export type HistoryStep = WorkflowStep;
+
+export type WorkflowStepStatus = 'pending' | 'running' | 'completed' | 'failed';

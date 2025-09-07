@@ -15,8 +15,8 @@ export interface StepDataRendererProps {
 export const StepDataRenderer: React.FC<StepDataRendererProps> = ({ step, migrationSummary }) => {
   if (!step.data) return null;
 
-  const isActive = step.status === 'active';
-  const isComplete = step.status === 'complete';
+  const isActive = step.status === 'running';
+  const isComplete = step.status === 'completed';
 
   // Composer step rendering
   if (isComposerStep(step) && (isActive || isComplete)) {

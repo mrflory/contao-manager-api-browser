@@ -29,17 +29,16 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
 }) => {
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
-      case 'complete':
-      case 'finished':
+      case 'completed':
         return 'green';
-      case 'error':
+      case 'failed':
         return 'red';
       case 'cancelled':
         return 'orange';
-      case 'active':
+      case 'running':
       case 'started':
         return 'blue';
-      case 'skipped':
+      case 'pending':
         return 'gray';
       default:
         return 'gray';
@@ -48,15 +47,13 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'complete':
-        return 'Complete';
-      case 'finished':
-        return 'Finished';
-      case 'error':
-        return 'Error';
+      case 'completed':
+        return 'Completed';
+      case 'failed':
+        return 'Failed';
       case 'cancelled':
         return 'Cancelled';
-      case 'active':
+      case 'running':
         return 'Active';
       case 'started':
         return 'Started';
@@ -100,8 +97,8 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
               p={4}
               borderWidth="1px"
               borderRadius="md"
-              borderColor={step.status === 'error' ? 'red.200' : 'gray.200'}
-              bg={step.status === 'error' ? 'red.50' : 'gray.50'}
+              borderColor={step.status === 'failed' ? 'red.200' : 'gray.200'}
+              bg={step.status === 'failed' ? 'red.50' : 'gray.50'}
             >
               <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
                 <Box flex="1" mr={3}>
@@ -167,8 +164,8 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
               )}
               
               <Box display="flex" justifyContent="space-between" mt={2} fontSize="xs" color="gray.500">
-                <Text>Started: {formatDateTime(step.startTime)}</Text>
-                {step.endTime && (
+                <Text>Started: {step.startTime ? formatDateTime(step.startTime) : 'Not started'}</Text>
+                {step.endTime && step.startTime && (
                   <Text>
                     Duration: {formatDuration(new Date(step.startTime), new Date(step.endTime))}
                   </Text>
@@ -229,12 +226,12 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
                 />
                 <DataListItem
                   label="Completed Steps"
-                  value={historyEntry.steps.filter(s => s.status === 'complete').length.toString()}
+                  value={historyEntry.steps.filter(s => s.status === 'completed').length.toString()}
                 />
-                {historyEntry.steps.some(s => s.status === 'error') && (
+                {historyEntry.steps.some(s => s.status === 'failed') && (
                   <DataListItem
                     label="Failed Steps"
-                    value={historyEntry.steps.filter(s => s.status === 'error').length.toString()}
+                    value={historyEntry.steps.filter(s => s.status === 'failed').length.toString()}
                   />
                 )}
               </DataListRoot>

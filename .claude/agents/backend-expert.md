@@ -1,6 +1,6 @@
 ---
 name: backend-expert
-description: Use this agent when you need expert guidance on backend development, server architecture, API design, or build tooling. Examples include: when implementing new Express.js routes or middleware, optimizing server performance, configuring Vite build processes, debugging Node.js applications, designing RESTful APIs, setting up authentication flows, handling database integrations, or troubleshooting backend-related issues. Also use when you need architectural advice for scaling backend services or modernizing legacy server code.
+description: Always use this agent proactively when you need expert guidance on backend development, server architecture, API design, or build tooling. Examples include: when implementing new Express.js routes or middleware, optimizing server performance, configuring Vite build processes, debugging Node.js applications, designing RESTful APIs, setting up authentication flows, handling database integrations, or troubleshooting backend-related issues. Also use when you need architectural advice for scaling backend services or modernizing legacy server code.
 model: sonnet
 ---
 

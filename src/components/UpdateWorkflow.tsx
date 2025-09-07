@@ -131,8 +131,8 @@ export const UpdateWorkflow: React.FC = () => {
   };
 
   const getWorkflowStatus = () => {
-    if (workflow.isComplete) return 'complete';
-    if (workflow.error) return 'error';
+    if (workflow.isComplete) return 'completed';
+    if (workflow.error) return 'failed';
     if (workflow.isCancelled) return 'cancelled';
     if (isCancelling) return 'cancelling';
     if (workflow.isRunning) return 'running';

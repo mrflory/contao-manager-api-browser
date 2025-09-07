@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Badge, HStack, VStack, Text, Collapsible, Spinner, IconButton } from '@chakra-ui/react';
-import { LuCheck as Check, LuX as X, LuMinus as Minus, LuCircle as Circle, LuChevronDown as ChevronDown, LuChevronUp as ChevronUp } from 'react-icons/lu';
+import { LuCheck as Check, LuX as X, LuCircle as Circle, LuChevronDown as ChevronDown, LuChevronUp as ChevronUp } from 'react-icons/lu';
 import {
   TimelineItem,
   TimelineConnector,
@@ -60,7 +60,7 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
     
     // Check if step is complete but waiting for user input
     // This happens when a step has completed its API call but workflow is paused
-    if (step.status === 'complete' && (hasPendingTasksError || hasPendingMigrations || hasDryRunComplete)) {
+    if (step.status === 'completed' && (hasPendingTasksError || hasPendingMigrations || hasDryRunComplete)) {
       return true;
     }
     
@@ -69,33 +69,30 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
 
   // Smart auto-expand/collapse logic
   useEffect(() => {
-    if (step.status === 'active') {
+    if (step.status === 'running') {
       // Auto-expand when step becomes active
       setIsExpanded(true);
-    } else if (step.status === 'error' || needsConfirmation()) {
+    } else if (step.status === 'failed' || needsConfirmation()) {
       // Always expand and keep expanded for errors or pending confirmations
       setIsExpanded(true);
-    } else if (step.status === 'complete' && !needsConfirmation()) {
+    } else if (step.status === 'completed' && !needsConfirmation()) {
       // Auto-collapse when step completes and doesn't need confirmation
       setIsExpanded(false);
     }
   }, [step.status, hasPendingTasksError, hasPendingMigrations, hasDryRunComplete]);
 
   // Determine if content should be shown (expanded or has important content)
-  const shouldShowContent = isExpanded || step.status === 'error' || step.status === 'active' || step.status === 'cancelled' || needsConfirmation();
+  const shouldShowContent = isExpanded || step.status === 'failed' || step.status === 'running' || needsConfirmation();
 
   const getStepIcon = () => {
     switch (step.status) {
-      case 'active':
+      case 'running':
         return <Spinner size="md" borderWidth="4px" />;
-      case 'complete':
+      case 'completed':
         return <Check color="white" size={24} />;
-      case 'error':
+      case 'failed':
         return <X color="white" size={24} />;
-      case 'skipped':
-        return <Minus color="white" size={24} />;
-      case 'cancelled':
-        return <X color="white" size={24} />;
+      case 'pending':
       default:
         return <Circle color="white" size={24} />;
     }
@@ -103,16 +100,13 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
 
   const getIndicatorColor = () => {
     switch (step.status) {
-      case 'active':
+      case 'running':
         return 'blue.300'; // Light blue for running
-      case 'complete':
+      case 'completed':
         return 'green.500'; // Green for finished
-      case 'error':
+      case 'failed':
         return 'red.500'; // Red for error
-      case 'skipped':
-        return 'blue.800'; // Dark blue for skipped
-      case 'cancelled':
-        return 'orange.500'; // Orange for cancelled
+      case 'pending':
       default:
         return 'blue.500'; // Default blue for pending
     }
@@ -127,7 +121,7 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
   };
 
   return (
-    <TimelineItem opacity={step.status === 'skipped' ? 0.6 : 1}>
+    <TimelineItem opacity={1}>
       <TimelineConnector bg={getIndicatorColor()}>
         {getStepIcon()}
       </TimelineConnector>
@@ -170,7 +164,7 @@ export const WorkflowStepComponent: React.FC<WorkflowStepProps> = ({
                     <Text>Ended: {formatTime(step.endTime)}</Text>
                   )}
                   {step.startTime && (
-                    <Text>Duration: {getDuration(step.startTime, step.endTime)}</Text>
+                    <Text>Duration: {getDuration(new Date(step.startTime), step.endTime ? new Date(step.endTime) : undefined)}</Text>
                   )}
                 </HStack>
               )}
