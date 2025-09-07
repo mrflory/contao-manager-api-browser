@@ -10,16 +10,18 @@ import {
   Badge,
   IconButton,
   HStack,
-  Link,
+  Menu,
+  Portal,
+  Text,
 } from '@chakra-ui/react';
-import { LuEye as Eye, LuRefreshCw as RefreshCw } from 'react-icons/lu';
+import { LuEye as Eye, LuRefreshCw as RefreshCw, LuEllipsis as MoreVertical, LuTrash2 as Trash } from 'react-icons/lu';
 import { Site, HistoryEntry, HistoryResponse } from '../../types';
 import { HistoryApiService } from '../../services/apiCallService';
 import { useApiCall } from '../../hooks/useApiCall';
 import { useToastNotifications } from '../../hooks/useToastNotifications';
-import { api } from '../../utils/api';
 import { HistoryDetailsModal } from '../modals/HistoryDetailsModal';
 import { formatDateTime, formatDuration } from '../../utils/dateUtils';
+import { ComposerFilesDialog } from '../ui/ComposerFilesDialog';
 
 export interface HistoryTabProps {
   site: Site;
@@ -29,6 +31,11 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<HistoryEntry | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [composerDialogState, setComposerDialogState] = useState<{
+    isOpen: boolean;
+    snapshotId: string | null;
+    filename: 'composer.json' | 'composer.lock' | null;
+  }>({ isOpen: false, snapshotId: null, filename: null });
   
   const toast = useToastNotifications();
 
@@ -72,6 +79,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
     return () => {
       isMounted = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [site.url]); // Only trigger when site.url changes
 
   const handleViewDetails = (entry: HistoryEntry) => {
@@ -84,31 +92,28 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
     setSelectedEntry(null);
   };
 
-  const handleDownloadSnapshot = async (snapshotId: string, filename: 'composer.json' | 'composer.lock') => {
+  const handleViewComposerFile = (snapshotId: string, filename: 'composer.json' | 'composer.lock') => {
+    setComposerDialogState({ isOpen: true, snapshotId, filename });
+  };
+
+  const handleDeleteEntry = async (entryId: string) => {
+    if (!window.confirm('Are you sure you want to delete this history entry? This action cannot be undone.')) {
+      return;
+    }
+
     try {
-      const blob = await api.downloadSnapshot(snapshotId, filename);
-      
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${snapshotId}-${filename}`;
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
-      
+      await HistoryApiService.deleteHistoryEntry(site.url, entryId);
       toast.showSuccess({
-        title: 'Download Started',
-        description: `Downloading ${filename} snapshot`
+        title: 'Entry Deleted',
+        description: 'History entry has been deleted successfully'
       });
+      // Reload history
+      await loadHistory.execute();
     } catch (error) {
-      console.error('Download error:', error);
+      console.error('Delete error:', error);
       toast.showError({
-        title: 'Download Failed',
-        description: `Failed to download ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        title: 'Delete Failed',
+        description: `Failed to delete history entry: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
   };
@@ -119,6 +124,11 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
       step.id === 'composer-update' && step.data?.snapshot
     );
     return composerStep?.data?.snapshot || null;
+  };
+
+  const getSnapshotFileCount = (snapshot: any) => {
+    if (!snapshot?.files) return 0;
+    return Object.values(snapshot.files).filter((file: any) => file?.exists).length;
   };
 
   const getStatusBadgeColor = (status: HistoryEntry['status']) => {
@@ -229,8 +239,8 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
                   <Table.ColumnHeader>Type</Table.ColumnHeader>
                   <Table.ColumnHeader>Status</Table.ColumnHeader>
                   <Table.ColumnHeader>Duration</Table.ColumnHeader>
-                  <Table.ColumnHeader>Snapshots</Table.ColumnHeader>
-                  <Table.ColumnHeader>Actions</Table.ColumnHeader>
+                  <Table.ColumnHeader>Files</Table.ColumnHeader>
+                  <Table.ColumnHeader width="120px">Actions</Table.ColumnHeader>
                 </Table.Row>
               </Table.Header>
               <Table.Body>
@@ -269,45 +279,93 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
                         const snapshot = getSnapshotFromHistoryEntry(entry);
                         if (!snapshot) {
                           return (
-                            <Box fontSize="xs" color="gray.400" fontStyle="italic">
-                              No snapshots
-                            </Box>
+                            <Text fontSize="sm" color="gray.400" fontStyle="italic">
+                              No files
+                            </Text>
                           );
                         }
                         
+                        const fileCount = getSnapshotFileCount(snapshot);
                         return (
-                          <HStack gap={3}>
-                            {snapshot.files['composer.json']?.exists && (
-                              <Link
-                                fontSize="xs"
-                                onClick={() => handleDownloadSnapshot(snapshot.id, 'composer.json')}
-                                title="Download composer.json snapshot"
-                              >
-                                composer.json
-                              </Link>
-                            )}
-                            {snapshot.files['composer.lock']?.exists && (
-                              <Link
-                                fontSize="xs"
-                                onClick={() => handleDownloadSnapshot(snapshot.id, 'composer.lock')}
-                                title="Download composer.lock snapshot"
-                              >
-                                composer.lock
-                              </Link>
-                            )}
-                          </HStack>
+                          <Text fontSize="sm" color="gray.600">
+                            {fileCount === 0 ? 'No files' : `${fileCount} file${fileCount !== 1 ? 's' : ''}`}
+                          </Text>
                         );
                       })()}
                     </Table.Cell>
                     <Table.Cell>
-                      <IconButton
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleViewDetails(entry)}
-                        title="View Details"
-                      >
-                        <Eye size={16} />
-                      </IconButton>
+                      <HStack gap={1}>
+                        <IconButton
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleViewDetails(entry)}
+                          title="View Details"
+                        >
+                          <Eye size={16} />
+                        </IconButton>
+                        
+                        {(() => {
+                          const snapshot = getSnapshotFromHistoryEntry(entry);
+                          if (!snapshot || getSnapshotFileCount(snapshot) === 0) {
+                            return (
+                              <IconButton
+                                size="sm"
+                                variant="ghost"
+                                disabled
+                                title="No files available"
+                              >
+                                <MoreVertical size={16} />
+                              </IconButton>
+                            );
+                          }
+                          
+                          return (
+                            <Menu.Root>
+                              <Menu.Trigger asChild>
+                                <IconButton
+                                  size="sm"
+                                  variant="ghost"
+                                  title="More actions"
+                                >
+                                  <MoreVertical size={16} />
+                                </IconButton>
+                              </Menu.Trigger>
+                              <Portal>
+                                <Menu.Positioner>
+                                  <Menu.Content>
+                                    {snapshot.files['composer.json']?.exists && (
+                                      <Menu.Item 
+                                        value="view-composer-json" 
+                                        onClick={() => handleViewComposerFile(snapshot.id, 'composer.json')}
+                                      >
+                                        View composer.json
+                                      </Menu.Item>
+                                    )}
+                                    {snapshot.files['composer.lock']?.exists && (
+                                      <Menu.Item 
+                                        value="view-composer-lock" 
+                                        onClick={() => handleViewComposerFile(snapshot.id, 'composer.lock')}
+                                      >
+                                        View composer.lock
+                                      </Menu.Item>
+                                    )}
+                                    <Menu.Separator />
+                                    <Menu.Item 
+                                      value="delete-entry" 
+                                      onClick={() => handleDeleteEntry(entry.id)}
+                                      color="red.500"
+                                      _hover={{ bg: 'red.50' }}
+                                    >
+                                      <Trash size={16} />
+                                      Delete entry
+                                    </Menu.Item>
+                                  </Menu.Content>
+                                </Menu.Positioner>
+                              </Portal>
+                            </Menu.Root>
+                          );
+                        })()}
+                      </HStack>
                     </Table.Cell>
                   </Table.Row>
                 ))}
@@ -323,7 +381,17 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           historyEntry={selectedEntry}
-          onDownloadSnapshot={handleDownloadSnapshot}
+          onDownloadSnapshot={() => {}} // Not used anymore since download is handled in the dialog
+        />
+      )}
+
+      {/* Composer Files Dialog */}
+      {composerDialogState.snapshotId && composerDialogState.filename && (
+        <ComposerFilesDialog
+          isOpen={composerDialogState.isOpen}
+          onClose={() => setComposerDialogState({ isOpen: false, snapshotId: null, filename: null })}
+          snapshotId={composerDialogState.snapshotId}
+          title={`${composerDialogState.filename} - Package Details`}
         />
       )}
     </>

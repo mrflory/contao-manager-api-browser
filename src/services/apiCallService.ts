@@ -334,6 +334,36 @@ export class HistoryApiService {
    * Update existing history entry
    */
   static updateHistoryEntry = api.updateHistoryEntry;
+
+  /**
+   * Download snapshot file as blob
+   */
+  static downloadSnapshot = api.downloadSnapshot;
+
+  /**
+   * Get snapshot file content as text
+   */
+  static getSnapshotFileContent = api.getSnapshotFileContent;
+
+  /**
+   * Delete history entry
+   */
+  static deleteHistoryEntry = api.deleteHistoryEntry;
+
+  /**
+   * List snapshots for a site
+   */
+  static listSnapshots = api.listSnapshots;
+
+  /**
+   * Delete a snapshot
+   */
+  static deleteSnapshot = api.deleteSnapshot;
+
+  /**
+   * Cleanup old snapshots
+   */
+  static cleanupSnapshots = api.cleanupSnapshots;
 }
 
 /**

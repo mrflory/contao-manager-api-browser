@@ -368,6 +368,12 @@ export const api = {
     });
   },
 
+  async deleteHistoryEntry(siteUrl: string, historyId: string): Promise<any> {
+    return makeApiCall(`/history/${encodeURIComponent(siteUrl)}/${historyId}`, {
+      method: 'DELETE'
+    });
+  },
+
   // Authentication API functions
   async validateToken(data: { url: string; token: string }): Promise<any> {
     return makeApiCall('/validate-token', {
@@ -424,6 +430,14 @@ export const api = {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return response.blob();
+  },
+
+  async getSnapshotFileContent(snapshotId: string, filename: 'composer.json' | 'composer.lock'): Promise<string> {
+    const response = await fetch(`${API_BASE}/snapshots/${encodeURIComponent(snapshotId)}/${filename}/content`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.text();
   },
 
   async listSnapshots(siteUrl: string): Promise<any> {

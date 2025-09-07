@@ -147,6 +147,51 @@ export class SnapshotService {
         }
     }
 
+    public getSnapshotFileContent(snapshotId: string, filename: string): { content: string; size: number } | null {
+        try {
+            // Validate filename - only allow specific files for security
+            const allowedFiles = ['composer.json', 'composer.lock', 'metadata.json'];
+            if (!allowedFiles.includes(filename)) {
+                throw new Error(`Invalid filename. Only ${allowedFiles.join(', ')} are allowed`);
+            }
+
+            const snapshotDir = path.join(this.snapshotsDir, snapshotId);
+            const filePath = path.join(snapshotDir, filename);
+            
+            // Security check - ensure we're not accessing files outside the snapshot directory
+            if (!filePath.startsWith(snapshotDir)) {
+                throw new Error('Invalid file path');
+            }
+
+            // Check if snapshot directory exists
+            if (!fs.existsSync(snapshotDir)) {
+                throw new Error('Snapshot not found');
+            }
+
+            if (!fs.existsSync(filePath)) {
+                throw new Error('File not found in snapshot');
+            }
+
+            // Get file stats for size validation
+            const stats = fs.statSync(filePath);
+            const maxFileSize = 10 * 1024 * 1024; // 10MB limit
+            
+            if (stats.size > maxFileSize) {
+                throw new Error('File too large to display');
+            }
+
+            const content = fs.readFileSync(filePath, 'utf8');
+            
+            return {
+                content,
+                size: stats.size
+            };
+        } catch (error) {
+            console.error(`[SNAPSHOT] Failed to get snapshot file content ${filename} for ${snapshotId}:`, error);
+            return null;
+        }
+    }
+
     public getSnapshotMetadata(snapshotId: string): SnapshotMetadata | null {
         try {
             const metadataPath = path.join(this.snapshotsDir, snapshotId, 'metadata.json');

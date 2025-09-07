@@ -322,6 +322,24 @@ app.get('/api/history/:siteUrl', (req: ApiRequest, res: Response) => {
     }
 });
 
+app.delete('/api/history/:siteUrl/:id', (req: ApiRequest, res: Response) => {
+    try {
+        const { siteUrl, id } = req.params;
+        const decodedSiteUrl = decodeURIComponent(siteUrl);
+        
+        const result = historyService.deleteHistoryEntry(decodedSiteUrl, id);
+        
+        if (result) {
+            res.json({ success: true, message: 'History entry deleted successfully' });
+        } else {
+            res.status(404).json({ error: 'History entry not found' });
+        }
+    } catch (error) {
+        console.error('Delete history error:', error);
+        res.status(500).json({ error: 'Failed to delete history entry' });
+    }
+});
+
 // Snapshot API endpoints  
 app.post('/api/snapshots/create', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     try {
@@ -461,6 +479,50 @@ app.get('/api/snapshots/:snapshotId/:filename', (req: ApiRequest, res: Response)
     } catch (error) {
         console.error('Get snapshot error:', error);
         return res.status(500).json({ error: 'Failed to get snapshot' });
+    }
+});
+
+app.get('/api/snapshots/:snapshotId/:filename/content', (req: ApiRequest, res: Response) => {
+    try {
+        const { snapshotId, filename } = req.params;
+        
+        console.log(`[SNAPSHOT API] Getting file content for snapshot ${snapshotId}, file ${filename}`);
+        
+        const fileData = snapshotService.getSnapshotFileContent(snapshotId, filename);
+        
+        if (!fileData) {
+            return res.status(404).json({ error: 'Snapshot file not found' });
+        }
+        
+        // Determine content type based on filename
+        let contentType = 'text/plain';
+        if (filename.endsWith('.json')) {
+            contentType = 'application/json';
+        }
+        
+        // Set appropriate headers for content display (not download)
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', fileData.size.toString());
+        res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour since snapshots are immutable
+        
+        return res.send(fileData.content);
+        
+    } catch (error) {
+        console.error('[SNAPSHOT API] Get snapshot content error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to get snapshot content';
+        
+        // Handle specific error types with appropriate status codes
+        if (errorMessage.includes('Invalid filename')) {
+            return res.status(400).json({ error: errorMessage });
+        }
+        if (errorMessage.includes('not found')) {
+            return res.status(404).json({ error: errorMessage });
+        }
+        if (errorMessage.includes('too large')) {
+            return res.status(413).json({ error: errorMessage });
+        }
+        
+        return res.status(500).json({ error: errorMessage });
     }
 });
 
