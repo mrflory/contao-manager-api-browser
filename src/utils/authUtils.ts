@@ -28,16 +28,19 @@ export class AuthUtils {
     localStorage.setItem(this.OAUTH_MANAGER_URL_KEY, managerUrl);
     localStorage.setItem(this.OAUTH_SCOPE_KEY, scope);
 
-    // Build OAuth URL
-    const oauthUrl = new URL('/oauth/authorize', managerUrl);
-    oauthUrl.searchParams.set('response_type', 'token');
-    oauthUrl.searchParams.set('client_id', 'Contao Manager API Browser');
-    oauthUrl.searchParams.set('scope', scope);
-    oauthUrl.searchParams.set('redirect_uri', redirectUri);
-    oauthUrl.searchParams.set('state', state);
+    // Build OAuth URL - Contao Manager uses hash-based OAuth
+    const oauthParams = new URLSearchParams({
+      'response_type': 'token',
+      'client_id': 'Contao Manager API Browser',
+      'scope': scope,
+      'redirect_uri': redirectUri,
+      'state': state
+    });
+    
+    const oauthUrl = `${managerUrl}/#oauth?${oauthParams.toString()}`;
 
     // Redirect to OAuth provider
-    window.location.href = oauthUrl.toString();
+    window.location.href = oauthUrl;
   }
 
   /**
