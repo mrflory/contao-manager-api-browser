@@ -1,0 +1,57 @@
+title: "Contao Manager API Browser"
+description: "A modern web-based interface for managing multiple Contao Manager instances through their APIs"
+
+baseurl: "/contao-manager-api-browser"
+url: "https://mrflory.github.io"
+
+# Theme configuration
+theme: just-the-docs
+color_scheme: light
+
+# Navigation structure
+nav_sort: case_insensitive
+
+# Search configuration
+search_enabled: true
+search:
+  heading_level: 2
+  previews: 2
+  preview_words_before: 3
+  preview_words_after: 3
+  tokenizer_separator: /[\s/]+/
+  rel_url: true
+  button: false
+
+# Footer configuration
+footer_content: "Copyright &copy; 2025 Florian Stallmann. Distributed under the <a href=\"https://github.com/mrflory/contao-manager-api-browser/tree/main/LICENSE\">MIT License</a>."
+
+# Repository configuration
+gh_edit_link: true
+gh_edit_link_text: "Edit this page on GitHub"
+gh_edit_repository: "https://github.com/mrflory/contao-manager-api-browser"
+gh_edit_branch: "main"
+gh_edit_view_mode: "tree"
+
+# Plugin configuration
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# SEO configuration
+author: Florian Stallmann
+twitter:
+  username: mrflory
+  card: summary
+
+# Exclude from processing
+exclude:
+  - node_modules/
+  - src/
+  - dist/
+  - package*.json
+  - tsconfig*.json
+  - jest.config.js
+  - vite.config.ts
+  - eslint.config.js
+  - data/
+  - ".github/"
