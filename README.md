@@ -1,15 +1,16 @@
 # Contao Manager API Browser
 
-A web-based interface for managing multiple Contao Manager instances through their APIs. This application provides a centralized dashboard to monitor update status, manage API tokens, and interact with Contao Manager installations.
+A modern web-based interface for managing multiple Contao Manager instances through their APIs. This TypeScript application provides a centralized dashboard with workflow automation, comprehensive monitoring, and secure token management for your Contao installations.
 
 ## Features
 
-- **Multi-site Management**: Manage multiple Contao Manager instances from one interface
-- **OAuth Authentication**: Secure token generation through Contao Manager's built-in OAuth flow
-- **Update Monitoring**: Check composer and self-update status across all your sites
-- **Token Management**: Store and manage API tokens securely
-- **Responsive Interface**: Clean, user-friendly web interface built with React
-- **TOTP Support**: Works with Two-Factor Authentication enabled Contao Manager instances
+- **Multi-site Management**: Manage multiple Contao Manager instances from one centralized interface
+- **OAuth Authentication**: Secure token generation through Contao Manager's built-in OAuth flow with TOTP support
+- **Workflow Automation**: Timeline-based execution system for complex multi-step operations like composer updates
+- **Comprehensive Monitoring**: Real-time status tracking for composer updates, self-updates, and system health
+- **History & Audit Trails**: Complete execution history with detailed logging for all operations
+- **Modern UI**: Built with React v19 and Chakra UI v3 with dark/light mode support
+- **Full TypeScript Stack**: Type-safe development with comprehensive error handling
 
 ## Prerequisites
 
@@ -17,69 +18,103 @@ A web-based interface for managing multiple Contao Manager instances through the
 - Access to one or more Contao Manager installations
 - Network connectivity to your Contao Manager instances
 
-## Installation
+## Quick Start
 
-1. **Clone the repository**:
+1. **Clone and Install**:
    ```bash
    git clone <repository-url>
    cd contao-manager-api
-   ```
-
-2. **Install dependencies**:
-   ```bash
    npm install
    ```
 
-3. **Set up configuration**:
+2. **Start Development Servers**:
    ```bash
-   # Copy the example configuration
-   cp data/config.example.json data/config.json
+   # Option 1: Start both servers with one command
+   npm run dev:full
+   
+   # Option 2: Start servers separately (in different terminals)
+   npm run dev        # Backend server (port 3000)
+   npm run dev:react  # Frontend server (port 5173)
    ```
 
-4. **Build the React application** (for production):
+3. **Access the Application**:
+   - Open http://localhost:5173 in your browser (React dev server)
+   - The backend API runs on http://localhost:3000
+
+4. **Add Your First Site**:
+   - Enter your Contao Manager URL (e.g., `https://example.com/contao-manager.phar.php`)
+   - Select the appropriate permissions scope
+   - Complete OAuth authentication through your Contao Manager
+
+## Production Setup
+
+1. **Build the application**:
    ```bash
    npm run build
    ```
 
-## Usage
+2. **Start production server**:
+   ```bash
+   npm start
+   ```
 
-### Development Mode
+The application will serve the built React frontend and API backend on http://localhost:3000
 
-Start both the API server and React development server:
+## Using the Application
+
+### Managing Sites
+
+1. **Adding Sites**: Click "Add New Site" and provide:
+   - Contao Manager URL (full path to contao-manager.phar.php)
+   - Permission scope (read, update, install, or admin)
+   - Complete OAuth authentication
+
+2. **Site Operations**: For each site you can:
+   - View system information and status
+   - Execute composer updates with workflow automation
+   - Browse logs and execution history
+   - Manage API tokens and permissions
+
+3. **Workflow Automation**: Complex operations like composer updates run as automated workflows with:
+   - Step-by-step progress visualization
+   - Pause/resume capabilities
+   - Complete audit trails
+   - Error handling and recovery
+
+### Permission Scopes
+
+- **read**: View-only access to status and information
+- **update**: Read access plus composer and self-update capabilities
+- **install**: Update access plus package installation/removal
+- **admin**: Full administrative access to all features
+
+### Development Commands
+
+For developers working on this application:
+
 ```bash
-# Start API server with auto-reload
-npm run dev
-
-# In another terminal, start React development server
-npm run dev:react
+npm run dev          # Start TypeScript backend with auto-reload
+npm run dev:react    # Start React development server (port 5173)
+npm run dev:full     # Start both backend and frontend concurrently
+npm run build        # Build complete application
+npm run test         # Run Jest test suite
+npm run lint         # Run ESLint code quality checks
+npm run mock:server  # Start mock Contao Manager for testing
 ```
-
-The application will be available at:
-- API Server: http://localhost:3000
-- React Dev Server: http://localhost:5173
-
-### Production Mode
-
-```bash
-# Build and start production server
-npm run build
-npm start
-```
-
-The application will be available at http://localhost:3000
 
 ## Configuration
 
-The application stores site configurations in `data/config.json`. This file is automatically created when you add your first site through the web interface.
+The application automatically creates `data/config.json` when you add your first site. All configuration is managed through the web interface - no manual file editing required.
 
-### Example Configuration Structure:
+### Configuration Structure:
 ```json
 {
   "sites": {
     "https://example.com/contao-manager.phar.php": {
       "name": "Example Site",
-      "url": "https://example.com/contao-manager.phar.php",
-      "token": "your-api-token-here",
+      "url": "https://example.com/contao-manager.phar.php", 
+      "token": "oauth-token-from-contao-manager",
+      "scope": "admin",
       "lastUsed": "2025-01-01T00:00:00.000Z"
     }
   },
@@ -87,96 +122,97 @@ The application stores site configurations in `data/config.json`. This file is a
 }
 ```
 
-## Adding Sites
+## Architecture
 
-1. **Access the Application**: Open your browser and navigate to the application URL
-2. **Enter Contao Manager URL**: Provide the full URL to your Contao Manager (e.g., `https://example.com/contao-manager.phar.php`)
-3. **Select Permissions**: Choose the required API scope:
-   - `read`: View-only access
-   - `update`: Read + update capabilities
-   - `install`: Read + update + package installation
-   - `admin`: Full administrative access
-4. **OAuth Authentication**: You'll be redirected to your Contao Manager for authentication
-5. **Complete Setup**: After authentication, the token will be automatically extracted and saved
+This application features a modern TypeScript architecture:
 
-## API Endpoints
+### Backend (TypeScript Express Server)
+- **Service-oriented architecture** with dedicated services for configuration, authentication, proxying, logging, and history
+- **Comprehensive API endpoints** for site management and workflow execution  
+- **Request/response logging** with complete audit trails
+- **OAuth token validation** and secure API forwarding
 
-The application provides several API endpoints:
+### Frontend (React v19 + Chakra UI v3)
+- **Modern React architecture** with TypeScript throughout
+- **Workflow engine** for complex multi-step operations
+- **Custom hooks** for API management, authentication, and state handling
+- **Responsive design** with dark/light mode support
 
-- `POST /api/validate-token` - Validate API token with Contao Manager
-- `POST /api/update-status` - Fetch composer and self-update status
-- `GET /api/config` - Get current configuration
-- `POST /api/set-active-site` - Set active site
-- `POST /api/save-token` - Save new API token
-- `DELETE /api/sites/:url` - Remove a site
-
-## Authentication & Security
-
-- **OAuth Flow**: Uses Contao Manager's built-in OAuth for secure token generation
-- **Token Storage**: API tokens are stored locally in the configuration file
-- **CORS Support**: Configured for cross-origin requests
-- **No Database**: Stateless proxy architecture for simplicity
-- **Timeout Handling**: 10-second timeout on external API calls
+### Key Features
+- **No database required** - uses JSON file storage for simplicity
+- **Full TypeScript stack** with comprehensive type safety
+- **Workflow automation** with timeline visualization and pause/resume
+- **OAuth integration** supporting TOTP/2FA authentication
+- **Mock server** for development and testing
 
 ## Troubleshooting
 
 ### Common Issues
 
 **"Invalid token" errors**
-- Token may have expired - regenerate through OAuth flow
-- Check that the token has sufficient permissions for the requested operation
+- Token may have expired - use "Refresh Token" in site settings or re-authenticate via OAuth
+- Verify the token has sufficient scope for the requested operation
+- Check that your Contao Manager instance is accessible
 
-**Connection timeouts**
-- Verify the Contao Manager URL is correct and accessible
-- Check that your server can reach the target Contao Manager instance
-- Ensure firewall settings allow outbound connections
+**Connection timeouts or unreachable sites**
+- Verify the Contao Manager URL is correct and accessible from your server
+- Check firewall settings allow outbound HTTPS connections
+- Ensure the target Contao Manager is not behind authentication or VPN
 
-**Permission errors**
-- Different operations require different API scopes:
-  - Composer status: `read` or higher
-  - Self-update status: `update` or higher
-- Regenerate token with appropriate permissions if needed
+**Workflow execution issues**
+- Check the History tab for detailed execution logs and error messages  
+- Workflows can be paused/resumed if they encounter temporary issues
+- Use the mock server (`npm run mock:server`) to test workflow functionality
 
-## Development
+**Permission scope issues**
+- Different operations require different scopes (read < update < install < admin)
+- Re-authenticate with higher permissions if needed for advanced operations
+
+## Development & Testing
+
+### Testing with Mock Server
+
+For safe development and testing without affecting real Contao Manager instances:
+
+1. **Start mock server**: `npm run mock:server` (runs on http://localhost:3001)
+2. **Add test site**: Use URL `http://localhost:3001/contao-manager.phar.php`  
+3. **Use admin scope**: Select "admin" permissions for full feature testing
+4. **Test workflows**: Execute composer updates and other operations safely
+
+The mock server includes realistic response timing, error scenarios, and a web interface for scenario management.
 
 ### Project Structure
 ```
-├── server.js              # Express.js API server
-├── src/                   # React application source
-│   ├── App.tsx            # Main application component
-│   ├── components/        # Reusable components
-│   ├── pages/             # Page components
-│   ├── types/             # TypeScript type definitions
-│   └── utils/             # Utility functions
+├── src/
+│   ├── server.ts          # TypeScript Express server  
+│   ├── services/          # Backend services (Config, Auth, Proxy, etc.)
+│   ├── workflow/          # Workflow engine and timeline items
+│   ├── components/        # React components and UI
+│   ├── pages/             # Page components  
+│   ├── hooks/             # Custom React hooks
+│   └── types/             # TypeScript definitions
+├── src/test/mockServer/   # Mock Contao Manager for testing
 ├── data/                  # Configuration storage
-│   └── config.example.json
-├── public/                # Static files for development
-└── dist/                  # Built React application
+└── dist/                  # Built application
 ```
 
-### Available Scripts
+### Contributing
 
-- `npm start` - Start production server
-- `npm run dev` - Start development API server with auto-reload
-- `npm run dev:react` - Start Vite development server for React
-- `npm run build` - Build React application for production
-- `npm run preview` - Preview production build locally
+1. Fork the repository and create a feature branch
+2. Use TypeScript throughout with proper type definitions  
+3. Follow existing code patterns and service architecture
+4. Test with the mock server before submitting
+5. Run `npm run lint` and `npm test` to ensure code quality
+6. Submit a pull request with a clear description
 
-## Contributing
+## Support
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+For issues, questions, or feature requests:
+- Check the troubleshooting section above
+- Test with the mock server to isolate issues  
+- Review the [Contao Manager API documentation](https://docs.contao.org/manual/en/installation/contao-manager/)
+- Open an issue in this repository with detailed information
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-For issues and questions:
-- Check the troubleshooting section above
-- Review the [Contao Manager documentation](https://docs.contao.org/manual/en/installation/contao-manager/)
-- Open an issue in this repository
