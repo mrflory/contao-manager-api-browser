@@ -14,6 +14,7 @@ export interface PackageSummary {
     operations: PackageOperation[];
   }[];
   operationDetails: Record<string, PackageOperation[]>;
+  summaryText?: string; // Raw summary line like "Package operations: 20 installs, 20 updates, 3 removals"
 }
 
 /**
@@ -25,6 +26,7 @@ export const parsePackageOperations = (console: string): PackageSummary | null =
   const operations: PackageOperation[] = [];
   const operationCounts: Record<string, number> = {};
   const operationDetails: Record<string, PackageOperation[]> = {};
+  let summaryText: string | undefined;
 
   // Initialize categories
   const categories = ['INSTALL', 'UPDATE', 'REMOVE', 'DOWNGRADE', 'LOCK'];
@@ -35,6 +37,15 @@ export const parsePackageOperations = (console: string): PackageSummary | null =
 
   // Split console output into lines
   const lines = console.split('\n');
+
+  // First, look for summary lines like "Package operations: 20 installs, 20 updates, 3 removals"
+  for (const line of lines) {
+    const summaryMatch = line.match(/^(?:Package|Lock file) operations:.*(?:installs?|updates?|removals?)/);
+    if (summaryMatch) {
+      summaryText = line.trim();
+      break;
+    }
+  }
 
   for (const line of lines) {
     let operation: PackageOperation | null = null;
@@ -105,7 +116,8 @@ export const parsePackageOperations = (console: string): PackageSummary | null =
     }
   }
 
-  if (operations.length === 0) {
+  // If we found a summary text but no detailed operations, still return the summary
+  if (operations.length === 0 && !summaryText) {
     return null;
   }
 
@@ -121,7 +133,8 @@ export const parsePackageOperations = (console: string): PackageSummary | null =
   return {
     totalOperations: operations.length,
     operationBreakdown,
-    operationDetails
+    operationDetails,
+    summaryText
   };
 };
 

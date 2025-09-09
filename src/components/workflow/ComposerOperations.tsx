@@ -111,11 +111,11 @@ export const ComposerOperations: React.FC<ComposerOperationsProps> = memo(({ dat
 
   // Memoize package summary to prevent unnecessary recalculations
   const packageSummary = useMemo(() => {
-    const successfulOperations = data?.operations?.filter((op: any) => op.status === 'completed');
-    if (!successfulOperations || successfulOperations.length === 0) return null;
+    if (!data?.operations || data.operations.length === 0) return null;
     
-    // Combine console outputs from all successful operations
-    const combinedConsole = successfulOperations
+    // Combine console outputs from all operations (not just completed ones)
+    // This ensures we capture dry-run results and operations in progress
+    const combinedConsole = data.operations
       .map((op: any) => op.console || '')
       .join('\n');
     
