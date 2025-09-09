@@ -82,7 +82,7 @@ export class AuthUtils {
     const tokenType = params.get('token_type');
     const state = params.get('state');
     
-    if (!token || tokenType !== 'Bearer') {
+    if (!token || (tokenType && tokenType.toLowerCase() !== 'bearer')) {
       return null;
     }
 

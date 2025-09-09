@@ -20,6 +20,7 @@ const App: React.FC = () => {
             <Route path="/" element={<SitesOverview />} />
             <Route path="/site/:siteUrl" element={<SiteDetails />} />
             <Route path="/add-site" element={<AddSite />} />
+            <Route path="/oauth-callback" element={<AddSite />} />
           </Routes>
         </Box>
       </Router>
