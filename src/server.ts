@@ -48,22 +48,40 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Configuration endpoints
-app.get('/api/config', (_req: Request, res: Response) => {
+app.get('/api/config', async (_req: Request, res: Response) => {
     try {
-        console.log('Loading config for /api/config endpoint');
-        const config = configService.getConfig();
-        const activeSite = configService.getActiveSite();
+        const config = await configService.getConfigAsync();
         
         const response = { 
             sites: config.sites || {},
-            activeSite: activeSite,
-            hasActiveSite: !!activeSite
+            activeSite: config.activeSite,
+            hasActiveSite: !!config.activeSite
         };
         
         res.json(response);
     } catch (error) {
         console.error('Error in /api/config:', error);
         res.status(500).json({ error: 'Failed to load configuration' });
+    }
+});
+
+// Storage management endpoints (for new storage abstraction)
+app.get('/api/storage/type', (_req: Request, res: Response) => {
+    try {
+        res.json({ 
+            storageType: 'json_file', // Default storage type (JSON file)
+            available: true,
+            capabilities: {
+                canExport: false,
+                canImport: false,
+                canMigrate: false,
+                supportsBackup: false,
+                isClientSide: false
+            }
+        });
+    } catch (error) {
+        console.error('Error getting storage type:', error);
+        res.status(500).json({ error: 'Failed to get storage type' });
     }
 });
 
@@ -587,8 +605,32 @@ app.get('/*splat', (req, res) => {
 // Error handling middleware (must be last)
 app.use(ErrorHandler.handle);
 
-app.listen(PORT, () => {
-    console.log(`TypeScript Server running on http://localhost:${PORT}`);
-});
+async function initializeServices() {
+    // Initialize storage backend
+    console.log('Initializing storage backend...');
+    const initResult = await configService.initialize();
+    if (!initResult.success) {
+        console.error('Failed to initialize storage backend:', initResult.error);
+        process.exit(1);
+    }
+    
+    console.log('Storage backend initialized successfully');
+}
+
+async function startServer() {
+    try {
+        await initializeServices();
+        
+        app.listen(PORT, () => {
+            console.log(`TypeScript Server running on http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+}
+
+// Start the server
+startServer();
 
 export default app;

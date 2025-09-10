@@ -10,8 +10,10 @@ export class ApiCallService {
   static async isUsingBrowserStorage(): Promise<boolean> {
     try {
       const storageType = await browserStorageService.detectStorageType();
+      console.log(`[API_ROUTING] Detected storage type:`, storageType, `-> Using browser storage:`, storageType === StorageType.BROWSER);
       return storageType === StorageType.BROWSER;
     } catch (error) {
+      console.log(`[API_ROUTING] Storage type detection failed:`, error);
       return false;
     }
   }
@@ -27,9 +29,11 @@ export class ApiCallService {
   ): Promise<ApiCallResult<T>> {
     try {
       const useBrowserStorage = await this.isUsingBrowserStorage();
+      console.log(`[API_ROUTING] ${context || 'API call'} routing decision:`, useBrowserStorage ? 'BROWSER_STORAGE' : 'SERVER_API');
       
       if (useBrowserStorage) {
         // Use browser storage function
+        console.log(`[API_ROUTING] Using browser storage for ${context}`);
         const result = await browserStorageFunction();
         return {
           success: true,
@@ -38,6 +42,7 @@ export class ApiCallService {
         };
       } else {
         // Use server API function
+        console.log(`[API_ROUTING] Using server API for ${context}`);
         return await this.executeApiCall(apiFunction, params, context);
       }
     } catch (error) {
@@ -62,6 +67,7 @@ export class ApiCallService {
   ): Promise<ApiCallResult<T>> {
     try {
       const result = await apiFunction(params);
+      console.log(`[API_CALL] ${context} response:`, result);
       
       return {
         success: true,
@@ -71,6 +77,7 @@ export class ApiCallService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       const contextMessage = context ? `${context}: ${errorMessage}` : errorMessage;
+      console.error(`[API_CALL] ${context} error:`, error);
       
       return {
         success: false,
@@ -154,12 +161,18 @@ export class SiteApiService {
    * Get site configuration (supports browser storage)
    */
   static async getConfig() {
-    return ApiCallService.routeApiCall(
+    const result = await ApiCallService.routeApiCall(
       api.getConfig,
       () => browserStorageService.loadConfig(),
       undefined,
       'Get site configuration'
     );
+    
+    if (result.success) {
+      return result.data;
+    } else {
+      throw new Error(result.error || 'Failed to get configuration');
+    }
   }
 
   /**
