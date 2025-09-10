@@ -23,7 +23,7 @@ This is a Node.js proxy application that provides a modern web interface for int
 ### Server Layer (TypeScript Backend - `src/server.ts`)
 - **Express.js TypeScript server** with modular service architecture
 - **Service-oriented design** with dedicated services:
-  - `ConfigService` - Site configuration and storage management
+  - `ConfigService` - Site configuration with pluggable storage backends
   - `AuthService` - OAuth token validation and authentication
   - `ProxyService` - API forwarding to Contao Manager instances
   - `LoggingService` - Request/response logging and audit trails
@@ -63,6 +63,28 @@ This is a Node.js proxy application that provides a modern web interface for int
 - **Server-side token storage** - tokens stored in `data/config.json` file on server
 - **Theme support** - Dark/light mode toggle using next-themes integration
 
+### Storage Architecture (Pluggable Backends)
+
+The application supports multiple storage backends through a unified abstraction layer:
+
+#### JSON File Storage (Default - `STORAGE_TYPE=json_file`)
+- Server-side storage in `data/config.json`
+- Token encryption with `TOKEN_MASTER_KEY`
+- Multi-site configuration support
+- Automatic backup and migration handling
+
+#### Browser Storage (`STORAGE_TYPE=browser`)
+- Client-side storage using localStorage
+- Privacy-focused deployment (no server-side data storage)
+- Import/export functionality for configuration backup
+- Namespace isolation (`contao-manager:config`)
+
+#### Database Storage (`STORAGE_TYPE=database` - Phase 1)
+- PostgreSQL backend for multi-tenant SaaS deployment
+- Connection via `DATABASE_URL` environment variable
+- Multi-tenant support with user isolation
+- Backup and migration capabilities
+
 ### Authentication Flow (OAuth Token-based)
 1. User enters Contao Manager URL and selects required permissions (scope)
 2. Application redirects to Contao Manager OAuth endpoint with parameters:
@@ -72,15 +94,17 @@ This is a Node.js proxy application that provides a modern web interface for int
    - `redirect_uri` (callback URL with #token fragment)
 3. User authenticates with Contao Manager (including TOTP if required)
 4. Contao Manager redirects back with access token in URL fragment
-5. Frontend extracts token from URL and sends it to server for storage in `data/config.json`
-6. Server stores site configuration with token and uses it for subsequent API calls
+5. Frontend extracts token from URL and sends it to server for storage
+6. Server stores site configuration using selected storage backend
 
 ## Key Technical Details
 
 - **Full TypeScript Stack** - Both frontend and backend written in TypeScript with strict type safety
 - **Service-Oriented Architecture** - Modular backend services with clear separation of concerns
 - **Workflow Engine** - Generic timeline-based execution system for complex multi-step operations
-- **JSON File Storage** - No database dependency, uses `data/config.json` for configuration
+- **Storage Abstraction Layer** - Pluggable storage backends (JSON file, Browser localStorage, PostgreSQL)
+- **JSON File Storage** - No database dependency, uses `data/config.json` for configuration (default)
+- **Browser Storage Support** - Client-side localStorage for privacy-focused deployments
 - **OAuth Token Authentication** - Supports TOTP/2FA through Contao Manager integration
 - **Request/Response Logging** - Comprehensive audit trails with structured logging
 - **History Tracking** - Workflow execution history with detailed step information
