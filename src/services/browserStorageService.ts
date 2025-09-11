@@ -10,6 +10,7 @@ import {
   StorageChangeEvent,
   StorageMigrationProgressEvent
 } from '../types/storage';
+import { getStorageCapabilities } from '../storage/interfaces';
 import { AppConfig } from '../types';
 
 /**
@@ -154,44 +155,7 @@ export class BrowserStorageService implements IBrowserStorageService {
    * Get capabilities of a storage type
    */
   getStorageCapabilities(type: StorageType): StorageCapabilities {
-    switch (type) {
-      case StorageType.BROWSER:
-        return {
-          canExport: true,
-          canImport: true,
-          canMigrate: true,
-          supportsBackup: true,
-          isClientSide: true,
-          maxStorageSize: 5 * 1024 * 1024 // 5MB typical localStorage limit
-        };
-      
-      case StorageType.JSON_FILE:
-        return {
-          canExport: true,
-          canImport: true,
-          canMigrate: true,
-          supportsBackup: true,
-          isClientSide: false
-        };
-      
-      case StorageType.DATABASE:
-        return {
-          canExport: true,
-          canImport: true,
-          canMigrate: true,
-          supportsBackup: true,
-          isClientSide: false
-        };
-      
-      default:
-        return {
-          canExport: false,
-          canImport: false,
-          canMigrate: false,
-          supportsBackup: false,
-          isClientSide: false
-        };
-    }
+    return getStorageCapabilities(type);
   }
 
   /**

@@ -1,17 +1,11 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import { HistoryEntry, HistoryResponse, CreateHistoryRequest, UpdateHistoryRequest } from '../types';
+import { UnifiedStorage, HistoryParams, QueryParams } from '../storage/interfaces';
 
 export class HistoryService {
-    private readonly dataDir: string;
+    private readonly storage: UnifiedStorage;
 
-    constructor(dataDir: string = path.join(process.cwd(), 'data')) {
-        this.dataDir = dataDir;
-        
-        // Ensure data directory exists
-        if (!fs.existsSync(this.dataDir)) {
-            fs.mkdirSync(this.dataDir, { recursive: true });
-        }
+    constructor(storage: UnifiedStorage) {
+        this.storage = storage;
     }
 
     private extractSiteName(url: string): string {
@@ -23,36 +17,37 @@ export class HistoryService {
         }
     }
 
-    public saveHistoryEntry(siteUrl: string, historyEntry: HistoryEntry): boolean {
+    public async saveHistoryEntry(siteUrl: string, historyEntry: HistoryEntry): Promise<boolean> {
         try {
-            const hostname = this.extractSiteName(siteUrl);
-            const historyFile = path.join(this.dataDir, `${hostname}.history.json`);
-            
-            let history: HistoryEntry[] = [];
-            
-            // Load existing history if file exists
-            if (fs.existsSync(historyFile)) {
-                const data = fs.readFileSync(historyFile, 'utf8');
-                if (data.trim()) {
-                    history = JSON.parse(data);
-                }
+            // Check if storage supports history
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsHistory) {
+                console.warn('History storage not supported by current storage backend');
+                return false;
+            }
+
+            if (!this.storage.history) {
+                console.warn('Storage history interface not available');
+                return false;
             }
             
-            // Find existing entry or add new one
-            const existingIndex = history.findIndex(entry => entry.id === historyEntry.id);
-            if (existingIndex !== -1) {
-                history[existingIndex] = historyEntry;
-            } else {
-                history.unshift(historyEntry); // Add to beginning (newest first)
+            // Use storage abstraction to update the history entry
+            const historyParams: HistoryParams = {
+                siteUrl,
+                workflowType: historyEntry.workflowType,
+                status: historyEntry.status,
+                startTime: historyEntry.startTime,
+                endTime: historyEntry.endTime,
+                steps: historyEntry.steps
+            };
+            
+            const result = await this.storage.history.updateHistoryEntry(historyEntry.id, historyParams);
+            
+            if (!result.success) {
+                console.error('Failed to save history entry:', result.error);
+                return false;
             }
             
-            // Keep only last 50 entries
-            if (history.length > 50) {
-                history = history.slice(0, 50);
-            }
-            
-            // Save back to file
-            fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
             return true;
         } catch (error) {
             console.error('Failed to save history entry:', error instanceof Error ? error.message : 'Unknown error');
@@ -60,38 +55,61 @@ export class HistoryService {
         }
     }
 
-    public loadHistoryForSite(siteUrl: string): HistoryEntry[] {
+    public async loadHistoryForSite(siteUrl: string): Promise<HistoryEntry[]> {
         try {
-            const hostname = this.extractSiteName(siteUrl);
-            const historyFile = path.join(this.dataDir, `${hostname}.history.json`);
-            
-            if (!fs.existsSync(historyFile)) {
+            // Check if storage supports history
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsHistory) {
+                return [];
+            }
+
+            if (!this.storage.history) {
+                console.warn('Storage history interface not available');
                 return [];
             }
             
-            const data = fs.readFileSync(historyFile, 'utf8');
-            if (!data.trim()) {
+            const result = await this.storage.history.getHistory(siteUrl);
+            
+            if (!result.success) {
+                console.error('Failed to load history:', result.error);
                 return [];
             }
             
-            return JSON.parse(data);
+            return result.data || [];
         } catch (error) {
             console.error('Failed to load history:', error instanceof Error ? error.message : 'Unknown error');
             return [];
         }
     }
 
-    public findHistoryEntry(siteUrl: string, historyId: string): HistoryEntry | null {
+    public async findHistoryEntry(siteUrl: string, historyId: string): Promise<HistoryEntry | null> {
         try {
-            const history = this.loadHistoryForSite(siteUrl);
-            return history.find(entry => entry.id === historyId) || null;
+            // Check if storage supports history
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsHistory) {
+                return null;
+            }
+
+            if (!this.storage.history) {
+                console.warn('Storage history interface not available');
+                return null;
+            }
+            
+            const result = await this.storage.history.getHistoryEntry(siteUrl, historyId);
+            
+            if (!result.success) {
+                console.error('Failed to find history entry:', result.error);
+                return null;
+            }
+            
+            return result.data || null;
         } catch (error) {
             console.error('Failed to find history entry:', error instanceof Error ? error.message : 'Unknown error');
             return null;
         }
     }
 
-    public createHistoryEntry(request: CreateHistoryRequest): HistoryEntry | null {
+    public async createHistoryEntry(request: CreateHistoryRequest): Promise<HistoryEntry | null> {
         try {
             const { siteUrl, workflowType } = request;
             
@@ -99,29 +117,41 @@ export class HistoryService {
                 throw new Error('siteUrl and workflowType are required');
             }
 
-            // Create new history entry
-            const historyEntry: HistoryEntry = {
-                id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9),
-                siteUrl,
-                startTime: new Date().toISOString(),
-                status: 'started',
-                steps: [],
-                workflowType
-            };
+            // Check if storage supports history
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsHistory) {
+                console.warn('History storage not supported by current storage backend');
+                return null;
+            }
 
-            // Save to history file
-            if (this.saveHistoryEntry(siteUrl, historyEntry)) {
-                return historyEntry;
+            if (!this.storage.history) {
+                console.warn('Storage history interface not available');
+                return null;
             }
             
-            return null;
+            const historyParams: HistoryParams = {
+                siteUrl,
+                workflowType,
+                status: 'started',
+                startTime: new Date().toISOString(),
+                steps: []
+            };
+
+            const result = await this.storage.history.createHistoryEntry(historyParams);
+            
+            if (!result.success) {
+                console.error('Create history error:', result.error);
+                return null;
+            }
+            
+            return result.data || null;
         } catch (error) {
             console.error('Create history error:', error instanceof Error ? error.message : 'Unknown error');
             return null;
         }
     }
 
-    public updateHistoryEntry(id: string, request: UpdateHistoryRequest): HistoryEntry | null {
+    public async updateHistoryEntry(id: string, request: UpdateHistoryRequest): Promise<HistoryEntry | null> {
         console.log('[HISTORY SERVICE] updateHistoryEntry called:', {
             id,
             request: JSON.stringify(request, null, 2)
@@ -136,34 +166,36 @@ export class HistoryService {
                 throw new Error('siteUrl is required');
             }
 
-            // Find history entry by id in the history file
-            const historyEntry = this.findHistoryEntry(siteUrl, id);
-            console.log('[HISTORY SERVICE] Found existing entry:', historyEntry ? 'Yes' : 'No');
-            
-            if (!historyEntry) {
+            // Check if storage supports history
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsHistory) {
+                console.warn('History storage not supported by current storage backend');
                 return null;
             }
 
-            // Update fields if provided
-            if (status) historyEntry.status = status as any;
-            if (endTime) historyEntry.endTime = endTime;
-            if (steps) historyEntry.steps = steps;
+            if (!this.storage.history) {
+                console.warn('Storage history interface not available');
+                return null;
+            }
 
-            console.log('[HISTORY SERVICE] Updated entry:', {
-                id: historyEntry.id,
-                status: historyEntry.status,
-                stepsCount: historyEntry.steps.length
-            });
+            const historyParams: HistoryParams = {
+                siteUrl,
+                status: status as any,
+                endTime,
+                steps
+            };
 
-            // Save updated entry back to history file
-            const saveResult = this.saveHistoryEntry(siteUrl, historyEntry);
-            console.log('[HISTORY SERVICE] Save result:', saveResult);
+            console.log('[HISTORY SERVICE] Calling storage update with params:', historyParams);
+
+            const result = await this.storage.history.updateHistoryEntry(id, historyParams);
+            console.log('[HISTORY SERVICE] Storage update result:', result.success);
             
-            if (saveResult) {
-                return historyEntry;
+            if (!result.success) {
+                console.error('[HISTORY SERVICE] Update history error:', result.error);
+                return null;
             }
             
-            return null;
+            return result.data || null;
         } catch (error) {
             console.error('[HISTORY SERVICE] Update history error:', error instanceof Error ? error.message : 'Unknown error');
             console.error('[HISTORY SERVICE] Error stack:', error instanceof Error ? error.stack : 'No stack');
@@ -171,10 +203,10 @@ export class HistoryService {
         }
     }
 
-    public getHistoryForSite(siteUrl: string): HistoryResponse {
+    public async getHistoryForSite(siteUrl: string): Promise<HistoryResponse> {
         try {
-            // Load history from file (already sorted newest first)
-            const history = this.loadHistoryForSite(siteUrl);
+            // Load history from storage abstraction
+            const history = await this.loadHistoryForSite(siteUrl);
             
             return { 
                 success: true,
@@ -187,61 +219,109 @@ export class HistoryService {
         }
     }
 
-    public deleteHistoryEntry(siteUrl: string, historyId: string): boolean {
+    public async deleteHistoryEntry(siteUrl: string, historyId: string): Promise<boolean> {
         try {
-            const history = this.loadHistoryForSite(siteUrl);
-            const filteredHistory = history.filter(entry => entry.id !== historyId);
-            
-            if (filteredHistory.length === history.length) {
-                return false; // Entry not found
+            // Check if storage supports history
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsHistory) {
+                console.warn('History storage not supported by current storage backend');
+                return false;
             }
 
-            const hostname = this.extractSiteName(siteUrl);
-            const historyFile = path.join(this.dataDir, `${hostname}.history.json`);
+            if (!this.storage.history) {
+                console.warn('Storage history interface not available');
+                return false;
+            }
             
-            fs.writeFileSync(historyFile, JSON.stringify(filteredHistory, null, 2));
-            return true;
+            const result = await this.storage.history.deleteHistoryEntry(siteUrl, historyId);
+            
+            if (!result.success) {
+                console.error('Failed to delete history entry:', result.error);
+                return false;
+            }
+            
+            return result.data || false;
         } catch (error) {
             console.error('Failed to delete history entry:', error instanceof Error ? error.message : 'Unknown error');
             return false;
         }
     }
 
-    public clearHistoryForSite(siteUrl: string): boolean {
+    public async clearHistoryForSite(siteUrl: string): Promise<boolean> {
         try {
-            const hostname = this.extractSiteName(siteUrl);
-            const historyFile = path.join(this.dataDir, `${hostname}.history.json`);
-            
-            if (fs.existsSync(historyFile)) {
-                fs.unlinkSync(historyFile);
+            // Check if storage supports history
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsHistory) {
+                console.warn('History storage not supported by current storage backend');
+                return false;
+            }
+
+            if (!this.storage.history) {
+                console.warn('Storage history interface not available');
+                return false;
             }
             
-            return true;
+            const result = await this.storage.history.clearHistory(siteUrl);
+            
+            if (!result.success) {
+                console.error('Failed to clear history:', result.error);
+                return false;
+            }
+            
+            return result.data || false;
         } catch (error) {
             console.error('Failed to clear history:', error instanceof Error ? error.message : 'Unknown error');
             return false;
         }
     }
 
-    public getHistoryStats(siteUrl: string): { 
+    public async getHistoryStats(siteUrl: string): Promise<{ 
         total: number; 
         completed: number; 
         failed: number; 
         running: number; 
         lastActivity?: string 
-    } {
+    }> {
         try {
-            const history = this.loadHistoryForSite(siteUrl);
-            
-            const stats = {
-                total: history.length,
-                completed: history.filter(h => h.status === 'completed').length,
-                failed: history.filter(h => h.status === 'failed').length,
-                running: history.filter(h => h.status === 'started').length,
-                lastActivity: history.length > 0 ? history[0].startTime : undefined
-            };
+            // Check if storage supports history
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsHistory) {
+                return {
+                    total: 0,
+                    completed: 0,
+                    failed: 0,
+                    running: 0
+                };
+            }
 
-            return stats;
+            if (!this.storage.history) {
+                console.warn('Storage history interface not available');
+                return {
+                    total: 0,
+                    completed: 0,
+                    failed: 0,
+                    running: 0
+                };
+            }
+            
+            const result = await this.storage.history.getHistoryStats(siteUrl);
+            
+            if (!result.success) {
+                console.error('Failed to get history stats:', result.error);
+                return {
+                    total: 0,
+                    completed: 0,
+                    failed: 0,
+                    running: 0
+                };
+            }
+            
+            return result.data || {
+                total: 0,
+                completed: 0,
+                failed: 0,
+                running: 0
+            };
         } catch (error) {
             console.error('Failed to get history stats:', error instanceof Error ? error.message : 'Unknown error');
             return {

@@ -1,5 +1,4 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import { UnifiedStorage, SnapshotParams, QueryParams, CleanupParams } from '../storage/interfaces';
 
 export interface SnapshotMetadata {
     id: string;
@@ -36,17 +35,10 @@ export interface SnapshotListResponse {
 }
 
 export class SnapshotService {
-    private readonly dataDir: string;
-    private readonly snapshotsDir: string;
+    private readonly storage: UnifiedStorage;
 
-    constructor(dataDir: string = path.join(process.cwd(), 'data')) {
-        this.dataDir = dataDir;
-        this.snapshotsDir = path.join(this.dataDir, 'snapshots');
-        
-        // Ensure snapshots directory exists
-        if (!fs.existsSync(this.snapshotsDir)) {
-            fs.mkdirSync(this.snapshotsDir, { recursive: true });
-        }
+    constructor(storage: UnifiedStorage) {
+        this.storage = storage;
     }
 
     private extractSiteName(url: string): string {
@@ -76,49 +68,39 @@ export class SnapshotService {
                 throw new Error('At least one of composerJson or composerLock is required');
             }
 
-            const snapshotId = this.generateSnapshotId(siteUrl);
-            const snapshotDir = path.join(this.snapshotsDir, snapshotId);
-            
-            // Create snapshot directory
-            if (!fs.existsSync(snapshotDir)) {
-                fs.mkdirSync(snapshotDir, { recursive: true });
+            // Check if storage supports snapshots
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsSnapshots) {
+                console.warn('Snapshot storage not supported by current storage backend');
+                return null;
             }
 
-            const metadata: SnapshotMetadata = {
-                id: snapshotId,
+            if (!this.storage.snapshots) {
+                console.warn('Storage snapshots interface not available');
+                return null;
+            }
+
+            const snapshotParams: SnapshotParams = {
                 siteUrl,
-                timestamp: new Date().toISOString(),
-                files: {},
+                composerJson,
+                composerLock,
                 workflowId,
                 stepId
             };
 
-            // Save composer.json if provided
-            if (composerJson) {
-                const composerJsonPath = path.join(snapshotDir, 'composer.json');
-                fs.writeFileSync(composerJsonPath, composerJson, 'utf8');
-                metadata.files['composer.json'] = {
-                    size: Buffer.byteLength(composerJson, 'utf8'),
-                    exists: true
-                };
+            const result = await this.storage.snapshots.createSnapshot(snapshotParams);
+            
+            if (!result.success) {
+                console.error('[SNAPSHOT] Failed to create snapshot:', result.error);
+                return null;
             }
 
-            // Save composer.lock if provided
-            if (composerLock) {
-                const composerLockPath = path.join(snapshotDir, 'composer.lock');
-                fs.writeFileSync(composerLockPath, composerLock, 'utf8');
-                metadata.files['composer.lock'] = {
-                    size: Buffer.byteLength(composerLock, 'utf8'),
-                    exists: true
-                };
+            const metadata = result.data;
+            if (metadata) {
+                console.log(`[SNAPSHOT] Created snapshot: ${metadata.id} for site: ${siteUrl}`);
             }
-
-            // Save metadata
-            const metadataPath = path.join(snapshotDir, 'metadata.json');
-            fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
-
-            console.log(`[SNAPSHOT] Created snapshot: ${snapshotId} for site: ${siteUrl}`);
-            return metadata;
+            
+            return metadata || null;
 
         } catch (error) {
             console.error('[SNAPSHOT] Failed to create snapshot:', error);
@@ -126,28 +108,34 @@ export class SnapshotService {
         }
     }
 
-    public getSnapshot(snapshotId: string, filename: 'composer.json' | 'composer.lock'): Buffer | null {
+    public async getSnapshot(snapshotId: string, filename: 'composer.json' | 'composer.lock'): Promise<Buffer | null> {
         try {
-            const snapshotDir = path.join(this.snapshotsDir, snapshotId);
-            const filePath = path.join(snapshotDir, filename);
-            
-            // Security check - ensure we're not accessing files outside the snapshot directory
-            if (!filePath.startsWith(snapshotDir)) {
-                throw new Error('Invalid file path');
-            }
-
-            if (!fs.existsSync(filePath)) {
+            // Check if storage supports snapshots
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsSnapshots) {
                 return null;
             }
 
-            return fs.readFileSync(filePath);
+            if (!this.storage.snapshots) {
+                console.warn('Storage snapshots interface not available');
+                return null;
+            }
+
+            const result = await this.storage.snapshots.getSnapshotFile(snapshotId, filename);
+            
+            if (!result.success || !result.data) {
+                console.error(`[SNAPSHOT] Failed to get snapshot file ${filename} for ${snapshotId}:`, result.error);
+                return null;
+            }
+
+            return Buffer.from(result.data.content, 'utf8');
         } catch (error) {
             console.error(`[SNAPSHOT] Failed to get snapshot file ${filename} for ${snapshotId}:`, error);
             return null;
         }
     }
 
-    public getSnapshotFileContent(snapshotId: string, filename: string): { content: string; size: number } | null {
+    public async getSnapshotFileContent(snapshotId: string, filename: string): Promise<{ content: string; size: number } | null> {
         try {
             // Validate filename - only allow specific files for security
             const allowedFiles = ['composer.json', 'composer.lock', 'metadata.json'];
@@ -155,36 +143,27 @@ export class SnapshotService {
                 throw new Error(`Invalid filename. Only ${allowedFiles.join(', ')} are allowed`);
             }
 
-            const snapshotDir = path.join(this.snapshotsDir, snapshotId);
-            const filePath = path.join(snapshotDir, filename);
+            // Check if storage supports snapshots
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsSnapshots) {
+                return null;
+            }
+
+            if (!this.storage.snapshots) {
+                console.warn('Storage snapshots interface not available');
+                return null;
+            }
+
+            const result = await this.storage.snapshots.getSnapshotFile(snapshotId, filename);
             
-            // Security check - ensure we're not accessing files outside the snapshot directory
-            if (!filePath.startsWith(snapshotDir)) {
-                throw new Error('Invalid file path');
+            if (!result.success || !result.data) {
+                console.error(`[SNAPSHOT] Failed to get snapshot file content ${filename} for ${snapshotId}:`, result.error);
+                return null;
             }
 
-            // Check if snapshot directory exists
-            if (!fs.existsSync(snapshotDir)) {
-                throw new Error('Snapshot not found');
-            }
-
-            if (!fs.existsSync(filePath)) {
-                throw new Error('File not found in snapshot');
-            }
-
-            // Get file stats for size validation
-            const stats = fs.statSync(filePath);
-            const maxFileSize = 10 * 1024 * 1024; // 10MB limit
-            
-            if (stats.size > maxFileSize) {
-                throw new Error('File too large to display');
-            }
-
-            const content = fs.readFileSync(filePath, 'utf8');
-            
             return {
-                content,
-                size: stats.size
+                content: result.data.content,
+                size: result.data.size
             };
         } catch (error) {
             console.error(`[SNAPSHOT] Failed to get snapshot file content ${filename} for ${snapshotId}:`, error);
@@ -192,28 +171,38 @@ export class SnapshotService {
         }
     }
 
-    public getSnapshotMetadata(snapshotId: string): SnapshotMetadata | null {
+    public async getSnapshotMetadata(snapshotId: string): Promise<SnapshotMetadata | null> {
         try {
-            const metadataPath = path.join(this.snapshotsDir, snapshotId, 'metadata.json');
-            
-            if (!fs.existsSync(metadataPath)) {
+            // Check if storage supports snapshots
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsSnapshots) {
                 return null;
             }
 
-            const metadata = fs.readFileSync(metadataPath, 'utf8');
-            return JSON.parse(metadata);
+            if (!this.storage.snapshots) {
+                console.warn('Storage snapshots interface not available');
+                return null;
+            }
+
+            const result = await this.storage.snapshots.getSnapshotMetadata(snapshotId);
+            
+            if (!result.success) {
+                console.error(`[SNAPSHOT] Failed to get metadata for ${snapshotId}:`, result.error);
+                return null;
+            }
+
+            return result.data || null;
         } catch (error) {
             console.error(`[SNAPSHOT] Failed to get metadata for ${snapshotId}:`, error);
             return null;
         }
     }
 
-    public listSnapshotsForSite(siteUrl: string): SnapshotListResponse {
+    public async listSnapshotsForSite(siteUrl: string): Promise<SnapshotListResponse> {
         try {
-            const siteName = this.extractSiteName(siteUrl);
-            const snapshots: SnapshotMetadata[] = [];
-
-            if (!fs.existsSync(this.snapshotsDir)) {
+            // Check if storage supports snapshots
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsSnapshots) {
                 return {
                     success: true,
                     snapshots: [],
@@ -222,19 +211,31 @@ export class SnapshotService {
                 };
             }
 
-            const entries = fs.readdirSync(this.snapshotsDir, { withFileTypes: true });
-            
-            for (const entry of entries) {
-                if (entry.isDirectory() && entry.name.startsWith(siteName + '-')) {
-                    const metadata = this.getSnapshotMetadata(entry.name);
-                    if (metadata && metadata.siteUrl === siteUrl) {
-                        snapshots.push(metadata);
-                    }
-                }
+            if (!this.storage.snapshots) {
+                console.warn('Storage snapshots interface not available');
+                return {
+                    success: false,
+                    snapshots: [],
+                    total: 0,
+                    siteUrl,
+                    error: 'Storage snapshots interface not available'
+                };
             }
 
-            // Sort by timestamp (newest first)
-            snapshots.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            const result = await this.storage.snapshots.getSnapshots(siteUrl);
+            
+            if (!result.success) {
+                console.error(`[SNAPSHOT] Failed to list snapshots for site ${siteUrl}:`, result.error);
+                return {
+                    success: false,
+                    snapshots: [],
+                    total: 0,
+                    siteUrl,
+                    error: result.error || 'Unknown error'
+                };
+            }
+
+            const snapshots = result.data || [];
 
             return {
                 success: true,
@@ -255,19 +256,29 @@ export class SnapshotService {
         }
     }
 
-    public deleteSnapshot(snapshotId: string): boolean {
+    public async deleteSnapshot(snapshotId: string): Promise<boolean> {
         try {
-            const snapshotDir = path.join(this.snapshotsDir, snapshotId);
-            
-            if (!fs.existsSync(snapshotDir)) {
+            // Check if storage supports snapshots
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsSnapshots) {
+                console.warn('Snapshot storage not supported by current storage backend');
                 return false;
             }
 
-            // Remove the entire snapshot directory
-            fs.rmSync(snapshotDir, { recursive: true, force: true });
+            if (!this.storage.snapshots) {
+                console.warn('Storage snapshots interface not available');
+                return false;
+            }
+
+            const result = await this.storage.snapshots.deleteSnapshot(snapshotId);
+            
+            if (!result.success) {
+                console.error(`[SNAPSHOT] Failed to delete snapshot ${snapshotId}:`, result.error);
+                return false;
+            }
             
             console.log(`[SNAPSHOT] Deleted snapshot: ${snapshotId}`);
-            return true;
+            return result.data || false;
 
         } catch (error) {
             console.error(`[SNAPSHOT] Failed to delete snapshot ${snapshotId}:`, error);
@@ -275,30 +286,34 @@ export class SnapshotService {
         }
     }
 
-    public cleanupOldSnapshots(siteUrl: string, keepLast: number = 10): { deletedCount: number; error?: string } {
+    public async cleanupOldSnapshots(siteUrl: string, keepLast: number = 10): Promise<{ deletedCount: number; error?: string }> {
         try {
-            const response = this.listSnapshotsForSite(siteUrl);
-            
-            if (!response.success) {
-                return { deletedCount: 0, error: response.error };
-            }
-
-            const snapshots = response.snapshots;
-            
-            if (snapshots.length <= keepLast) {
+            // Check if storage supports snapshots
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsSnapshots) {
                 return { deletedCount: 0 };
             }
 
-            const toDelete = snapshots.slice(keepLast);
-            let deletedCount = 0;
-
-            for (const snapshot of toDelete) {
-                if (this.deleteSnapshot(snapshot.id)) {
-                    deletedCount++;
-                }
+            if (!this.storage.snapshots) {
+                console.warn('Storage snapshots interface not available');
+                return { deletedCount: 0, error: 'Storage snapshots interface not available' };
             }
 
+            const cleanupParams: CleanupParams = {
+                siteUrl,
+                keepLast
+            };
+
+            const result = await this.storage.snapshots.cleanupSnapshots(cleanupParams);
+            
+            if (!result.success) {
+                console.error(`[SNAPSHOT] Failed to cleanup snapshots for site ${siteUrl}:`, result.error);
+                return { deletedCount: 0, error: result.error };
+            }
+
+            const deletedCount = result.data?.deletedCount || 0;
             console.log(`[SNAPSHOT] Cleanup: deleted ${deletedCount} old snapshots for site ${siteUrl}`);
+            
             return { deletedCount };
 
         } catch (error) {

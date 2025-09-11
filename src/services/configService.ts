@@ -1,6 +1,8 @@
 import { AppConfig, SiteConfig, VersionInfo, AuthMethod } from '../types';
 import { SiteConfigStorage, StorageType, StorageConfig } from '../storage/interfaces';
 import { StorageFactory } from '../storage/StorageFactory';
+import fs from 'fs/promises';
+import path from 'path';
 
 export class ConfigService {
     private storage: SiteConfigStorage;
@@ -335,6 +337,187 @@ export class ConfigService {
             return urlObj.hostname;
         } catch {
             return url;
+        }
+    }
+
+    // Migration support methods for backward compatibility
+
+    /**
+     * Detect if legacy file-based config exists
+     */
+    async hasLegacyConfig(): Promise<boolean> {
+        try {
+            const dataDir = process.env.DATA_DIR || path.join(process.cwd(), 'data');
+            const legacyConfigPath = path.join(dataDir, 'config.json');
+            await fs.access(legacyConfigPath);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Load legacy config file directly for migration purposes
+     */
+    async loadLegacyConfig(): Promise<any> {
+        try {
+            const dataDir = process.env.DATA_DIR || path.join(process.cwd(), 'data');
+            const legacyConfigPath = path.join(dataDir, 'config.json');
+            const content = await fs.readFile(legacyConfigPath, 'utf-8');
+            return JSON.parse(content);
+        } catch (error) {
+            console.error('Failed to load legacy config:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Check if current storage is compatible with legacy format
+     */
+    isLegacyCompatible(): boolean {
+        return this.storage.constructor.name === 'JsonFileStorage' || 
+               this.storage.constructor.name === 'JsonFileStorageUnified';
+    }
+
+    /**
+     * Migrate from legacy format to current storage
+     */
+    async migrateLegacyConfig(): Promise<{ success: boolean; error?: string }> {
+        try {
+            if (!await this.hasLegacyConfig()) {
+                return { success: true }; // No legacy config to migrate
+            }
+
+            const legacyConfig = await this.loadLegacyConfig();
+            if (!legacyConfig) {
+                return { success: false, error: 'Failed to load legacy config' };
+            }
+
+            // Convert legacy format to new format if needed
+            const convertedConfig = await this.convertLegacyConfig(legacyConfig);
+            
+            // Save using current storage
+            const result = await this.saveConfigAsync(convertedConfig);
+            if (!result) {
+                return { success: false, error: 'Failed to save migrated config' };
+            }
+
+            return { success: true };
+        } catch (error) {
+            return { 
+                success: false, 
+                error: error instanceof Error ? error.message : 'Unknown error during migration' 
+            };
+        }
+    }
+
+    /**
+     * Convert legacy config format to current format
+     */
+    private async convertLegacyConfig(legacyConfig: any): Promise<AppConfig> {
+        const convertedConfig: AppConfig = {
+            sites: {},
+            activeSite: legacyConfig.activeSite || null,
+            version: '2.0',
+            lastUpdated: new Date().toISOString()
+        };
+
+        // Convert sites
+        if (legacyConfig.sites && typeof legacyConfig.sites === 'object') {
+            for (const [url, siteData] of Object.entries(legacyConfig.sites)) {
+                if (typeof siteData === 'object' && siteData !== null) {
+                    const legacySite = siteData as any;
+                    
+                    convertedConfig.sites[url] = {
+                        url,
+                        name: legacySite.name || this.extractSiteName(url),
+                        token: legacySite.token,
+                        encryptedToken: legacySite.encryptedToken,
+                        authMethod: legacySite.authMethod || 'token',
+                        scope: legacySite.scope || 'read',
+                        user: legacySite.user,
+                        addedAt: legacySite.addedAt || new Date().toISOString(),
+                        lastAccess: legacySite.lastAccess,
+                        versionInfo: legacySite.versionInfo
+                    };
+                }
+            }
+        }
+
+        return convertedConfig;
+    }
+
+    /**
+     * Graceful service fallback for migration scenarios
+     * Attempts to load from current storage, falls back to legacy if needed
+     */
+    async loadConfigWithFallback(): Promise<AppConfig> {
+        try {
+            // Try current storage first
+            const config = await this.loadConfigAsync();
+            if (config && Object.keys(config.sites || {}).length > 0) {
+                return config;
+            }
+
+            // Fall back to legacy if current storage is empty and legacy exists
+            if (await this.hasLegacyConfig()) {
+                console.log('Falling back to legacy config format');
+                const legacyConfig = await this.loadLegacyConfig();
+                if (legacyConfig) {
+                    return await this.convertLegacyConfig(legacyConfig);
+                }
+            }
+
+            return config;
+        } catch (error) {
+            console.error('Error in loadConfigWithFallback:', error);
+            // Return empty config as last resort
+            return {
+                sites: {},
+                activeSite: null,
+                version: '2.0',
+                lastUpdated: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Check if migration is needed
+     */
+    async needsMigration(): Promise<boolean> {
+        try {
+            const hasLegacy = await this.hasLegacyConfig();
+            if (!hasLegacy) {
+                return false;
+            }
+
+            // Check if current storage has data
+            const currentConfig = await this.loadConfigAsync();
+            const hasCurrentData = currentConfig && Object.keys(currentConfig.sites || {}).length > 0;
+
+            // Migration needed if we have legacy data but no current data
+            return hasLegacy && !hasCurrentData;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Auto-migrate if needed (called during service initialization)
+     */
+    async autoMigrateIfNeeded(): Promise<void> {
+        try {
+            if (await this.needsMigration()) {
+                console.log('Auto-migrating legacy configuration...');
+                const result = await this.migrateLegacyConfig();
+                if (result.success) {
+                    console.log('Legacy configuration migrated successfully');
+                } else {
+                    console.warn('Failed to auto-migrate legacy configuration:', result.error);
+                }
+            }
+        } catch (error) {
+            console.warn('Error during auto-migration:', error);
         }
     }
 }

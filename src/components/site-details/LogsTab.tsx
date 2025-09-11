@@ -14,7 +14,7 @@ import {
   Table,
   Alert,
 } from '@chakra-ui/react';
-import { LuTrash2 as Trash2, LuRefreshCcw } from 'react-icons/lu';
+import { LuTrash2 as Trash2, LuRefreshCcw, LuInfo as Info } from 'react-icons/lu';
 import { Site } from '../../types';
 import { useApiCall } from '../../hooks/useApiCall';
 import { useModalState } from '../../hooks/useModalState';
@@ -24,6 +24,7 @@ import { ApiResultModal } from '../modals/ApiResultModal';
 import { useColorModeValue } from '../ui/color-mode';
 import { CodeBlock } from '../ui/code-block';
 import { formatDateTime } from '../../utils/dateUtils';
+import { useStorageCapabilities } from '../../hooks/useStorageCapabilities';
 
 export interface LogsTabProps {
   site: Site;
@@ -35,7 +36,9 @@ export const LogsTab: React.FC<LogsTabProps> = ({ site }) => {
   const cardBg = useColorModeValue('white', 'gray.800');
   const toast = useToastNotifications();
   const { modalState, openModal, closeModal } = useModalState();
+  const storageCapabilities = useStorageCapabilities();
 
+  // Always initialize hooks to maintain hook order
   const logsApi = useApiCall(
     () => LogsApiService.getLogs(site.url),
     {
@@ -67,8 +70,42 @@ export const LogsTab: React.FC<LogsTabProps> = ({ site }) => {
   };
 
   useEffect(() => {
-    loadLogs();
-  }, [site.url]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (storageCapabilities.supportsLogs) {
+      loadLogs();
+    }
+  }, [site.url, storageCapabilities.supportsLogs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // If storage doesn't support logs, show information message
+  if (!storageCapabilities.supportsLogs) {
+    return (
+      <VStack gap={6} align="stretch">
+        <Alert.Root status="warning">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title display="flex" alignItems="center" gap={2}>
+              <Info size={20} />
+              Logs Not Available
+            </Alert.Title>
+            <Alert.Description>
+              The current storage backend ({storageCapabilities.capabilities.isClientSide ? 'Browser Storage' : 'Server Storage'}) does not support API call logging. 
+              Logs are only available when using storage backends that support persistent logging features.
+            </Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+        
+        <Box p={6} bg="gray.50" borderRadius="md">
+          <Text fontSize="sm" color="gray.600">
+            To enable logging functionality:
+          </Text>
+          <Text fontSize="sm" color="gray.600" mt={2} pl={4}>
+            • Switch to a server-based storage backend (JSON File or Database)
+            • Logs will be automatically recorded for all API interactions
+            • Historical log data will be preserved across sessions
+          </Text>
+        </Box>
+      </VStack>
+    );
+  }
 
   const showLogDetails = (log: any) => {
     const logDetails = (

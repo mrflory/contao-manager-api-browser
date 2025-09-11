@@ -12,8 +12,10 @@ import {
   Editable,
   IconButton,
   Link,
+  Text,
+  HStack,
 } from '@chakra-ui/react';
-import { LuArrowLeft as ArrowLeft, LuPencil as Edit, LuCheck as Check, LuX as X } from 'react-icons/lu';
+import { LuArrowLeft as ArrowLeft, LuPencil as Edit, LuCheck as Check, LuX as X, LuInfo as Info } from 'react-icons/lu';
 import { Config } from '../types';
 import { useApiCall } from '../hooks/useApiCall';
 import { SiteApiService } from '../services/apiCallService';
@@ -32,6 +34,26 @@ import { MaintenanceMode } from '../types';
 import { LuShieldAlert as ShieldAlert, LuPlay as Play } from 'react-icons/lu';
 import { Badge } from '@chakra-ui/react';
 import { Tooltip } from '../components/ui/tooltip';
+import { useStorageCapabilities } from '../hooks/useStorageCapabilities';
+
+// Helper component for showing storage limitations info
+const StorageLimitationsInfo: React.FC<{ unsupportedFeatures: string[] }> = ({ unsupportedFeatures }) => {
+  if (unsupportedFeatures.length === 0) return null;
+
+  return (
+    <Alert.Root status="info" size="sm" mb={4}>
+      <Alert.Indicator />
+      <Alert.Content>
+        <HStack>
+          <Info size={16} />
+          <Text fontSize="sm">
+            Some features are unavailable with the current storage backend: {unsupportedFeatures.join(', ')}
+          </Text>
+        </HStack>
+      </Alert.Content>
+    </Alert.Root>
+  );
+};
 
 const SiteDetails: React.FC = () => {
   const { siteUrl } = useParams<{ siteUrl: string }>();
@@ -40,6 +62,7 @@ const SiteDetails: React.FC = () => {
   const [activeTab, setActiveTab] = useState("site-info");
   
   const toast = useToastNotifications();
+  const storageCapabilities = useStorageCapabilities();
 
 
   const loadConfig = useApiCall(
@@ -74,6 +97,16 @@ const SiteDetails: React.FC = () => {
   useEffect(() => {
     loadConfig.execute();
   }, []);
+
+  // Handle tab switching when storage capabilities change
+  useEffect(() => {
+    // If current tab is not supported by storage, switch to site-info
+    if (activeTab === 'logs' && !storageCapabilities.showLogsTab) {
+      setActiveTab('site-info');
+    } else if (activeTab === 'history' && !storageCapabilities.showHistoryTab) {
+      setActiveTab('site-info');
+    }
+  }, [activeTab, storageCapabilities.showLogsTab, storageCapabilities.showHistoryTab]);
 
   // No need to handle reauthentication callback here - it's handled by AddSite page
 
@@ -257,14 +290,21 @@ const SiteDetails: React.FC = () => {
         </Flex>
 
         <Box borderWidth="1px" borderRadius="lg" p={8}>
+          {/* Show storage limitations info if there are unsupported features */}
+          <StorageLimitationsInfo unsupportedFeatures={storageCapabilities.getUnsupportedFeatures()} />
+          
           <Tabs.Root colorPalette="blue" variant="line" value={activeTab} onValueChange={({ value }) => setActiveTab(value)} lazyMount>
             <Tabs.List>
               <Tabs.Trigger value="site-info">Site Info</Tabs.Trigger>
               <Tabs.Trigger value="packages">Packages</Tabs.Trigger>
               <Tabs.Trigger value="update">Update</Tabs.Trigger>
-              <Tabs.Trigger value="history">History</Tabs.Trigger>
+              {storageCapabilities.showHistoryTab && (
+                <Tabs.Trigger value="history">History</Tabs.Trigger>
+              )}
               <Tabs.Trigger value="expert">Expert</Tabs.Trigger>
-              <Tabs.Trigger value="logs">Logs</Tabs.Trigger>
+              {storageCapabilities.showLogsTab && (
+                <Tabs.Trigger value="logs">Logs</Tabs.Trigger>
+              )}
             </Tabs.List>
 
             {/* Tab 1: Site Info */}
@@ -290,20 +330,24 @@ const SiteDetails: React.FC = () => {
               </VStack>
             </Tabs.Content>
 
-            {/* Tab 4: History */}
-            <Tabs.Content value="history">
-              <HistoryTab site={site} />
-            </Tabs.Content>
+            {/* Tab 4: History - Only show if storage supports it */}
+            {storageCapabilities.showHistoryTab && (
+              <Tabs.Content value="history">
+                <HistoryTab site={site} />
+              </Tabs.Content>
+            )}
 
             {/* Tab 5: Expert */}
             <Tabs.Content value="expert">
               <ExpertTab site={site} />
             </Tabs.Content>
 
-            {/* Tab 6: Logs */}
-            <Tabs.Content value="logs">
-              <LogsTab site={site} />
-            </Tabs.Content>
+            {/* Tab 6: Logs - Only show if storage supports it */}
+            {storageCapabilities.showLogsTab && (
+              <Tabs.Content value="logs">
+                <LogsTab site={site} />
+              </Tabs.Content>
+            )}
           </Tabs.Root>
         </Box>
         

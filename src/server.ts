@@ -10,6 +10,11 @@ import { HistoryService } from './services/historyService';
 import { SnapshotService } from './services/snapshotService';
 import { AuthService } from './services/authService';
 import { ProxyService } from './services/proxyService';
+import { MigrationService } from './services/migrationService';
+
+// Storage
+import { JsonFileStorageUnified } from './storage';
+import { UnifiedStorage, StorageType } from './storage/interfaces';
 
 // Middleware
 import { ErrorHandler, AuthMiddleware, ScopeMiddleware, ResponseLogger } from './middleware';
@@ -21,13 +26,21 @@ import type { ApiRequest } from './types';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize services
+// Initialize storage and services
+const storage: UnifiedStorage = new JsonFileStorageUnified({ 
+    type: StorageType.JSON_FILE,
+    dataDir: process.env.DATA_DIR || path.join(process.cwd(), 'data')
+});
 const configService = new ConfigService();
-const loggingService = new LoggingService();
-const historyService = new HistoryService();
-const snapshotService = new SnapshotService();
+const loggingService = new LoggingService(storage);
+const historyService = new HistoryService(storage);
+const snapshotService = new SnapshotService(storage);
 const authService = new AuthService(configService, loggingService);
 const proxyService = new ProxyService(configService, loggingService, authService);
+
+// Initialize migration service (for now using the same storage as both source and target)
+// In practice, this would be configured based on the actual migration being performed
+const migrationService = new MigrationService(storage, storage);
 
 // Initialize middleware
 const authMiddleware = new AuthMiddleware(configService);
@@ -74,14 +87,175 @@ app.get('/api/storage/type', (_req: Request, res: Response) => {
             capabilities: {
                 canExport: false,
                 canImport: false,
-                canMigrate: false,
-                supportsBackup: false,
+                canMigrate: true,
+                supportsBackup: true,
                 isClientSide: false
             }
         });
     } catch (error) {
         console.error('Error getting storage type:', error);
         res.status(500).json({ error: 'Failed to get storage type' });
+    }
+});
+
+// Migration management endpoints
+app.get('/api/migrate/status', async (_req: Request, res: Response) => {
+    try {
+        const activeMigrations = migrationService.getActiveMigrations();
+        res.json({
+            activeMigrations: activeMigrations.length,
+            migrations: activeMigrations
+        });
+    } catch (error) {
+        console.error('Error getting migration status:', error);
+        res.status(500).json({ error: 'Failed to get migration status' });
+    }
+});
+
+app.get('/api/migrate/detect', async (_req: Request, res: Response) => {
+    try {
+        const detectedData = await migrationService.detectExistingData();
+        res.json({
+            hasData: detectedData.totalSize > 0,
+            detectedData
+        });
+    } catch (error) {
+        console.error('Error detecting existing data:', error);
+        res.status(500).json({ error: 'Failed to detect existing data' });
+    }
+});
+
+app.post('/api/migrate/start', async (req: Request, res: Response) => {
+    try {
+        const {
+            fromStorageType,
+            toStorageType,
+            migrationType = 'full_migration',
+            dataCategories = ['config', 'logs', 'history', 'snapshots'],
+            preserveOriginal = true,
+            validateMigration = true,
+            createBackup = true,
+            batchSize = 100,
+            maxRetries = 3,
+            continueOnError = false,
+            siteFilter
+        } = req.body;
+
+        // Validate required fields
+        if (!fromStorageType || !toStorageType) {
+            return res.status(400).json({ 
+                error: 'fromStorageType and toStorageType are required' 
+            });
+        }
+
+        const migrationOptions = {
+            fromStorageType,
+            toStorageType,
+            migrationType,
+            dataCategories,
+            preserveOriginal,
+            validateMigration,
+            createBackup,
+            batchSize,
+            maxRetries,
+            continueOnError,
+            siteFilter
+        };
+
+        const migrationId = await migrationService.startMigration(migrationOptions);
+        
+        res.json({
+            success: true,
+            migrationId,
+            message: 'Migration started successfully'
+        });
+    } catch (error) {
+        console.error('Error starting migration:', error);
+        res.status(500).json({ 
+            error: 'Failed to start migration',
+            details: error instanceof Error ? error.message : String(error)
+        });
+    }
+});
+
+app.get('/api/migrate/progress/:migrationId', async (req: Request, res: Response) => {
+    try {
+        const { migrationId } = req.params;
+        const progress = migrationService.getMigrationStatus(migrationId);
+        
+        if (!progress) {
+            return res.status(404).json({ error: 'Migration not found' });
+        }
+        
+        res.json(progress);
+    } catch (error) {
+        console.error('Error getting migration progress:', error);
+        res.status(500).json({ error: 'Failed to get migration progress' });
+    }
+});
+
+app.get('/api/migrate/result/:migrationId', async (req: Request, res: Response) => {
+    try {
+        const { migrationId } = req.params;
+        const result = await migrationService.getMigrationResult(migrationId);
+        
+        if (!result) {
+            return res.status(404).json({ error: 'Migration result not found or migration still in progress' });
+        }
+        
+        res.json(result);
+    } catch (error) {
+        console.error('Error getting migration result:', error);
+        res.status(500).json({ error: 'Failed to get migration result' });
+    }
+});
+
+app.post('/api/migrate/rollback', async (req: Request, res: Response) => {
+    try {
+        const {
+            migrationId,
+            restoreFromBackup = true,
+            cleanupTarget = false,
+            validateRollback = true
+        } = req.body;
+
+        if (!migrationId) {
+            return res.status(400).json({ error: 'migrationId is required' });
+        }
+
+        const rollbackOptions = {
+            migrationId,
+            restoreFromBackup,
+            cleanupTarget,
+            validateRollback
+        };
+
+        const result = await migrationService.rollbackMigration(rollbackOptions);
+        
+        res.json({
+            success: true,
+            result,
+            message: 'Migration rollback completed'
+        });
+    } catch (error) {
+        console.error('Error rolling back migration:', error);
+        res.status(500).json({ 
+            error: 'Failed to rollback migration',
+            details: error instanceof Error ? error.message : String(error)
+        });
+    }
+});
+
+app.delete('/api/migrate/cleanup', async (_req: Request, res: Response) => {
+    try {
+        migrationService.cleanupCompletedMigrations();
+        res.json({
+            success: true,
+            message: 'Completed migrations cleaned up'
+        });
+    } catch (error) {
+        console.error('Error cleaning up migrations:', error);
+        res.status(500).json({ error: 'Failed to cleanup migrations' });
     }
 });
 
@@ -259,16 +433,16 @@ proxyEndpoints.forEach(endpoint => {
 });
 
 // Local logs endpoints (our own logging system)
-app.get('/api/logs/:siteUrl', (req: ApiRequest, res: Response) => {
+app.get('/api/logs/:siteUrl', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     try {
         const siteUrl = decodeURIComponent(req.params.siteUrl);
-        const result = loggingService.readLogs(siteUrl);
+        const result = await loggingService.readLogs(siteUrl);
         res.json(result);
     } catch (error) {
         console.error('[LOGS] Error:', error);
         res.status(500).json({ error: `Failed to read log file: ${error instanceof Error ? error.message : 'Unknown error'}` });
     }
-});
+}));
 
 app.delete('/api/logs/:siteUrl/cleanup', (req: ApiRequest, res: Response) => {
     try {
@@ -578,6 +752,208 @@ app.post('/api/snapshots/cleanup/:siteUrl', (req: ApiRequest, res: Response) => 
     }
 });
 
+// Migration endpoints
+app.get('/api/migrate/detect', ErrorHandler.asyncWrapper(async (_req: Request, res: Response) => {
+    try {
+        const detectedData = await migrationService.detectExistingData();
+        res.json({
+            success: true,
+            data: detectedData
+        });
+    } catch (error) {
+        console.error('Error detecting existing data:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to detect existing data',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
+app.get('/api/migrate/status/:migrationId', ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const { migrationId } = req.params;
+        const status = migrationService.getMigrationStatus(migrationId);
+        
+        if (!status) {
+            return res.status(404).json({
+                success: false,
+                error: 'Migration not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: status
+        });
+    } catch (error) {
+        console.error('Error getting migration status:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to get migration status',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
+app.get('/api/migrate/progress', ErrorHandler.asyncWrapper(async (_req: Request, res: Response) => {
+    try {
+        const activeMigrations = migrationService.getActiveMigrations();
+        res.json({
+            success: true,
+            data: activeMigrations
+        });
+    } catch (error) {
+        console.error('Error getting migration progress:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to get migration progress',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
+app.post('/api/migrate/start', ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const {
+            fromStorageType,
+            toStorageType,
+            migrationType,
+            dataCategories,
+            preserveOriginal = true,
+            validateMigration = true,
+            createBackup = true,
+            batchSize = 100,
+            maxRetries = 3,
+            continueOnError = false,
+            siteFilter = null
+        } = req.body;
+
+        // Validate required fields
+        if (!fromStorageType || !toStorageType || !migrationType || !dataCategories) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields: fromStorageType, toStorageType, migrationType, dataCategories'
+            });
+        }
+
+        const migrationOptions = {
+            fromStorageType,
+            toStorageType,
+            migrationType,
+            dataCategories,
+            preserveOriginal,
+            validateMigration,
+            createBackup,
+            batchSize,
+            maxRetries,
+            continueOnError,
+            siteFilter
+        };
+
+        const migrationId = await migrationService.startMigration(migrationOptions);
+
+        res.json({
+            success: true,
+            data: {
+                migrationId,
+                message: 'Migration started successfully'
+            }
+        });
+
+    } catch (error) {
+        console.error('Error starting migration:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to start migration',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
+app.get('/api/migrate/result/:migrationId', ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const { migrationId } = req.params;
+        const result = await migrationService.getMigrationResult(migrationId);
+        
+        if (!result) {
+            return res.status(404).json({
+                success: false,
+                error: 'Migration result not found or migration still in progress'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        console.error('Error getting migration result:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to get migration result',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
+app.post('/api/migrate/rollback', ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const {
+            migrationId,
+            restoreFromBackup = true,
+            cleanupTarget = false,
+            validateRollback = true
+        } = req.body;
+
+        if (!migrationId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Migration ID is required'
+            });
+        }
+
+        const rollbackOptions = {
+            migrationId,
+            restoreFromBackup,
+            cleanupTarget,
+            validateRollback
+        };
+
+        const rollbackResult = await migrationService.rollbackMigration(rollbackOptions);
+
+        res.json({
+            success: true,
+            data: rollbackResult
+        });
+
+    } catch (error) {
+        console.error('Error rolling back migration:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to rollback migration',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
+app.delete('/api/migrate/cleanup', ErrorHandler.asyncWrapper(async (_req: Request, res: Response) => {
+    try {
+        migrationService.cleanupCompletedMigrations();
+        res.json({
+            success: true,
+            message: 'Completed migrations cleaned up successfully'
+        });
+    } catch (error) {
+        console.error('Error cleaning up migrations:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to cleanup migrations',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
 // Serve React app for all non-API routes
 app.get('/', (_req, res) => {
     if (process.env.NODE_ENV === 'production') {
@@ -606,15 +982,23 @@ app.get('/*splat', (req, res) => {
 app.use(ErrorHandler.handle);
 
 async function initializeServices() {
-    // Initialize storage backend
-    console.log('Initializing storage backend...');
-    const initResult = await configService.initialize();
-    if (!initResult.success) {
-        console.error('Failed to initialize storage backend:', initResult.error);
+    // Initialize unified storage backend
+    console.log('Initializing unified storage backend...');
+    const storageInitResult = await storage.initialize();
+    if (!storageInitResult.success) {
+        console.error('Failed to initialize unified storage backend:', storageInitResult.error);
         process.exit(1);
     }
     
-    console.log('Storage backend initialized successfully');
+    // Initialize config service (legacy for compatibility)
+    console.log('Initializing config service...');
+    const configInitResult = await configService.initialize();
+    if (!configInitResult.success) {
+        console.error('Failed to initialize config service:', configInitResult.error);
+        process.exit(1);
+    }
+    
+    console.log('All services initialized successfully');
 }
 
 async function startServer() {

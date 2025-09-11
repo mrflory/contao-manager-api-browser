@@ -1,9 +1,8 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import { LogEntry, LogsResponse } from '../types';
+import { UnifiedStorage, LogParams, QueryParams, CleanupParams } from '../storage/interfaces';
 
 export class LoggingService {
-    private readonly dataDir: string;
+    private readonly storage: UnifiedStorage;
     private readonly responseLoggingExclusions: string[] = [
         'GET /api/server/phpinfo',
         'GET /api/server/database',
@@ -11,13 +10,8 @@ export class LoggingService {
         'GET /api/files/composer.lock'
     ];
 
-    constructor(dataDir: string = path.join(process.cwd(), 'data')) {
-        this.dataDir = dataDir;
-        
-        // Ensure data directory exists
-        if (!fs.existsSync(this.dataDir)) {
-            fs.mkdirSync(this.dataDir, { recursive: true });
-        }
+    constructor(storage: UnifiedStorage) {
+        this.storage = storage;
     }
 
     private extractSiteName(url: string): string {
@@ -34,7 +28,7 @@ export class LoggingService {
         return this.responseLoggingExclusions.includes(apiCall);
     }
 
-    public logApiCall(
+    public async logApiCall(
         siteUrl: string, 
         method: string, 
         endpoint: string, 
@@ -42,18 +36,25 @@ export class LoggingService {
         requestData: any = null, 
         responseData: any = null, 
         error: string | null = null
-    ): void {
+    ): Promise<void> {
         try {
-            const hostname = this.extractSiteName(siteUrl);
-            const logFile = path.join(this.dataDir, `${hostname}.log`);
-            
-            const timestamp = new Date().toISOString();
+            // Check if storage supports logging
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsLogs) {
+                // Silently skip logging if not supported (e.g., browser storage)
+                return;
+            }
+
+            if (!this.storage.logs) {
+                console.warn('Storage logs interface not available');
+                return;
+            }
             
             // Determine if response should be logged for this endpoint
             const excludeResponse = this.shouldExcludeResponseLogging(method, endpoint);
             
-            const logEntry: LogEntry = {
-                timestamp,
+            const logParams: LogParams = {
+                siteUrl,
                 method,
                 endpoint,
                 statusCode,
@@ -62,57 +63,43 @@ export class LoggingService {
                 error: error || undefined
             };
             
-            const logLine = JSON.stringify(logEntry) + '\n';
+            const result = await this.storage.logs.addLogEntry(logParams);
             
-            // Append to log file
-            fs.appendFileSync(logFile, logLine);
+            if (!result.success) {
+                console.error('Failed to log API call:', result.error);
+            }
         } catch (logError) {
-            console.error('Failed to write to log file:', logError instanceof Error ? logError.message : 'Unknown error');
+            console.error('Failed to write to storage log:', logError instanceof Error ? logError.message : 'Unknown error');
         }
     }
 
-    public readLogs(siteUrl: string): LogsResponse {
+    public async readLogs(siteUrl: string): Promise<LogsResponse> {
         try {
-            const hostname = this.extractSiteName(siteUrl);
-            const logFile = path.join(this.dataDir, `${hostname}.log`);
-            
-            // Check if log file exists
-            if (!fs.existsSync(logFile)) {
+            // Check if storage supports logging
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsLogs) {
+                const hostname = this.extractSiteName(siteUrl);
                 return { 
                     logs: [], 
                     total: 0,
                     siteUrl,
                     hostname,
-                    message: 'No logs found for this site'
+                    message: 'Log storage not supported by current storage backend'
                 } as LogsResponse & { message: string };
             }
-            
-            // Read log file and parse JSON lines
-            const logContent = fs.readFileSync(logFile, 'utf8');
-            const logLines = logContent.trim().split('\n').filter(line => line.trim());
-            
-            const logs: LogEntry[] = [];
-            for (const line of logLines) {
-                try {
-                    const logEntry = JSON.parse(line);
-                    logs.push(logEntry);
-                } catch (parseError) {
-                    console.error('Failed to parse log line:', parseError instanceof Error ? parseError.message : 'Unknown error');
-                    // Include unparseable lines as raw text
-                    logs.push({
-                        timestamp: new Date().toISOString(),
-                        method: 'UNKNOWN',
-                        endpoint: 'PARSE_ERROR',
-                        statusCode: 0,
-                        error: `Failed to parse: ${line}`,
-                        requestData: null,
-                        responseData: null
-                    });
-                }
+
+            if (!this.storage.logs) {
+                throw new Error('Storage logs interface not available');
             }
             
-            // Sort logs by timestamp (newest first)
-            logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            const result = await this.storage.logs.getLogs(siteUrl);
+            
+            if (!result.success) {
+                throw new Error(`Failed to read logs: ${result.error}`);
+            }
+            
+            const logs = result.data || [];
+            const hostname = this.extractSiteName(siteUrl);
             
             return { 
                 logs,
@@ -121,66 +108,60 @@ export class LoggingService {
                 hostname
             };
         } catch (error) {
-            throw new Error(`Failed to read log file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            throw new Error(`Failed to read logs: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
-    public cleanupLogs(siteUrl: string): { success: boolean; deletedCount: number; message: string } {
+    public async cleanupLogs(siteUrl: string): Promise<{ success: boolean; deletedCount: number; message: string }> {
         try {
-            const hostname = this.extractSiteName(siteUrl);
-            const logFile = path.join(this.dataDir, `${hostname}.log`);
-            
-            // Check if log file exists
-            if (!fs.existsSync(logFile)) {
+            // Check if storage supports logging
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsLogs) {
                 return { 
                     success: true, 
                     deletedCount: 0, 
-                    message: 'No logs found for this site' 
+                    message: 'Log storage not supported by current storage backend' 
+                };
+            }
+
+            if (!this.storage.logs) {
+                return {
+                    success: false,
+                    deletedCount: 0,
+                    message: 'Storage logs interface not available'
                 };
             }
             
-            // Read log file and parse JSON lines
-            const logContent = fs.readFileSync(logFile, 'utf8');
-            const logLines = logContent.trim().split('\n').filter(line => line.trim());
-            
-            const logs: string[] = [];
+            // Clean up logs older than one week
             const oneWeekAgo = new Date();
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
             
-            let deletedCount = 0;
+            const cleanupParams: CleanupParams = {
+                siteUrl,
+                olderThan: oneWeekAgo.toISOString()
+            };
             
-            for (const line of logLines) {
-                try {
-                    const logEntry = JSON.parse(line);
-                    const logDate = new Date(logEntry.timestamp);
-                    
-                    // Keep logs that are newer than one week
-                    if (logDate > oneWeekAgo) {
-                        logs.push(line);
-                    } else {
-                        deletedCount++;
-                    }
-                } catch (parseError) {
-                    // Keep unparseable lines as they might be important
-                    logs.push(line);
-                }
+            const result = await this.storage.logs.cleanupLogs(cleanupParams);
+            
+            if (!result.success) {
+                return {
+                    success: false,
+                    deletedCount: 0,
+                    message: `Failed to cleanup logs: ${result.error}`
+                };
             }
-            
-            // Write the filtered logs back to the file
-            const newLogContent = logs.length > 0 ? logs.join('\n') + '\n' : '';
-            fs.writeFileSync(logFile, newLogContent);
             
             return { 
                 success: true, 
-                deletedCount,
-                message: `Successfully deleted ${deletedCount} log entries older than 1 week`
+                deletedCount: result.data?.deletedCount || 0,
+                message: result.data?.message || `Successfully deleted ${result.data?.deletedCount || 0} log entries older than 1 week`
             };
         } catch (error) {
             return {
                 success: false,
                 deletedCount: 0,
-                error: `Failed to cleanup log file: ${error instanceof Error ? error.message : 'Unknown error'}`
-            } as any;
+                message: `Failed to cleanup logs: ${error instanceof Error ? error.message : 'Unknown error'}`
+            };
         }
     }
 

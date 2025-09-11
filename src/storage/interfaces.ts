@@ -1,4 +1,4 @@
-import { AppConfig, SiteConfig, VersionInfo, AuthMethod } from '../types';
+import { AppConfig, SiteConfig, VersionInfo, AuthMethod, LogEntry, HistoryEntry, SnapshotMetadata } from '../types';
 
 /**
  * Storage type enumeration for different backend implementations
@@ -30,6 +30,42 @@ export interface StorageResult<T = any> {
 }
 
 /**
+ * Enhanced storage capabilities interface indicating what each storage type supports
+ */
+export interface StorageCapabilities {
+  // Basic capabilities
+  canExport: boolean;
+  canImport: boolean;
+  canMigrate: boolean;
+  supportsBackup: boolean;
+  isClientSide: boolean;
+  maxStorageSize?: number;
+  
+  // Data type support capabilities
+  supportsSiteConfig: boolean;
+  supportsLogs: boolean;
+  supportsHistory: boolean;
+  supportsSnapshots: boolean;
+  
+  // Advanced capabilities
+  supportsTransactions: boolean;
+  supportsIndexing: boolean;
+  supportsConcurrency: boolean;
+  supportsCompression: boolean;
+  supportsEncryption: boolean;
+  
+  // Performance and limitations
+  maxFileSize?: number;
+  maxEntriesPerType?: number;
+  queryCapabilities: {
+    canFilter: boolean;
+    canSort: boolean;
+    canPaginate: boolean;
+    canAggregate: boolean;
+  };
+}
+
+/**
  * Parameters for site operations
  */
 export interface AddSiteParams {
@@ -49,6 +85,200 @@ export interface UpdateSiteParams {
   user?: any;
   scope?: string;
   versionInfo?: Omit<VersionInfo, 'lastUpdated'>;
+}
+
+/**
+ * Query parameters for filtering and pagination
+ */
+export interface QueryParams {
+  limit?: number;
+  offset?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  filter?: Record<string, any>;
+  startDate?: string;
+  endDate?: string;
+}
+
+/**
+ * Parameters for log operations
+ */
+export interface LogParams {
+  siteUrl: string;
+  method?: string;
+  endpoint?: string;
+  statusCode?: number;
+  requestData?: any;
+  responseData?: any;
+  error?: string;
+}
+
+/**
+ * Parameters for history operations
+ */
+export interface HistoryParams {
+  siteUrl: string;
+  workflowType?: string;
+  status?: HistoryEntry['status'];
+  startTime?: string;
+  endTime?: string;
+  steps?: HistoryEntry['steps'];
+}
+
+/**
+ * Parameters for snapshot operations
+ */
+export interface SnapshotParams {
+  siteUrl: string;
+  composerJson?: string;
+  composerLock?: string;
+  workflowId?: string;
+  stepId?: string;
+}
+
+/**
+ * Cleanup parameters for data maintenance
+ */
+export interface CleanupParams {
+  siteUrl: string;
+  olderThan?: string; // ISO date string
+  keepLast?: number;
+  dryRun?: boolean;
+}
+
+/**
+ * Logs storage interface for API request/response logging
+ */
+export interface LogsStorage {
+  /**
+   * Add a new log entry
+   */
+  addLogEntry(params: LogParams): Promise<StorageResult<boolean>>;
+
+  /**
+   * Get logs for a specific site with optional filtering
+   */
+  getLogs(siteUrl: string, query?: QueryParams): Promise<StorageResult<LogEntry[]>>;
+
+  /**
+   * Get log statistics
+   */
+  getLogStats(siteUrl: string): Promise<StorageResult<{
+    total: number;
+    errorCount: number;
+    lastActivity?: string;
+  }>>;
+
+  /**
+   * Clean up old logs
+   */
+  cleanupLogs(params: CleanupParams): Promise<StorageResult<{
+    deletedCount: number;
+    message: string;
+  }>>;
+
+  /**
+   * Delete all logs for a site
+   */
+  clearLogs(siteUrl: string): Promise<StorageResult<boolean>>;
+}
+
+/**
+ * History storage interface for workflow execution history
+ */
+export interface HistoryStorage {
+  /**
+   * Create a new history entry
+   */
+  createHistoryEntry(params: HistoryParams): Promise<StorageResult<HistoryEntry>>;
+
+  /**
+   * Update an existing history entry
+   */
+  updateHistoryEntry(id: string, params: HistoryParams): Promise<StorageResult<HistoryEntry>>;
+
+  /**
+   * Get history entry by ID
+   */
+  getHistoryEntry(siteUrl: string, id: string): Promise<StorageResult<HistoryEntry | null>>;
+
+  /**
+   * Get history for a specific site with optional filtering
+   */
+  getHistory(siteUrl: string, query?: QueryParams): Promise<StorageResult<HistoryEntry[]>>;
+
+  /**
+   * Get history statistics
+   */
+  getHistoryStats(siteUrl: string): Promise<StorageResult<{
+    total: number;
+    completed: number;
+    failed: number;
+    running: number;
+    lastActivity?: string;
+  }>>;
+
+  /**
+   * Delete a history entry
+   */
+  deleteHistoryEntry(siteUrl: string, id: string): Promise<StorageResult<boolean>>;
+
+  /**
+   * Clear all history for a site
+   */
+  clearHistory(siteUrl: string): Promise<StorageResult<boolean>>;
+}
+
+/**
+ * Snapshots storage interface for file state snapshots
+ */
+export interface SnapshotsStorage {
+  /**
+   * Create a new snapshot
+   */
+  createSnapshot(params: SnapshotParams): Promise<StorageResult<SnapshotMetadata>>;
+
+  /**
+   * Get snapshot metadata by ID
+   */
+  getSnapshotMetadata(id: string): Promise<StorageResult<SnapshotMetadata | null>>;
+
+  /**
+   * Get snapshot file content
+   */
+  getSnapshotFile(id: string, filename: string): Promise<StorageResult<{
+    content: string;
+    size: number;
+    mimeType?: string;
+  } | null>>;
+
+  /**
+   * Get snapshots for a specific site
+   */
+  getSnapshots(siteUrl: string, query?: QueryParams): Promise<StorageResult<SnapshotMetadata[]>>;
+
+  /**
+   * Delete a snapshot
+   */
+  deleteSnapshot(id: string): Promise<StorageResult<boolean>>;
+
+  /**
+   * Clean up old snapshots
+   */
+  cleanupSnapshots(params: CleanupParams): Promise<StorageResult<{
+    deletedCount: number;
+    freedSpace: number;
+  }>>;
+
+  /**
+   * Get snapshot storage statistics
+   */
+  getSnapshotStats(siteUrl: string): Promise<StorageResult<{
+    total: number;
+    totalSize: number;
+    oldestSnapshot?: string;
+    newestSnapshot?: string;
+  }>>;
 }
 
 /**
@@ -322,4 +552,220 @@ export abstract class BaseStorage implements SiteConfigStorage {
       return this.createStorageResult(false, {}, error instanceof Error ? error.message : 'Unknown error');
     }
   }
+}
+
+/**
+ * Unified storage interface combining all data types
+ * Storage backends can implement only the interfaces they support
+ */
+export interface UnifiedStorage extends SiteConfigStorage {
+  /**
+   * Get storage type and capabilities
+   */
+  getCapabilities(): StorageCapabilities;
+
+  /**
+   * Optional logs storage implementation
+   */
+  logs?: LogsStorage;
+
+  /**
+   * Optional history storage implementation
+   */
+  history?: HistoryStorage;
+
+  /**
+   * Optional snapshots storage implementation
+   */
+  snapshots?: SnapshotsStorage;
+
+  /**
+   * Batch operations for efficiency
+   */
+  batch?: {
+    /**
+     * Execute multiple operations in a transaction (if supported)
+     */
+    transaction<T>(operations: (() => Promise<T>)[]): Promise<StorageResult<T[]>>;
+
+    /**
+     * Bulk delete operations across data types
+     */
+    bulkDelete(operations: Array<{
+      type: 'config' | 'logs' | 'history' | 'snapshots';
+      siteUrl: string;
+      id?: string;
+    }>): Promise<StorageResult<{ deletedCount: number }>>;
+
+    /**
+     * Bulk export for backup/migration
+     */
+    bulkExport(siteUrl: string, types: ('config' | 'logs' | 'history' | 'snapshots')[]): Promise<StorageResult<{
+      data: Record<string, any>;
+      metadata: {
+        exportedAt: string;
+        version: string;
+        storageType: StorageType;
+      };
+    }>>;
+
+    /**
+     * Bulk import for restoration/migration
+     */
+    bulkImport(data: {
+      data: Record<string, any>;
+      metadata: {
+        exportedAt: string;
+        version: string;
+        storageType: StorageType;
+      };
+    }): Promise<StorageResult<{ importedCount: number }>>;
+  };
+}
+
+/**
+ * Storage type capability definitions
+ * These define what each storage type supports
+ */
+export const STORAGE_TYPE_CAPABILITIES: Record<StorageType, StorageCapabilities> = {
+  [StorageType.JSON_FILE]: {
+    // Basic capabilities
+    canExport: true,
+    canImport: true,
+    canMigrate: true,
+    supportsBackup: true,
+    isClientSide: false,
+    maxStorageSize: undefined, // Limited by disk space
+    
+    // Data type support
+    supportsSiteConfig: true,
+    supportsLogs: true,
+    supportsHistory: true,
+    supportsSnapshots: true,
+    
+    // Advanced capabilities
+    supportsTransactions: false,
+    supportsIndexing: false,
+    supportsConcurrency: false,
+    supportsCompression: false,
+    supportsEncryption: false,
+    
+    // Performance and limitations
+    maxFileSize: 100 * 1024 * 1024, // 100MB per file
+    maxEntriesPerType: 10000,
+    queryCapabilities: {
+      canFilter: true,  // Can filter in memory
+      canSort: true,    // Can sort in memory
+      canPaginate: true, // Can paginate in memory
+      canAggregate: true // Can aggregate in memory
+    }
+  },
+
+  [StorageType.BROWSER]: {
+    // Basic capabilities
+    canExport: true,
+    canImport: true,
+    canMigrate: true,
+    supportsBackup: false,
+    isClientSide: true,
+    maxStorageSize: 10 * 1024 * 1024, // ~10MB typical browser storage limit
+    
+    // Data type support (LIMITED - no logs/history/snapshots in browser)
+    supportsSiteConfig: true,
+    supportsLogs: false,      // Too much data for browser storage
+    supportsHistory: false,   // Too much data for browser storage
+    supportsSnapshots: false, // Too much data for browser storage
+    
+    // Advanced capabilities
+    supportsTransactions: false,
+    supportsIndexing: false,
+    supportsConcurrency: false,
+    supportsCompression: false,
+    supportsEncryption: false,
+    
+    // Performance and limitations
+    maxFileSize: 5 * 1024 * 1024, // 5MB per entry
+    maxEntriesPerType: 100,
+    queryCapabilities: {
+      canFilter: true,   // Can filter in memory
+      canSort: true,     // Can sort in memory
+      canPaginate: true, // Can paginate in memory
+      canAggregate: true // Can aggregate in memory
+    }
+  },
+
+  [StorageType.DATABASE]: {
+    // Basic capabilities
+    canExport: true,
+    canImport: true,
+    canMigrate: true,
+    supportsBackup: true,
+    isClientSide: false,
+    maxStorageSize: undefined, // Limited by database configuration
+    
+    // Data type support (FULL SUPPORT)
+    supportsSiteConfig: true,
+    supportsLogs: true,
+    supportsHistory: true,
+    supportsSnapshots: true,
+    
+    // Advanced capabilities
+    supportsTransactions: true,
+    supportsIndexing: true,
+    supportsConcurrency: true,
+    supportsCompression: true,
+    supportsEncryption: true,
+    
+    // Performance and limitations
+    maxFileSize: 1024 * 1024 * 1024, // 1GB per entry (configurable)
+    maxEntriesPerType: 1000000, // 1M entries per type
+    queryCapabilities: {
+      canFilter: true,   // Native SQL filtering
+      canSort: true,     // Native SQL sorting
+      canPaginate: true, // Native SQL pagination
+      canAggregate: true // Native SQL aggregation
+    }
+  }
+};
+
+/**
+ * Helper function to get capabilities for a storage type
+ */
+export function getStorageCapabilities(type: StorageType): StorageCapabilities {
+  return STORAGE_TYPE_CAPABILITIES[type];
+}
+
+/**
+ * Helper function to check if a storage type supports a specific data type
+ */
+export function supportsDataType(storageType: StorageType, dataType: 'config' | 'logs' | 'history' | 'snapshots'): boolean {
+  const capabilities = getStorageCapabilities(storageType);
+  
+  switch (dataType) {
+    case 'config':
+      return capabilities.supportsSiteConfig;
+    case 'logs':
+      return capabilities.supportsLogs;
+    case 'history':
+      return capabilities.supportsHistory;
+    case 'snapshots':
+      return capabilities.supportsSnapshots;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Helper function to get supported data types for a storage type
+ */
+export function getSupportedDataTypes(storageType: StorageType): string[] {
+  const capabilities = getStorageCapabilities(storageType);
+  const supported: string[] = [];
+  
+  if (capabilities.supportsSiteConfig) supported.push('config');
+  if (capabilities.supportsLogs) supported.push('logs');
+  if (capabilities.supportsHistory) supported.push('history');
+  if (capabilities.supportsSnapshots) supported.push('snapshots');
+  
+  return supported;
 }

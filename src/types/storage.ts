@@ -29,12 +29,36 @@ export interface StorageConfig {
 }
 
 export interface StorageCapabilities {
+  // Basic capabilities
   canExport: boolean;
   canImport: boolean;
   canMigrate: boolean;
   supportsBackup: boolean;
   isClientSide: boolean;
   maxStorageSize?: number;
+  
+  // Data type support capabilities
+  supportsSiteConfig: boolean;
+  supportsLogs: boolean;
+  supportsHistory: boolean;
+  supportsSnapshots: boolean;
+  
+  // Advanced capabilities
+  supportsTransactions: boolean;
+  supportsIndexing: boolean;
+  supportsConcurrency: boolean;
+  supportsCompression: boolean;
+  supportsEncryption: boolean;
+  
+  // Performance and limitations
+  maxFileSize?: number;
+  maxEntriesPerType?: number;
+  queryCapabilities: {
+    canFilter: boolean;
+    canSort: boolean;
+    canPaginate: boolean;
+    canAggregate: boolean;
+  };
 }
 
 export interface StorageMigrationOptions {

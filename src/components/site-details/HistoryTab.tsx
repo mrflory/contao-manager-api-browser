@@ -14,7 +14,7 @@ import {
   Portal,
   Text,
 } from '@chakra-ui/react';
-import { LuEye as Eye, LuRefreshCw as RefreshCw, LuEllipsis as MoreVertical, LuTrash2 as Trash } from 'react-icons/lu';
+import { LuEye as Eye, LuRefreshCw as RefreshCw, LuEllipsis as MoreVertical, LuTrash2 as Trash, LuInfo as Info } from 'react-icons/lu';
 import { Site, HistoryEntry, HistoryResponse } from '../../types';
 import { HistoryApiService } from '../../services/apiCallService';
 import { useApiCall } from '../../hooks/useApiCall';
@@ -23,6 +23,7 @@ import { HistoryDetailsModal } from '../modals/HistoryDetailsModal';
 import { ConfirmationDialog } from '../modals/ConfirmationDialog';
 import { formatDateTime, formatDuration } from '../../utils/dateUtils';
 import { ComposerFilesDialog } from '../ui/ComposerFilesDialog';
+import { useStorageCapabilities } from '../../hooks/useStorageCapabilities';
 
 export interface HistoryTabProps {
   site: Site;
@@ -41,7 +42,9 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
   }>({ isOpen: false, snapshotId: null, filename: null });
   
   const toast = useToastNotifications();
+  const storageCapabilities = useStorageCapabilities();
 
+  // Always initialize hooks to maintain hook order
   const loadHistory = useApiCall(
     () => {
       console.log('Loading history for site:', site.url);
@@ -84,6 +87,38 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [site.url]); // Only trigger when site.url changes
+
+  // If storage doesn't support history, show information message
+  if (!storageCapabilities.supportsHistory) {
+    return (
+      <VStack gap={6} align="stretch">
+        <Alert.Root status="warning">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title display="flex" alignItems="center" gap={2}>
+              <Info size={20} />
+              History Not Available
+            </Alert.Title>
+            <Alert.Description>
+              The current storage backend ({storageCapabilities.capabilities.isClientSide ? 'Browser Storage' : 'Server Storage'}) does not support workflow history tracking. 
+              History is only available when using storage backends that support persistent data storage.
+            </Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+        
+        <Box p={6} bg="gray.50" borderRadius="md">
+          <Text fontSize="sm" color="gray.600">
+            To enable history functionality:
+          </Text>
+          <Text fontSize="sm" color="gray.600" mt={2} pl={4}>
+            • Switch to a server-based storage backend (JSON File or Database)
+            • Workflow execution history will be automatically tracked
+            • Previous workflow runs, snapshots, and execution details will be preserved
+          </Text>
+        </Box>
+      </VStack>
+    );
+  }
 
   const handleViewDetails = (entry: HistoryEntry) => {
     setSelectedEntry(entry);

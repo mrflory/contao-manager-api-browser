@@ -20,6 +20,7 @@ export {
 
 // Storage implementations
 export { JsonFileStorage } from './JsonFileStorage';
+export { JsonFileStorageUnified } from './JsonFileStorageUnified';
 export { BrowserStorage } from './BrowserStorage';
 export { DatabaseStorage } from './DatabaseStorage';
 
