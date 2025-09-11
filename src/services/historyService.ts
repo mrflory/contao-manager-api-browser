@@ -1,5 +1,5 @@
 import { HistoryEntry, HistoryResponse, CreateHistoryRequest, UpdateHistoryRequest } from '../types';
-import { UnifiedStorage, HistoryParams, QueryParams } from '../storage/interfaces';
+import { UnifiedStorage, HistoryParams } from '../storage/interfaces';
 
 export class HistoryService {
     private readonly storage: UnifiedStorage;
@@ -8,14 +8,6 @@ export class HistoryService {
         this.storage = storage;
     }
 
-    private extractSiteName(url: string): string {
-        try {
-            const urlObj = new URL(url);
-            return urlObj.hostname;
-        } catch {
-            return url;
-        }
-    }
 
     public async saveHistoryEntry(siteUrl: string, historyEntry: HistoryEntry): Promise<boolean> {
         try {

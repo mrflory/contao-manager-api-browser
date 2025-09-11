@@ -12,7 +12,6 @@ import {
     LogParams,
     HistoryParams,
     SnapshotParams,
-    QueryParams,
     CleanupParams,
     StorageType,
     STORAGE_TYPE_CAPABILITIES
@@ -41,7 +40,7 @@ export class JsonFileStorageUnified extends JsonFileStorage implements UnifiedSt
         this.snapshots = new JsonSnapshotsStorage(this.dataDir);
     }
 
-    override getCapabilities(): StorageCapabilities {
+    getCapabilities(): StorageCapabilities {
         return STORAGE_TYPE_CAPABILITIES[StorageType.JSON_FILE];
     }
 
@@ -119,7 +118,7 @@ class JsonLogsStorage implements LogsStorage {
         }
     }
 
-    async getLogs(siteUrl: string, query?: QueryParams): Promise<StorageResult<LogEntry[]>> {
+    async getLogs(siteUrl: string): Promise<StorageResult<LogEntry[]>> {
         try {
             const hostname = this.extractSiteName(siteUrl);
             const logFile = path.join(this.dataDir, `${hostname}.log`);
@@ -388,7 +387,7 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    async getHistory(siteUrl: string, query?: QueryParams): Promise<StorageResult<HistoryEntry[]>> {
+    async getHistory(siteUrl: string): Promise<StorageResult<HistoryEntry[]>> {
         try {
             const hostname = this.extractSiteName(siteUrl);
             const historyFile = path.join(this.dataDir, `${hostname}.history.json`);
@@ -705,7 +704,7 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
         }
     }
 
-    async getSnapshots(siteUrl: string, query?: QueryParams): Promise<StorageResult<SnapshotMetadata[]>> {
+    async getSnapshots(siteUrl: string): Promise<StorageResult<SnapshotMetadata[]>> {
         try {
             const siteName = this.extractSiteName(siteUrl);
             const snapshots: SnapshotMetadata[] = [];
@@ -822,7 +821,7 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
 
             // Calculate total size
             for (const snapshot of snapshots) {
-                for (const [filename, fileInfo] of Object.entries(snapshot.files)) {
+                for (const [_filename, fileInfo] of Object.entries(snapshot.files)) {
                     if (fileInfo.exists) {
                         totalSize += fileInfo.size;
                     }

@@ -417,9 +417,7 @@ export class ConfigService {
     private async convertLegacyConfig(legacyConfig: any): Promise<AppConfig> {
         const convertedConfig: AppConfig = {
             sites: {},
-            activeSite: legacyConfig.activeSite || null,
-            version: '2.0',
-            lastUpdated: new Date().toISOString()
+            activeSite: legacyConfig.activeSite || null
         };
 
         // Convert sites
@@ -431,13 +429,11 @@ export class ConfigService {
                     convertedConfig.sites[url] = {
                         url,
                         name: legacySite.name || this.extractSiteName(url),
-                        token: legacySite.token,
-                        encryptedToken: legacySite.encryptedToken,
+                        token: legacySite.token || legacySite.encryptedToken,
                         authMethod: legacySite.authMethod || 'token',
                         scope: legacySite.scope || 'read',
                         user: legacySite.user,
-                        addedAt: legacySite.addedAt || new Date().toISOString(),
-                        lastAccess: legacySite.lastAccess,
+                        lastUsed: legacySite.lastAccess || legacySite.addedAt || new Date().toISOString(),
                         versionInfo: legacySite.versionInfo
                     };
                 }
@@ -474,9 +470,7 @@ export class ConfigService {
             // Return empty config as last resort
             return {
                 sites: {},
-                activeSite: null,
-                version: '2.0',
-                lastUpdated: new Date().toISOString()
+                activeSite: null
             };
         }
     }

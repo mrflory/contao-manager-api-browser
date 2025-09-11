@@ -25,11 +25,6 @@ export function useWorkflowHistory() {
       context.set('activeSite', { url: siteUrl });
       context.set('workflowId', `${workflowType}-${Date.now()}`);
       
-      console.log('[WORKFLOW-HISTORY] Populated engine context with:', {
-        activeSiteUrl: siteUrl,
-        workflowType,
-        workflowId: context.get('workflowId')
-      });
       
       await engine.startHistoryTracking(siteUrl, workflowType);
     },

@@ -1,4 +1,4 @@
-import { UnifiedStorage, SnapshotParams, QueryParams, CleanupParams } from '../storage/interfaces';
+import { UnifiedStorage, SnapshotParams, CleanupParams } from '../storage/interfaces';
 
 export interface SnapshotMetadata {
     id: string;
@@ -41,20 +41,7 @@ export class SnapshotService {
         this.storage = storage;
     }
 
-    private extractSiteName(url: string): string {
-        try {
-            const urlObj = new URL(url);
-            return urlObj.hostname.replace(/[^a-zA-Z0-9.-]/g, '_');
-        } catch {
-            return url.replace(/[^a-zA-Z0-9.-]/g, '_');
-        }
-    }
 
-    private generateSnapshotId(siteUrl: string): string {
-        const siteName = this.extractSiteName(siteUrl);
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '-').split('.')[0];
-        return `${siteName}-${timestamp}`;
-    }
 
     public async createSnapshot(request: CreateSnapshotRequest): Promise<SnapshotMetadata | null> {
         try {

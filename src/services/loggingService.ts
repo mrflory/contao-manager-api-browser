@@ -1,5 +1,5 @@
-import { LogEntry, LogsResponse } from '../types';
-import { UnifiedStorage, LogParams, QueryParams, CleanupParams } from '../storage/interfaces';
+import { LogsResponse } from '../types';
+import { UnifiedStorage, LogParams, CleanupParams } from '../storage/interfaces';
 
 export class LoggingService {
     private readonly storage: UnifiedStorage;

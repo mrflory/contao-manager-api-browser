@@ -94,6 +94,167 @@ app.get('/api/storage/type', (_req: Request, res: Response) => {
     }
 });
 
+// Migration management endpoints
+app.get('/api/migrate/status', async (_req: Request, res: Response) => {
+    try {
+        const activeMigrations = migrationService.getActiveMigrations();
+        res.json({
+            activeMigrations: activeMigrations.length,
+            migrations: activeMigrations
+        });
+    } catch (error) {
+        console.error('Error getting migration status:', error);
+        res.status(500).json({ error: 'Failed to get migration status' });
+    }
+});
+
+app.get('/api/migrate/detect', async (_req: Request, res: Response) => {
+    try {
+        const detectedData = await migrationService.detectExistingData();
+        res.json({
+            hasData: detectedData.totalSize > 0,
+            detectedData
+        });
+    } catch (error) {
+        console.error('Error detecting existing data:', error);
+        res.status(500).json({ error: 'Failed to detect existing data' });
+    }
+});
+
+app.post('/api/migrate/start', async (req: Request, res: Response) => {
+    try {
+        const {
+            fromStorageType,
+            toStorageType,
+            migrationType = 'full_migration',
+            dataCategories = ['config', 'logs', 'history', 'snapshots'],
+            preserveOriginal = true,
+            validateMigration = true,
+            createBackup = true,
+            batchSize = 100,
+            maxRetries = 3,
+            continueOnError = false,
+            siteFilter
+        } = req.body;
+
+        // Validate required fields
+        if (!fromStorageType || !toStorageType) {
+            return res.status(400).json({ 
+                error: 'fromStorageType and toStorageType are required' 
+            });
+        }
+
+        const migrationOptions = {
+            fromStorageType,
+            toStorageType,
+            migrationType,
+            dataCategories,
+            preserveOriginal,
+            validateMigration,
+            createBackup,
+            batchSize,
+            maxRetries,
+            continueOnError,
+            siteFilter
+        };
+
+        const migrationId = await migrationService.startMigration(migrationOptions);
+        
+        res.json({
+            success: true,
+            migrationId,
+            message: 'Migration started successfully'
+        });
+    } catch (error) {
+        console.error('Error starting migration:', error);
+        res.status(500).json({ 
+            error: 'Failed to start migration',
+            details: error instanceof Error ? error.message : String(error)
+        });
+    }
+});
+
+app.get('/api/migrate/progress/:migrationId', async (req: Request, res: Response) => {
+    try {
+        const { migrationId } = req.params;
+        const progress = migrationService.getMigrationStatus(migrationId);
+        
+        if (!progress) {
+            return res.status(404).json({ error: 'Migration not found' });
+        }
+        
+        res.json(progress);
+    } catch (error) {
+        console.error('Error getting migration progress:', error);
+        res.status(500).json({ error: 'Failed to get migration progress' });
+    }
+});
+
+app.get('/api/migrate/result/:migrationId', async (req: Request, res: Response) => {
+    try {
+        const { migrationId } = req.params;
+        const result = await migrationService.getMigrationResult(migrationId);
+        
+        if (!result) {
+            return res.status(404).json({ error: 'Migration result not found or migration still in progress' });
+        }
+        
+        res.json(result);
+    } catch (error) {
+        console.error('Error getting migration result:', error);
+        res.status(500).json({ error: 'Failed to get migration result' });
+    }
+});
+
+app.post('/api/migrate/rollback', async (req: Request, res: Response) => {
+    try {
+        const {
+            migrationId,
+            restoreFromBackup = true,
+            cleanupTarget = false,
+            validateRollback = true
+        } = req.body;
+
+        if (!migrationId) {
+            return res.status(400).json({ error: 'migrationId is required' });
+        }
+
+        const rollbackOptions = {
+            migrationId,
+            restoreFromBackup,
+            cleanupTarget,
+            validateRollback
+        };
+
+        const result = await migrationService.rollbackMigration(rollbackOptions);
+        
+        res.json({
+            success: true,
+            result,
+            message: 'Migration rollback completed'
+        });
+    } catch (error) {
+        console.error('Error rolling back migration:', error);
+        res.status(500).json({ 
+            error: 'Failed to rollback migration',
+            details: error instanceof Error ? error.message : String(error)
+        });
+    }
+});
+
+app.delete('/api/migrate/cleanup', async (_req: Request, res: Response) => {
+    try {
+        migrationService.cleanupCompletedMigrations();
+        res.json({
+            success: true,
+            message: 'Completed migrations cleaned up'
+        });
+    } catch (error) {
+        console.error('Error cleaning up migrations:', error);
+        res.status(500).json({ error: 'Failed to cleanup migrations' });
+    }
+});
+
 app.post('/api/set-active-site', (req: ApiRequest, res: Response) => {
     const { url } = req.body;
     
@@ -294,9 +455,9 @@ app.delete('/api/logs/:siteUrl/cleanup', (req: ApiRequest, res: Response) => {
 });
 
 // History API endpoints
-app.post('/api/history/create', async (req: ApiRequest, res: Response) => {
+app.post('/api/history/create', (req: ApiRequest, res: Response) => {
     try {
-        const historyEntry = await historyService.createHistoryEntry(req.body);
+        const historyEntry = historyService.createHistoryEntry(req.body);
         
         if (historyEntry) {
             res.json({ success: true, historyEntry });
@@ -309,7 +470,7 @@ app.post('/api/history/create', async (req: ApiRequest, res: Response) => {
     }
 });
 
-app.put('/api/history/:id', async (req: ApiRequest, res: Response) => {
+app.put('/api/history/:id', (req: ApiRequest, res: Response) => {
     console.log('[HISTORY UPDATE] Request received:', {
         id: req.params.id,
         body: req.body,
@@ -319,7 +480,7 @@ app.put('/api/history/:id', async (req: ApiRequest, res: Response) => {
     
     try {
         const { id } = req.params;
-        const historyEntry = await historyService.updateHistoryEntry(id, req.body);
+        const historyEntry = historyService.updateHistoryEntry(id, req.body);
         
         console.log('[HISTORY UPDATE] Service result:', historyEntry ? 'Success' : 'Not found');
         
@@ -336,12 +497,12 @@ app.put('/api/history/:id', async (req: ApiRequest, res: Response) => {
     }
 });
 
-app.get('/api/history/:siteUrl', async (req: ApiRequest, res: Response) => {
+app.get('/api/history/:siteUrl', (req: ApiRequest, res: Response) => {
     try {
         const { siteUrl } = req.params;
         const decodedSiteUrl = decodeURIComponent(siteUrl);
         
-        const result = await historyService.getHistoryForSite(decodedSiteUrl);
+        const result = historyService.getHistoryForSite(decodedSiteUrl);
         res.json(result);
     } catch (error) {
         console.error('Get history error:', error);
@@ -349,12 +510,12 @@ app.get('/api/history/:siteUrl', async (req: ApiRequest, res: Response) => {
     }
 });
 
-app.delete('/api/history/:siteUrl/:id', async (req: ApiRequest, res: Response) => {
+app.delete('/api/history/:siteUrl/:id', (req: ApiRequest, res: Response) => {
     try {
         const { siteUrl, id } = req.params;
         const decodedSiteUrl = decodeURIComponent(siteUrl);
         
-        const result = await historyService.deleteHistoryEntry(decodedSiteUrl, id);
+        const result = historyService.deleteHistoryEntry(decodedSiteUrl, id);
         
         if (result) {
             res.json({ success: true, message: 'History entry deleted successfully' });
@@ -470,12 +631,12 @@ app.post('/api/snapshots/create', ErrorHandler.asyncWrapper(async (req: ApiReque
     }
 }));
 
-app.get('/api/snapshots/list/:siteUrl', async (req: ApiRequest, res: Response) => {
+app.get('/api/snapshots/list/:siteUrl', (req: ApiRequest, res: Response) => {
     try {
         const { siteUrl } = req.params;
         const decodedSiteUrl = decodeURIComponent(siteUrl);
         
-        const result = await snapshotService.listSnapshotsForSite(decodedSiteUrl);
+        const result = snapshotService.listSnapshotsForSite(decodedSiteUrl);
         return res.json(result);
     } catch (error) {
         console.error('List snapshots error:', error);
@@ -483,7 +644,7 @@ app.get('/api/snapshots/list/:siteUrl', async (req: ApiRequest, res: Response) =
     }
 });
 
-app.get('/api/snapshots/:snapshotId/:filename', async (req: ApiRequest, res: Response) => {
+app.get('/api/snapshots/:snapshotId/:filename', (req: ApiRequest, res: Response) => {
     try {
         const { snapshotId, filename } = req.params;
         
@@ -492,7 +653,7 @@ app.get('/api/snapshots/:snapshotId/:filename', async (req: ApiRequest, res: Res
             return res.status(400).json({ error: 'Invalid filename. Must be composer.json or composer.lock' });
         }
         
-        const fileBuffer = await snapshotService.getSnapshot(snapshotId, filename as 'composer.json' | 'composer.lock');
+        const fileBuffer = snapshotService.getSnapshot(snapshotId, filename as 'composer.json' | 'composer.lock');
         
         if (!fileBuffer) {
             return res.status(404).json({ error: 'Snapshot file not found' });
@@ -509,13 +670,13 @@ app.get('/api/snapshots/:snapshotId/:filename', async (req: ApiRequest, res: Res
     }
 });
 
-app.get('/api/snapshots/:snapshotId/:filename/content', async (req: ApiRequest, res: Response) => {
+app.get('/api/snapshots/:snapshotId/:filename/content', (req: ApiRequest, res: Response) => {
     try {
         const { snapshotId, filename } = req.params;
         
         console.log(`[SNAPSHOT API] Getting file content for snapshot ${snapshotId}, file ${filename}`);
         
-        const fileData = await snapshotService.getSnapshotFileContent(snapshotId, filename);
+        const fileData = snapshotService.getSnapshotFileContent(snapshotId, filename);
         
         if (!fileData) {
             return res.status(404).json({ error: 'Snapshot file not found' });
@@ -553,11 +714,11 @@ app.get('/api/snapshots/:snapshotId/:filename/content', async (req: ApiRequest, 
     }
 });
 
-app.delete('/api/snapshots/:snapshotId', async (req: ApiRequest, res: Response) => {
+app.delete('/api/snapshots/:snapshotId', (req: ApiRequest, res: Response) => {
     try {
         const { snapshotId } = req.params;
         
-        const success = await snapshotService.deleteSnapshot(snapshotId);
+        const success = snapshotService.deleteSnapshot(snapshotId);
         
         if (success) {
             return res.json({ success: true });
@@ -570,13 +731,13 @@ app.delete('/api/snapshots/:snapshotId', async (req: ApiRequest, res: Response) 
     }
 });
 
-app.post('/api/snapshots/cleanup/:siteUrl', async (req: ApiRequest, res: Response) => {
+app.post('/api/snapshots/cleanup/:siteUrl', (req: ApiRequest, res: Response) => {
     try {
         const { siteUrl } = req.params;
         const decodedSiteUrl = decodeURIComponent(siteUrl);
         const { keepLast = 10 } = req.body;
         
-        const result = await snapshotService.cleanupOldSnapshots(decodedSiteUrl, keepLast);
+        const result = snapshotService.cleanupOldSnapshots(decodedSiteUrl, keepLast);
         return res.json({ success: true, ...result });
     } catch (error) {
         console.error('Cleanup snapshots error:', error);
@@ -586,6 +747,208 @@ app.post('/api/snapshots/cleanup/:siteUrl', async (req: ApiRequest, res: Respons
         });
     }
 });
+
+// Migration endpoints
+app.get('/api/migrate/detect', ErrorHandler.asyncWrapper(async (_req: Request, res: Response) => {
+    try {
+        const detectedData = await migrationService.detectExistingData();
+        res.json({
+            success: true,
+            data: detectedData
+        });
+    } catch (error) {
+        console.error('Error detecting existing data:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to detect existing data',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
+app.get('/api/migrate/status/:migrationId', ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const { migrationId } = req.params;
+        const status = migrationService.getMigrationStatus(migrationId);
+        
+        if (!status) {
+            return res.status(404).json({
+                success: false,
+                error: 'Migration not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: status
+        });
+    } catch (error) {
+        console.error('Error getting migration status:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to get migration status',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
+app.get('/api/migrate/progress', ErrorHandler.asyncWrapper(async (_req: Request, res: Response) => {
+    try {
+        const activeMigrations = migrationService.getActiveMigrations();
+        res.json({
+            success: true,
+            data: activeMigrations
+        });
+    } catch (error) {
+        console.error('Error getting migration progress:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to get migration progress',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
+app.post('/api/migrate/start', ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const {
+            fromStorageType,
+            toStorageType,
+            migrationType,
+            dataCategories,
+            preserveOriginal = true,
+            validateMigration = true,
+            createBackup = true,
+            batchSize = 100,
+            maxRetries = 3,
+            continueOnError = false,
+            siteFilter = null
+        } = req.body;
+
+        // Validate required fields
+        if (!fromStorageType || !toStorageType || !migrationType || !dataCategories) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields: fromStorageType, toStorageType, migrationType, dataCategories'
+            });
+        }
+
+        const migrationOptions = {
+            fromStorageType,
+            toStorageType,
+            migrationType,
+            dataCategories,
+            preserveOriginal,
+            validateMigration,
+            createBackup,
+            batchSize,
+            maxRetries,
+            continueOnError,
+            siteFilter
+        };
+
+        const migrationId = await migrationService.startMigration(migrationOptions);
+
+        res.json({
+            success: true,
+            data: {
+                migrationId,
+                message: 'Migration started successfully'
+            }
+        });
+
+    } catch (error) {
+        console.error('Error starting migration:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to start migration',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
+app.get('/api/migrate/result/:migrationId', ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const { migrationId } = req.params;
+        const result = await migrationService.getMigrationResult(migrationId);
+        
+        if (!result) {
+            return res.status(404).json({
+                success: false,
+                error: 'Migration result not found or migration still in progress'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        console.error('Error getting migration result:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to get migration result',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
+app.post('/api/migrate/rollback', ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const {
+            migrationId,
+            restoreFromBackup = true,
+            cleanupTarget = false,
+            validateRollback = true
+        } = req.body;
+
+        if (!migrationId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Migration ID is required'
+            });
+        }
+
+        const rollbackOptions = {
+            migrationId,
+            restoreFromBackup,
+            cleanupTarget,
+            validateRollback
+        };
+
+        const rollbackResult = await migrationService.rollbackMigration(rollbackOptions);
+
+        res.json({
+            success: true,
+            data: rollbackResult
+        });
+
+    } catch (error) {
+        console.error('Error rolling back migration:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to rollback migration',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
+
+app.delete('/api/migrate/cleanup', ErrorHandler.asyncWrapper(async (_req: Request, res: Response) => {
+    try {
+        migrationService.cleanupCompletedMigrations();
+        res.json({
+            success: true,
+            message: 'Completed migrations cleaned up successfully'
+        });
+    } catch (error) {
+        console.error('Error cleaning up migrations:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to cleanup migrations',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+}));
 
 // Serve React app for all non-API routes
 app.get('/', (_req, res) => {

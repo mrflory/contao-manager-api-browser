@@ -48,12 +48,6 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
         const siteUrl = activeSite?.url;
         const workflowId = this.context?.get('workflowId');
         
-        console.log('[COMPOSER UPDATE] Context debug:', {
-          hasContext: !!this.context,
-          hasActiveSite: !!activeSite,
-          activeSiteUrl: siteUrl,
-          workflowId: workflowId
-        });
         
         if (!siteUrl) {
           throw new Error('No active site URL found in context');

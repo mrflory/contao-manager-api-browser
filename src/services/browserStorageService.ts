@@ -75,25 +75,20 @@ export class BrowserStorageService implements IBrowserStorageService {
       const response = await fetch('/api/storage/type');
       if (response.ok) {
         const result = await response.json();
-        console.log(`[BROWSER_STORAGE] Server storage type detected:`, result.storageType);
         return result.storageType || StorageType.JSON_FILE;
       }
     } catch (error) {
-      console.log('[BROWSER_STORAGE] Backend storage type detection failed, checking browser storage');
     }
 
     // Fall back to browser storage if available and has data
     if (await this.isStorageAvailable(StorageType.BROWSER)) {
       const browserData = localStorage.getItem(this.storageKey);
-      console.log(`[BROWSER_STORAGE] Checking localStorage for key '${this.storageKey}':`, browserData ? 'FOUND DATA' : 'NO DATA');
       if (browserData) {
-        console.log(`[BROWSER_STORAGE] Using browser storage mode as fallback`);
         return StorageType.BROWSER;
       }
     }
     
     // Default to JSON file storage
-    console.log(`[BROWSER_STORAGE] Defaulting to JSON file storage`);
     return StorageType.JSON_FILE;
   }
 
