@@ -2,6 +2,7 @@ import { BaseTimelineItem } from '../engine/BaseTimelineItem';
 import { TimelineResult, WorkflowContext } from '../engine/types';
 import { api } from '../../utils/api';
 import { MigrationOperations } from '../../components/workflow/MigrationOperations';
+import { createMigrationSummary } from '../../utils/migrationSummary';
 
 /**
  * Timeline item for executing database migrations
@@ -112,8 +113,12 @@ export class ExecuteMigrationsTimelineItem extends BaseTimelineItem {
             }
             
             // Create UI content showing the migration results
+            const migrationSummary = createMigrationSummary(migrationStatus, this.id);
             const uiContent = migrationStatus.operations ? (
-              <MigrationOperations data={migrationStatus} />
+              <MigrationOperations
+                data={migrationStatus}
+                summary={migrationSummary}
+              />
             ) : null;
             
             // Set the timeline item status to complete before resolving
