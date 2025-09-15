@@ -89,10 +89,13 @@ const SiteDetails: React.FC = () => {
   );
 
   // Maintenance mode state management - moved to parent to share across tabs
-  const getMaintenanceMode = useApiCall<MaintenanceMode>(TaskApiService.getMaintenanceModeStatus, {
-    showErrorToast: false, // We'll handle errors in the UI
-    errorMessage: 'Failed to get maintenance mode status'
-  });
+  const getMaintenanceMode = useApiCall<MaintenanceMode>(
+    () => TaskApiService.getSiteMaintenanceModeStatus(decodedSiteUrl),
+    {
+      showErrorToast: false, // We'll handle errors in the UI
+      errorMessage: 'Failed to get maintenance mode status'
+    }
+  );
 
   useEffect(() => {
     loadConfig.execute();
@@ -116,6 +119,7 @@ const SiteDetails: React.FC = () => {
   // Load maintenance mode status when site is available
   useEffect(() => {
     if (site) {
+      // Just load maintenance mode directly - let the backend handle active site internally
       getMaintenanceMode.execute();
     }
   }, [site]);

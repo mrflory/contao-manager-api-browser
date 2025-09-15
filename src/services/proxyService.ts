@@ -26,7 +26,7 @@ export class ProxyService {
         data: any = null, 
         cookieHeader?: string
     ): Promise<AxiosResponse> {
-        const activeSite = this.configService.getActiveSite();
+        const activeSite = await this.configService.getActiveSiteAsync();
         
         if (!activeSite) {
             throw new Error('No active site configured');
@@ -133,8 +133,97 @@ export class ProxyService {
         return response;
     }
 
+    // Site-specific proxy method that bypasses active site requirement
+    public async proxyToSpecificSite(
+        site: any,
+        endpoint: string, 
+        method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', 
+        data: any = null, 
+        cookieHeader?: string
+    ): Promise<AxiosResponse> {
+        // Check scope permissions for cookie authentication
+        if (site.authMethod === 'cookie' && site.scope) {
+            console.log(`[SCOPE-CHECK] Site: ${site.url}, Auth: ${site.authMethod}, Scope: ${site.scope}, Endpoint: ${method} ${endpoint}`);
+            if (!this.authService.checkScopePermission(site.scope, method, endpoint)) {
+                console.log(`[SCOPE-CHECK] Permission denied for scope '${site.scope}' on ${method} ${endpoint}`);
+                throw new Error(`Access denied: ${method} ${endpoint} requires higher permissions than '${site.scope}' scope`);
+            }
+            console.log(`[SCOPE-CHECK] Permission granted for scope '${site.scope}' on ${method} ${endpoint}`);
+        }
+        
+        const config: any = {
+            url: `${site.url}${endpoint}`,
+            method,
+            data,
+            timeout: 10000, // 10 second timeout
+            maxRedirects: 5
+        };
+
+        console.log(`[API REQUEST] ${method} ${site.url}${endpoint}`);
+
+        let response: AxiosResponse;
+        let requestError: Error | null = null;
+
+        // Determine authentication method
+        if (site.authMethod === 'cookie' && cookieHeader) {
+            // Cookie authentication
+            config.headers = {
+                'Content-Type': 'application/json',
+                'Cookie': cookieHeader || ''
+            };
+            
+            try {
+                response = await axios(config as any);
+                console.log('[API REQUEST] Cookie authentication worked');
+            } catch (error) {
+                console.log('[API REQUEST] Cookie authentication failed:', error instanceof Error ? error.message : 'Unknown error');
+                requestError = error instanceof Error ? error : new Error('Unknown error');
+                response = (error as any).response || { status: 500, data: null };
+            }
+        } else {
+            // For token authentication, use the stored token
+            if (!site.token) {
+                throw new Error('No token available for token-based authentication');
+            }
+            
+            // Try Contao-Manager-Auth header first (recommended by swagger)
+            try {
+                config.headers = {
+                    ...config.headers,
+                    'Contao-Manager-Auth': site.token as string
+                };
+                console.log('[API REQUEST] Using Contao-Manager-Auth header');
+                response = await axios(config as any);
+                console.log('[API REQUEST] Contao-Manager-Auth worked');
+            } catch (error) {
+                console.log('[API REQUEST] Contao-Manager-Auth failed, trying Authorization Bearer fallback');
+                // Fallback to Authorization Bearer header
+                try {
+                    config.headers = {
+                        ...config.headers,
+                        'Authorization': `Bearer ${site.token}`
+                    };
+                    delete config.headers['Contao-Manager-Auth'];
+                    response = await axios(config as any);
+                    console.log('[API REQUEST] Authorization Bearer fallback worked');
+                } catch (fallbackError) {
+                    console.log('[API REQUEST] Both auth methods failed');
+                    requestError = fallbackError instanceof Error ? fallbackError : new Error('Unknown error');
+                    response = (fallbackError as any).response || { status: 500, data: null };
+                }
+            }
+        }
+
+        // If we have an error and no response, throw it
+        if (requestError && (!response || response.status >= 400)) {
+            throw requestError;
+        }
+
+        return response;
+    }
+
     public async updateStatus(): Promise<UpdateStatusResult> {
-        const activeSite = this.configService.getActiveSite();
+        const activeSite = await this.configService.getActiveSiteAsync();
         
         if (!activeSite) {
             throw new Error('No active site configured');
@@ -193,7 +282,7 @@ export class ProxyService {
     }
 
     public async updateVersionInfo(): Promise<VersionInfoResult> {
-        const activeSite = this.configService.getActiveSite();
+        const activeSite = await this.configService.getActiveSiteAsync();
         
         if (!activeSite) {
             throw new Error('No active site configured');
@@ -282,8 +371,8 @@ export class ProxyService {
         }
     }
 
-    public getAuthenticatedAxiosConfig(url: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', data: any = null, cookieHeader?: string): any {
-        const activeSite = this.configService.getActiveSite();
+    public async getAuthenticatedAxiosConfig(url: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', data: any = null, cookieHeader?: string): Promise<any> {
+        const activeSite = await this.configService.getActiveSiteAsync();
         
         if (!activeSite) {
             throw new Error('No active site configured');

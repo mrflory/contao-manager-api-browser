@@ -243,6 +243,10 @@ export const api = {
     });
   },
 
+  async getSiteMaintenanceModeStatus(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/maintenance-mode`);
+  },
+
   // Tasks endpoints
   async getTaskData(): Promise<any> {
     return makeApiCall('/task');

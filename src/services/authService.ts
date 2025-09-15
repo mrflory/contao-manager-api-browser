@@ -101,7 +101,7 @@ export class AuthService {
         }
 
         if (this.configService.addSite(managerUrl, token)) {
-            const activeSite = this.configService.getActiveSite();
+            const activeSite = await this.configService.getActiveSiteAsync();
             return { success: true, activeSite };
         } else {
             throw new Error('Failed to save site configuration');
@@ -235,7 +235,7 @@ export class AuthService {
         };
     }
 
-    public saveSiteCookie(request: SaveSiteCookieRequest): { success: boolean; activeSite: any; isReauth: boolean } {
+    public async saveSiteCookie(request: SaveSiteCookieRequest): Promise<{ success: boolean; activeSite: any; isReauth: boolean }> {
         const { managerUrl, user, authMethod, scope, isReauth } = request;
         
         if (!managerUrl || !user || !authMethod) {
@@ -253,7 +253,7 @@ export class AuthService {
             if (isReauth) {
                 this.configService.setActiveSite(managerUrl);
             }
-            const activeSite = this.configService.getActiveSite();
+            const activeSite = await this.configService.getActiveSiteAsync();
             return { success: true, activeSite, isReauth: !!isReauth };
         } else {
             throw new Error('Failed to save site configuration');
@@ -261,7 +261,7 @@ export class AuthService {
     }
 
     public async getTokenInfo(cookieHeader?: string): Promise<SessionInfo> {
-        const activeSite = this.configService.getActiveSite();
+        const activeSite = await this.configService.getActiveSiteAsync();
         
         if (!activeSite) {
             throw new Error('No active site configured');

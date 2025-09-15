@@ -470,6 +470,11 @@ export class TaskApiService {
    * Disable maintenance mode
    */
   static disableMaintenanceMode = api.disableMaintenanceMode;
+
+  /**
+   * Get maintenance mode status for specific site
+   */
+  static getSiteMaintenanceModeStatus = (siteUrl: string) => api.getSiteMaintenanceModeStatus(siteUrl);
 }
 
 /**

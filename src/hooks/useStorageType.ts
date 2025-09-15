@@ -63,14 +63,50 @@ export const useStorageType = (): UseStorageTypeResult => {
   const [error, setError] = useState<string>();
   const [migrationProgress, setMigrationProgress] = useState(0);
   const [isMigrating, setIsMigrating] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const toast = useToastNotifications();
   const eventListenersRef = useRef<{ [key: string]: Function }>({});
 
   /**
+   * Refresh storage information
+   */
+  const refreshStorageInfo = useCallback(async (): Promise<void> => {
+    try {
+      const info = await browserStorageService.getStorageInfo();
+      setStorageInfo(info);
+    } catch (error) {
+      console.error('Failed to refresh storage info:', error);
+      setStorageInfo({
+        usedSpace: 0,
+        availableSpace: 0,
+        usagePercentage: 0
+      });
+    }
+  }, []);
+
+  /**
+   * Refresh available storage backends
+   */
+  const refreshAvailableBackends = useCallback(async (): Promise<void> => {
+    try {
+      const backends = await browserStorageService.getAvailableStorageBackends();
+      setAvailableBackends(backends);
+    } catch (error) {
+      console.error('Failed to refresh available backends:', error);
+      setAvailableBackends([]);
+    }
+  }, []);
+
+  /**
    * Initialize storage state and set up event listeners
    */
   useEffect(() => {
+    // Prevent multiple initializations
+    if (isInitialized) {
+      return;
+    }
+
     const initializeStorage = async () => {
       setIsLoading(true);
       setError(undefined);
@@ -81,11 +117,15 @@ export const useStorageType = (): UseStorageTypeResult => {
         setStorageState(state);
         setCurrentStorageType(state.type);
 
-        // Load storage info and available backends
-        await Promise.all([
+        // Load storage info and available backends - don't block page rendering
+        Promise.all([
           refreshStorageInfo(),
           refreshAvailableBackends()
-        ]);
+        ]).catch(error => {
+          console.error('Background storage detection failed:', error);
+        });
+
+        setIsInitialized(true);
 
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to initialize storage';
@@ -126,37 +166,7 @@ export const useStorageType = (): UseStorageTypeResult => {
         browserStorageService.removeEventListener(event as any, callback);
       });
     };
-  }, [toast]);
-
-  /**
-   * Refresh storage information
-   */
-  const refreshStorageInfo = useCallback(async (): Promise<void> => {
-    try {
-      const info = await browserStorageService.getStorageInfo();
-      setStorageInfo(info);
-    } catch (error) {
-      console.error('Failed to refresh storage info:', error);
-      setStorageInfo({
-        usedSpace: 0,
-        availableSpace: 0,
-        usagePercentage: 0
-      });
-    }
-  }, []);
-
-  /**
-   * Refresh available storage backends
-   */
-  const refreshAvailableBackends = useCallback(async (): Promise<void> => {
-    try {
-      const backends = await browserStorageService.getAvailableStorageBackends();
-      setAvailableBackends(backends);
-    } catch (error) {
-      console.error('Failed to refresh available backends:', error);
-      setAvailableBackends([]);
-    }
-  }, []);
+  }, [isInitialized]);
 
   /**
    * Switch to a different storage type

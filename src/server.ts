@@ -94,20 +94,62 @@ app.get('/api/storage/type', (_req: Request, res: Response) => {
     }
 });
 
-app.post('/api/set-active-site', (req: ApiRequest, res: Response) => {
+// Storage info endpoint
+app.get('/api/storage/info', (_req: Request, res: Response) => {
+    try {
+        const storageInfo = configService.getStorageInfo();
+        res.json({
+            type: storageInfo.type,
+            available: storageInfo.available,
+            capabilities: {
+                canExport: false,
+                canImport: false,
+                canMigrate: true,
+                supportsBackup: true,
+                isClientSide: false
+            }
+        });
+    } catch (error) {
+        console.error('Error getting storage info:', error);
+        res.status(500).json({ error: 'Failed to get storage info' });
+    }
+});
+
+// Database storage status endpoint
+app.get('/api/storage/database/status', (_req: Request, res: Response) => {
+    try {
+        // For now, return that database storage is not available
+        res.json({
+            available: false,
+            connected: false,
+            error: 'Database storage not configured'
+        });
+    } catch (error) {
+        console.error('Error getting database status:', error);
+        res.status(500).json({ error: 'Failed to get database status' });
+    }
+});
+
+app.post('/api/set-active-site', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     const { url } = req.body;
     
     if (!url) {
         return res.status(400).json({ error: 'Site URL is required' });
     }
     
-    if (configService.setActiveSite(url)) {
-        const activeSite = configService.getActiveSite();
-        return res.json({ success: true, activeSite });
-    } else {
-        return res.status(404).json({ error: 'Site not found' });
+    try {
+        const success = await configService.setActiveSiteAsync(url);
+        if (success) {
+            const activeSite = await configService.getActiveSiteAsync();
+            return res.json({ success: true, activeSite });
+        } else {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+    } catch (error) {
+        console.error('Error setting active site:', error);
+        return res.status(500).json({ error: 'Failed to set active site' });
     }
-});
+}));
 
 app.delete('/api/sites/:url', (req: ApiRequest, res: Response) => {
     const url = decodeURIComponent(req.params.url);
@@ -243,6 +285,35 @@ const proxyEndpoints = [
     '/api/logs'
 ];
 
+// Add site-specific maintenance mode endpoint that bypasses active site issues
+app.get('/api/site/:siteUrl/maintenance-mode', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
+    try {
+        const siteUrl = decodeURIComponent(req.params.siteUrl);
+        
+        // Get site configuration directly without setting as active
+        const config = await configService.getConfigAsync();
+        const site = config.sites?.[siteUrl];
+        
+        if (!site) {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+        
+        // Use proxyService directly with site information, bypassing active site
+        const response = await proxyService.proxyToSpecificSite(
+            site,
+            '/api/contao/maintenance-mode', 
+            'GET',
+            null,
+            req.headers.cookie
+        );
+        
+        const result = proxyService.handleApiResponse('/contao/maintenance-mode', response);
+        return res.status(result.status).json(result.data);
+    } catch (error) {
+        console.error('Maintenance mode error:', error);
+        return res.status(500).json({ error: 'Failed to get maintenance mode status' });
+    }
+}));
 
 // Create proxy routes for all HTTP methods
 proxyEndpoints.forEach(endpoint => {
@@ -649,5 +720,3 @@ async function startServer() {
 
 // Start the server
 startServer();
-
-export default app;
