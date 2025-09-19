@@ -131,12 +131,6 @@ usage_logs (id, user_id, site_id, action_type, api_endpoint, timestamp, ip_addre
 sessions (id, user_id, session_token, expires_at, created_at)
 ```
 
-### 1.2 Data Migration Strategy ⚠️ CRITICAL
-- [ ] Create migration script from `data/config.json` to database
-- [ ] Implement data validation and integrity checks
-- [ ] Create rollback procedures for failed migrations
-- [ ] Test migration with production data samples
-- [ ] Plan zero-downtime migration deployment
 
 ---
 
@@ -279,11 +273,10 @@ Open Source App ←→ Subscription Service
 ## Critical Dependencies & Risks
 
 ### High-Risk Items ⚠️ CRITICAL
-1. **Data Migration Risk**: Current users must not lose access during transition
-2. **Token Security**: Contao Manager tokens must remain secure during database migration
-3. **Service Separation**: Must maintain feature parity during architecture split
-4. **Performance**: Database queries must be optimized for multi-user scale
-5. **Billing Complexity**: Payment provider integration can introduce significant complexity
+1. **Token Security**: Contao Manager tokens must remain secure in database storage
+2. **Service Separation**: Must maintain feature parity during architecture split
+3. **Performance**: Database queries must be optimized for multi-user scale
+4. **Billing Complexity**: Payment provider integration can introduce significant complexity
 
 ### Technical Dependencies
 - PostgreSQL database cluster
@@ -307,7 +300,7 @@ Open Source App ←→ Subscription Service
 - **Database Query Performance**: < 100ms average response time
 - **API Availability**: 99.9% uptime SLA
 - **User Authentication**: < 2% failed login rate
-- **Data Migration**: 100% data integrity preservation
+- **Data Integrity**: 100% data consistency across storage backends
 
 ### Business KPIs  
 - **Free Tier Conversion**: Target 5% free-to-paid conversion rate
@@ -389,7 +382,7 @@ This implementation plan transforms a single-user tool into a flexible, scalable
 **Key Strategic Benefits:**
 - **Storage Abstraction**: Enables personal, team, and SaaS deployments with the same codebase
 - **Privacy Options**: Browser storage for privacy-conscious users who want client-side-only operation
-- **Migration Path**: Smooth transition from current JSON file → Browser storage → Database as needs evolve
+- **Deployment Flexibility**: Users can choose their preferred storage type based on needs (JSON file, Browser, Database)
 - **Business Flexibility**: Support open-source, privacy-focused, and commercial SaaS business models simultaneously
 
 The separation between open-source and proprietary components allows maintaining community trust while protecting intellectual property around user management and billing systems. The storage abstraction ensures that users can choose their preferred level of privacy and deployment complexity.
