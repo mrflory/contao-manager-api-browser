@@ -57,11 +57,20 @@ export const taskHandlers = {
       if (state.currentTask && state.currentTask.id === taskId) {
         // Check if task should fail based on scenario
         if (state.scenarios?.taskFailures?.[name]) {
-          state.currentTask.status = 'error';
-          state.currentTask.console = state.scenarios.taskFailures[name];
-          if (state.currentTask.operations) {
-            // Mark first operation as error
-            state.currentTask.operations[0].status = 'error';
+          const taskFailure = state.scenarios.taskFailures[name];
+
+          // Handle enhanced error format (object) or simple format (string)
+          if (typeof taskFailure === 'object' && taskFailure !== null && 'id' in taskFailure) {
+            // Enhanced error format - replace the entire task with the error response
+            Object.assign(state.currentTask, taskFailure);
+          } else {
+            // Simple error format (backward compatibility)
+            state.currentTask.status = 'error';
+            state.currentTask.console = typeof taskFailure === 'string' ? taskFailure : 'Task failed';
+            if (state.currentTask.operations) {
+              // Mark first operation as error
+              state.currentTask.operations[0].status = 'error';
+            }
           }
         } else {
           state.currentTask.status = 'complete';

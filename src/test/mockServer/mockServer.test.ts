@@ -197,7 +197,18 @@ describe('Mock Server Tests', () => {
       const state = mockServer.getState();
 
       expect(state.scenarios?.taskFailures).toBeDefined();
-      expect(state.scenarios?.taskFailures?.['composer/update']).toContain('requirements could not be resolved');
+      const taskFailure = state.scenarios?.taskFailures?.['composer/update'];
+
+      // Handle both string and enhanced error object formats
+      if (typeof taskFailure === 'string') {
+        expect(taskFailure).toContain('error');
+      } else if (typeof taskFailure === 'object' && taskFailure !== null && 'console' in taskFailure) {
+        expect(taskFailure.console).toContain('TypeError');
+        expect(taskFailure.status).toBe('error');
+        expect(taskFailure.id).toBeDefined();
+      } else {
+        fail('Expected taskFailure to be either string or enhanced error object');
+      }
     });
 
     test('handles scenario not found', () => {

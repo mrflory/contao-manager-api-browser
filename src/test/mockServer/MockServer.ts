@@ -731,8 +731,15 @@ export class MockServer {
       if (this.state.currentTask && this.state.currentTask.id === task.id) {
         // Check if task should fail based on scenario
         if (this.state.scenarios?.taskFailures?.[taskName]) {
-          task.status = 'error';
-          task.console = this.state.scenarios.taskFailures[taskName];
+          const taskFailure = this.state.scenarios.taskFailures[taskName];
+          if (typeof taskFailure === 'object' && taskFailure !== null && 'id' in taskFailure) {
+            // Enhanced error format - replace the entire task
+            Object.assign(task, taskFailure);
+          } else {
+            // Simple error format (backward compatibility)
+            task.status = 'error';
+            task.console = typeof taskFailure === 'string' ? taskFailure : 'Task failed';
+          }
         } else {
           task.status = 'complete';
           task.console = `${taskName} completed successfully`;

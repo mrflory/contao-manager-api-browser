@@ -136,7 +136,12 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
       return this.startPolling();
       
     } catch (error) {
-      return this.setError(error instanceof Error ? error.message : 'Failed to start composer update');
+      return this.setEnhancedError({
+        category: 'composer',
+        summary: 'Failed to start composer update',
+        message: error instanceof Error ? error.message : 'Failed to start composer update',
+        operationType: 'composer'
+      });
     }
   }
   
@@ -212,7 +217,11 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
             
           } else if (taskData.status === 'error') {
             this.stopPolling();
-            resolve(this.setError(taskData.console || 'Composer update failed'));
+            resolve(this.createEnhancedErrorFromConsole(
+              taskData.console || 'Composer update failed',
+              'composer',
+              'Composer update failed'
+            ));
           }
           // If status is 'active', continue polling
           
@@ -230,7 +239,12 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
             resolve(this.setComplete());
           } else {
             this.stopPolling();
-            resolve(this.setError(error instanceof Error ? error.message : 'Composer update failed'));
+            resolve(this.setEnhancedError({
+              category: 'composer',
+              summary: 'Composer update failed',
+              message: error instanceof Error ? error.message : 'Composer update failed',
+              operationType: 'composer'
+            }));
           }
         }
       };
@@ -249,7 +263,13 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
       setTimeout(() => {
         if (this.pollingInterval && !this.isCancelled) {
           this.stopPolling();
-          resolve(this.setError('Composer update timeout after 30 minutes'));
+          resolve(this.setEnhancedError({
+            category: 'system',
+            summary: 'Composer update timeout',
+            message: 'Composer update timeout after 30 minutes',
+            details: 'The operation took longer than expected. This could be due to slow network connections, large package dependencies, or server performance issues.',
+            operationType: 'composer'
+          }));
         }
       }, 30 * 60 * 1000);
     });

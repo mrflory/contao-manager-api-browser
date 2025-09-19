@@ -37,7 +37,12 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
       return result;
       
     } catch (error) {
-      return this.setError(error instanceof Error ? error.message : 'Failed to start composer dry-run');
+      return this.setEnhancedError({
+        category: 'composer',
+        summary: 'Failed to start composer dry-run',
+        message: error instanceof Error ? error.message : 'Failed to start composer dry-run',
+        operationType: 'composer'
+      });
     }
   }
   
@@ -104,7 +109,11 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
             safeResolve(result);
             
           } else if (taskData.status === 'error') {
-            safeResolve(this.setError(taskData.console || 'Composer dry-run failed'));
+            safeResolve(this.createEnhancedErrorFromConsole(
+              taskData.console || 'Composer dry-run failed',
+              'composer',
+              'Composer dry-run failed'
+            ));
           }
           // If status is 'active', continue polling
           
@@ -114,7 +123,12 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
             const result = this.handleDryRunComplete(this.lastTaskData);
             safeResolve(result);
           } else {
-            safeResolve(this.setError(error instanceof Error ? error.message : 'Composer dry-run failed'));
+            safeResolve(this.setEnhancedError({
+              category: 'composer',
+              summary: 'Composer dry-run failed',
+              message: error instanceof Error ? error.message : 'Composer dry-run failed',
+              operationType: 'composer'
+            }));
           }
         }
       };
@@ -126,7 +140,13 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
       // Set timeout after 10 minutes
       setTimeout(() => {
         if (!resolved) {
-          safeResolve(this.setError('Composer dry-run timeout after 10 minutes'));
+          safeResolve(this.setEnhancedError({
+            category: 'system',
+            summary: 'Composer dry-run timeout',
+            message: 'Composer dry-run timeout after 10 minutes',
+            details: 'The operation took longer than expected. This could be due to slow network connections, large package dependencies, or server performance issues.',
+            operationType: 'composer'
+          }));
         }
       }, 10 * 60 * 1000);
     });

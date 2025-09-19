@@ -13,20 +13,29 @@ interface WorkflowTimelineProps {
   isWorkflowRunning?: boolean;
 }
 
-export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({ engine, executionHistory, currentIndex, onStartFromStep, isWorkflowRunning }) => {
+export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
+  engine,
+  executionHistory,
+  currentIndex,
+  onStartFromStep,
+  isWorkflowRunning
+}) => {
   const timeline = engine.getTimeline();
-  
+
   if (timeline.length === 0) {
     return null;
   }
-  
+
+  // Note: Error detection is now handled individually by each timeline item
+  // No longer showing workflow-level error summary as it's redundant
+
   return (
-    <VStack align="stretch" gap={0}>
+    <VStack align="stretch" gap={4}>
       <TimelineRoot size="xl">
         {timeline.map((item, index) => {
           const record = executionHistory.find(r => r.item.id === item.id);
           const isCurrent = index === currentIndex;
-          
+
           return (
             <TimelineItemRenderer
               key={item.id}

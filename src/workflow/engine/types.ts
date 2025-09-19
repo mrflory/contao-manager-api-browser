@@ -1,4 +1,5 @@
 import React from 'react';
+import { LegacyErrorCompat } from '../../types/errorTypes';
 
 // Timeline item status
 export type TimelineItemStatus = 'pending' | 'active' | 'complete' | 'error' | 'skipped' | 'cancelled' | 'user_action_required';
@@ -31,20 +32,19 @@ export interface TimelineActionResult {
 }
 
 // Result of timeline item execution
-export interface TimelineResult {
+export interface TimelineResult extends LegacyErrorCompat {
   status: 'success' | 'error' | 'user_action_required';
   data?: any;
-  error?: string;
-  
+
   // UI content to display in timeline
   uiContent?: React.ReactNode;
-  
+
   // User actions if interaction is required
   userActions?: UserAction[];
-  
+
   // Additional timeline items to inject
   nextItems?: TimelineItem[];
-  
+
   // Whether to pause workflow for user decision
   pauseWorkflow?: boolean;
 }
@@ -73,10 +73,14 @@ export interface TimelineItem {
   status: TimelineItemStatus;
   startTime?: Date;
   endTime?: Date;
-  
+
+  // Error information (stored on item when execution history is not available)
+  lastError?: string;
+  lastEnhancedError?: import('../../types/errorTypes').EnhancedError;
+
   // Main execution method
   execute(context?: WorkflowContext): Promise<TimelineResult>;
-  
+
   // Optional lifecycle methods
   onSkip?(): Promise<void>;
   onRetry?(): Promise<void>;

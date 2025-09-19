@@ -18,6 +18,7 @@ import { MigrationOperations } from '../../components/workflow/MigrationOperatio
 import { ManagerOperations } from '../../components/workflow/ManagerOperations';
 import { ManagerVersionComparison } from '../../components/display/ManagerVersionComparison';
 import { Separator } from '@chakra-ui/react';
+import { ErrorDisplay } from '../../components/errors/ErrorDisplay';
 
 interface TimelineItemRendererProps {
   item: TimelineItem;
@@ -266,18 +267,30 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
               )}
 
               {/* Error display */}
-              {item.status === 'error' && executionRecord?.result?.error && (
-                <Text 
-                  fontSize="sm" 
-                  color="red.500" 
-                  p={3} 
-                  bg="red.50" 
-                  borderRadius="md" 
-                  borderLeft="4px solid" 
-                  borderColor="red.500"
-                >
-                  ⚠️ {executionRecord.result.error}
-                </Text>
+              {item.status === 'error' && (
+                <>
+                  {/* Try enhanced error from execution record first, then from item itself */}
+                  {(executionRecord?.result?.enhancedError || item.lastEnhancedError) ? (
+                    <ErrorDisplay
+                      error={executionRecord?.result?.enhancedError || item.lastEnhancedError!}
+                      variant="inline"
+                      showRecoveryActions={true}
+                      onRetry={item.canRetry() ? onRetry : undefined}
+                    />
+                  ) : (executionRecord?.result?.error || item.lastError) ? (
+                    <Text
+                      fontSize="sm"
+                      color="red.500"
+                      p={3}
+                      bg="red.50"
+                      borderRadius="md"
+                      borderLeft="4px solid"
+                      borderColor="red.500"
+                    >
+                      ⚠️ {executionRecord?.result?.error || item.lastError}
+                    </Text>
+                  ) : null}
+                </>
               )}
               
               {/* Custom UI content from timeline result */}

@@ -120,7 +120,7 @@ export interface MockState {
 
   // Scenario-specific settings
   scenarios?: {
-    taskFailures?: Record<string, string>; // task name -> error message
+    taskFailures?: Record<string, string | TaskData>; // task name -> error message or full error task
     migrationFailures?: boolean;
     multipleMigrationCycles?: boolean;
     networkLatency?: number;
