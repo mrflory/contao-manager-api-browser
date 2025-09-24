@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import cookieParser from 'cookie-parser';
 
 // Services
 import { ConfigService } from './services/configService';
@@ -17,6 +18,18 @@ import { UnifiedStorage, StorageType } from './storage/interfaces';
 
 // Middleware
 import { ErrorHandler, AuthMiddleware, ScopeMiddleware, ResponseLogger } from './middleware';
+import {
+    securityHeaders,
+    corsOptions,
+    generalRateLimit,
+    authErrorHandler
+} from './middleware/securityMiddleware';
+
+// Routes
+import { createAuthRoutes } from './routes/authRoutes';
+
+// Database
+import { PrismaClient } from './generated/prisma';
 
 // Types
 import type { Request, Response } from 'express';
@@ -24,6 +37,9 @@ import type { ApiRequest } from './types';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize Prisma client for Phase 2 user authentication
+const prisma = new PrismaClient();
 
 // Initialize storage and services
 const storage: UnifiedStorage = new JsonFileStorageUnified({
@@ -38,14 +54,18 @@ const snapshotService = new SnapshotService(storage);
 const authService = new AuthService(configService, loggingService);
 const proxyService = new ProxyService(configService, loggingService, authService);
 
-
 // Initialize middleware
 const authMiddleware = new AuthMiddleware(configService);
 const scopeMiddleware = new ScopeMiddleware(authService);
 const responseLogger = new ResponseLogger(loggingService);
 
-app.use(cors());
-app.use(express.json());
+// Security middleware
+app.use(securityHeaders);
+app.use(generalRateLimit);
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Response logging middleware
 app.use(responseLogger.logRequest);
@@ -56,6 +76,9 @@ if (process.env.NODE_ENV === 'production') {
 } else {
     app.use(express.static('public'));
 }
+
+// Phase 2: User Authentication Routes
+app.use('/api/auth', createAuthRoutes(prisma));
 
 // Configuration endpoints
 app.get('/api/config', async (_req: Request, res: Response) => {
@@ -720,12 +743,39 @@ async function initializeServices() {
 async function startServer() {
     try {
         await initializeServices();
-        
-        app.listen(PORT, () => {
+
+        // Add authentication error handler
+        app.use(authErrorHandler);
+
+        const server = app.listen(PORT, () => {
             console.log(`TypeScript Server running on http://localhost:${PORT}`);
+            console.log('Phase 2: User Authentication System initialized');
         });
+
+        // Graceful shutdown handling
+        const gracefulShutdown = async (signal: string) => {
+            console.log(`\n${signal} received. Starting graceful shutdown...`);
+
+            server.close(() => {
+                console.log('HTTP server closed.');
+            });
+
+            try {
+                await prisma.$disconnect();
+                console.log('Database connection closed.');
+            } catch (error) {
+                console.error('Error during database disconnect:', error);
+            }
+
+            process.exit(0);
+        };
+
+        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
     } catch (error) {
         console.error('Failed to start server:', error);
+        await prisma.$disconnect();
         process.exit(1);
     }
 }
