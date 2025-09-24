@@ -1,57 +1,7 @@
 import { api } from '../utils/api';
 import { ApiCallResult, ApiFunction } from '../types/apiTypes';
-import { StorageType } from '../types/storage';
-import { browserStorageService } from './browserStorageService';
 
 export class ApiCallService {
-  /**
-   * Detect if we should use browser storage mode
-   */
-  static async isUsingBrowserStorage(): Promise<boolean> {
-    try {
-      const storageType = await browserStorageService.detectStorageType();
-      return storageType === StorageType.BROWSER;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  /**
-   * Route API call based on storage mode
-   */
-  static async routeApiCall<T = unknown, P = unknown>(
-    apiFunction: ApiFunction<T, P>,
-    browserStorageFunction: () => Promise<T> | T,
-    params?: P,
-    context?: string
-  ): Promise<ApiCallResult<T>> {
-    try {
-      const useBrowserStorage = await this.isUsingBrowserStorage();
-      
-      if (useBrowserStorage) {
-        // Use browser storage function
-        const result = await browserStorageFunction();
-        return {
-          success: true,
-          data: result,
-          statusCode: 200
-        };
-      } else {
-        // Use server API function
-        return await this.executeApiCall(apiFunction, params, context);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      const contextMessage = context ? `${context}: ${errorMessage}` : errorMessage;
-      
-      return {
-        success: false,
-        error: contextMessage,
-        statusCode: this.extractStatusCode(error)
-      };
-    }
-  }
-
   /**
    * Generic API call wrapper with standardized error handling
    */
@@ -147,20 +97,15 @@ export class ApiCallService {
 }
 
 /**
- * Site-specific API service with browser storage support
+ * Site-specific API service
  */
 export class SiteApiService {
   /**
-   * Get site configuration (supports browser storage)
+   * Get site configuration
    */
   static async getConfig() {
-    const result = await ApiCallService.routeApiCall(
-      api.getConfig,
-      () => browserStorageService.loadConfig(),
-      undefined,
-      'Get site configuration'
-    );
-    
+    const result = await ApiCallService.executeApiCall(api.getConfig, undefined, 'Get site configuration');
+
     if (result.success) {
       return result.data;
     } else {
@@ -169,143 +114,55 @@ export class SiteApiService {
   }
 
   /**
-   * Save authentication token for a site (supports browser storage)
+   * Save authentication token for a site
    */
   static async saveToken(token: string, managerUrl: string) {
-    return ApiCallService.routeApiCall(
+    return ApiCallService.executeApiCall(
       () => api.saveToken(token, managerUrl),
-      async () => {
-        const config = await browserStorageService.loadConfig();
-        
-        // Add or update site in config
-        if (!config.sites) {
-          config.sites = {};
-        }
-        
-        config.sites[managerUrl] = {
-          name: new URL(managerUrl).hostname,
-          url: managerUrl,
-          token: token,
-          authMethod: 'token' as const,
-          scope: 'read',
-          lastUsed: new Date().toISOString()
-        };
-        
-        // Set as active site if no active site exists
-        if (!config.activeSite) {
-          config.activeSite = managerUrl;
-        }
-        
-        await browserStorageService.saveConfig(config);
-        return { success: true, message: 'Token saved successfully' };
-      },
       { token, managerUrl },
       'Save authentication token'
     );
   }
 
   /**
-   * Remove site from configuration (supports browser storage)
+   * Remove site from configuration
    */
   static async removeSite(url: string) {
-    return ApiCallService.routeApiCall(
+    return ApiCallService.executeApiCall(
       () => api.removeSite(url),
-      async () => {
-        const config = await browserStorageService.loadConfig();
-        
-        if (config.sites && config.sites[url]) {
-          delete config.sites[url];
-          
-          // Clear active site if it was the removed site
-          if (config.activeSite === url) {
-            const remainingSites = Object.keys(config.sites);
-            config.activeSite = remainingSites.length > 0 ? remainingSites[0] : null;
-          }
-          
-          await browserStorageService.saveConfig(config);
-        }
-        
-        return;
-      },
       { url },
       'Remove site'
     );
   }
 
   /**
-   * Update site name (supports browser storage)
+   * Update site name
    */
   static async updateSiteName(url: string, newName: string) {
-    return ApiCallService.routeApiCall(
+    return ApiCallService.executeApiCall(
       () => api.updateSiteName(url, newName),
-      async () => {
-        const config = await browserStorageService.loadConfig();
-        
-        if (config.sites && config.sites[url]) {
-          config.sites[url].name = newName;
-          await browserStorageService.saveConfig(config);
-        }
-        
-        return { success: true, message: 'Site name updated successfully' };
-      },
       { url, name: newName },
       'Update site name'
     );
   }
 
   /**
-   * Save cookie authentication site (supports browser storage)
+   * Save cookie authentication site
    */
   static async saveSiteCookie(data: { managerUrl: string; user: any; authMethod: string; scope: string; isReauth?: boolean }) {
-    return ApiCallService.routeApiCall(
+    return ApiCallService.executeApiCall(
       () => api.saveSiteCookie(data),
-      async () => {
-        const config = await browserStorageService.loadConfig();
-
-        // Add or update site in config
-        if (!config.sites) {
-          config.sites = {};
-        }
-
-        config.sites[data.managerUrl] = {
-          name: new URL(data.managerUrl).hostname,
-          url: data.managerUrl,
-          authMethod: 'cookie' as const,
-          scope: data.scope,
-          user: data.user,
-          lastUsed: new Date().toISOString()
-        };
-
-        // Set as active site if no active site exists or if this is a reauthentication
-        if (!config.activeSite || data.isReauth) {
-          config.activeSite = data.managerUrl;
-        }
-
-        await browserStorageService.saveConfig(config);
-        return { success: true, activeSite: config.activeSite, isReauth: !!data.isReauth };
-      },
       data,
       'Save cookie authentication site'
     );
   }
 
   /**
-   * Set active site (supports browser storage)
+   * Set active site
    */
   static async setActiveSite(url: string) {
-    return ApiCallService.routeApiCall(
+    return ApiCallService.executeApiCall(
       () => api.setActiveSite(url),
-      async () => {
-        const config = await browserStorageService.loadConfig();
-        
-        if (config.sites && config.sites[url]) {
-          config.activeSite = url;
-          config.sites[url].lastUsed = new Date().toISOString();
-          await browserStorageService.saveConfig(config);
-        }
-        
-        return { activeSite: config.sites[url] };
-      },
       { url },
       'Set active site'
     );

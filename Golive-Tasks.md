@@ -4,12 +4,11 @@
 This document outlines the critical tasks needed to transform the current single-user Contao Manager API Browser into a multi-user freemium SaaS application. The implementation is structured to maintain the open-source nature of core functionality while separating subscription management into a proprietary service.
 
 ## Architecture Goals
-- **Flexible Storage**: Pluggable storage backends (JSON file, Browser localStorage, PostgreSQL)
+- **Flexible Storage**: Pluggable storage backends (JSON file, MySQL database)
 - **Deployment Options**: Support personal, team, and SaaS deployment scenarios
 - **Open Source**: Core Contao Manager proxy and site management functionality
 - **Closed Source**: User management, billing, and subscription enforcement service (SaaS only)
 - **Freemium Model**: 1 free site, unlimited sites with subscription (SaaS deployment)
-- **Privacy Options**: Client-side browser storage for privacy-focused users
 
 ---
 
@@ -36,30 +35,28 @@ interface SiteConfigStorage {
 
 enum StorageType {
   JSON_FILE = 'json',      // Server-side JSON file (current)
-  BROWSER = 'browser',     // Client-side localStorage
-  DATABASE = 'database'    // PostgreSQL database
+  DATABASE = 'database'    // MySQL database
 }
 ```
 
 ### 0.2 Storage Backend Implementations ✅ COMPLETED
 - [x] **JsonFileStorage**: Refactor current server.js functions into class implementation
-- [x] **BrowserStorage**: Client-side localStorage implementation for privacy-focused users
-- [x] **DatabaseStorage**: PostgreSQL implementation (prepared for SaaS deployment)
+- [x] **DatabaseStorage**: MySQL implementation (prepared for SaaS deployment)
 - [x] Add comprehensive error handling for each storage type
 - [x] Implement data validation and migration helpers for each backend
 
 ### 0.3 Deployment Scenario Support ✅ COMPLETED
-- [x] **Personal/Self-Hosted**: Browser storage option for complete client-side deployment
+- [x] **Personal/Self-Hosted**: JSON file storage for single-user deployment
 - [x] **Team/Server**: JSON file sharing (current functionality maintained)
-- [x] **SaaS/Enterprise**: Database storage with user isolation
+- [x] **SaaS/Enterprise**: MySQL database storage with user isolation
 - [x] Create configuration examples for each deployment scenario
 - [x] Document migration paths between storage types
 
 ### 0.4 Benefits of This Abstraction
 **Flexibility:**
-- Enables smooth migration path from current JSON → Browser → Database storage
-- Allows users to choose privacy level (client-side vs server-side storage)
+- Enables smooth migration path from current JSON → Database storage
 - Supports different business models with same codebase
+- Maintains simplicity with focused storage options
 
 **Architecture Benefits:**
 - No breaking changes to existing API endpoints
@@ -68,8 +65,7 @@ enum StorageType {
 - Future storage backends can be added without code changes
 
 **Business Model Support:**
-- **Open Source**: JSON file + Browser storage options
-- **Privacy-Focused**: Pure client-side browser storage
+- **Open Source**: JSON file storage for self-hosted deployments
 - **Commercial SaaS**: Database storage with user management
 
 ### ✅ Phase 0 Implementation Summary
@@ -77,11 +73,9 @@ enum StorageType {
 
 **What was implemented:**
 - Complete storage abstraction layer with `SiteConfigStorage` interface
-- Three storage backends: JsonFileStorage, BrowserStorage, DatabaseStorage (PostgreSQL prepared)
+- Two storage backends: JsonFileStorage, DatabaseStorage (MySQL prepared)
 - Storage factory pattern with environment-based selection (`STORAGE_TYPE` variable)
 - ConfigService refactored to use storage abstraction while maintaining backward compatibility
-- Frontend React components for storage selection, settings, and import/export
-- Custom React hooks (`useStorageType`) for browser storage integration
 - Token encryption preserved and working across all storage backends
 - Environment configuration updated with storage options (.env.example)
 - Documentation updated to reflect new architecture
@@ -93,19 +87,14 @@ enum StorageType {
 STORAGE_TYPE=json_file
 DATA_DIR=./data
 
-# Privacy-focused client-side only
-STORAGE_TYPE=browser
-STORAGE_NAMESPACE=contao-manager
-
 # SaaS multi-tenant (Phase 1 ready)
 STORAGE_TYPE=database
-DATABASE_URL=postgresql://user:pass@host/db
+DATABASE_URL=mysql://user:pass@host/db
 ```
 
 **Migration paths available:**
 - Users can seamlessly switch between storage types
-- Frontend UI provides migration tools and progress tracking
-- Zero data loss migration between JSON file ↔ Browser ↔ Database storage
+- Zero data loss migration between JSON file ↔ Database storage
 
 ---
 
@@ -115,7 +104,7 @@ DATABASE_URL=postgresql://user:pass@host/db
 
 ### 1.1 Database Setup & Schema Design ⚠️ CRITICAL
 **Priority: Highest**
-- [ ] Set up PostgreSQL database with connection pooling
+- [ ] Set up MySQL database with connection pooling
 - [ ] Design comprehensive database schema (users, subscriptions, sites, usage_logs)
 - [ ] Implement Prisma ORM for type-safe database operations
 - [ ] Create database migrations and seeders
@@ -279,7 +268,7 @@ Open Source App ←→ Subscription Service
 4. **Billing Complexity**: Payment provider integration can introduce significant complexity
 
 ### Technical Dependencies
-- PostgreSQL database cluster
+- MySQL database cluster
 - Redis cache cluster  
 - Payment provider API (Stripe recommended)
 - Email service provider
@@ -341,7 +330,7 @@ Open Source App ←→ Subscription Service
 - **Security Consultant**: Security review, penetration testing, compliance
 
 ### Infrastructure Budget (Monthly)
-- **Database**: $200-500 (managed PostgreSQL + Redis)
+- **Database**: $200-500 (managed MySQL + Redis)
 - **Application Hosting**: $300-800 (container orchestration platform)
 - **Monitoring/Logging**: $100-300 (APM, logging, alerting services)
 - **CDN/Assets**: $50-200 (static asset delivery)
@@ -381,9 +370,8 @@ This implementation plan transforms a single-user tool into a flexible, scalable
 
 **Key Strategic Benefits:**
 - **Storage Abstraction**: Enables personal, team, and SaaS deployments with the same codebase
-- **Privacy Options**: Browser storage for privacy-conscious users who want client-side-only operation
-- **Deployment Flexibility**: Users can choose their preferred storage type based on needs (JSON file, Browser, Database)
-- **Business Flexibility**: Support open-source, privacy-focused, and commercial SaaS business models simultaneously
+- **Deployment Flexibility**: Users can choose their preferred storage type based on needs (JSON file, Database)
+- **Business Flexibility**: Support open-source and commercial SaaS business models
 
 The separation between open-source and proprietary components allows maintaining community trust while protecting intellectual property around user management and billing systems. The storage abstraction ensures that users can choose their preferred level of privacy and deployment complexity.
 

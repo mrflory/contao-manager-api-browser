@@ -8,7 +8,6 @@ import {
   Flex,
   Input,
   VStack,
-  Alert,
 } from '@chakra-ui/react';
 import { LuArrowLeft } from 'react-icons/lu';
 import { ScopeSelector } from '../components/forms/ScopeSelector';
@@ -20,7 +19,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useToastNotifications } from '../hooks/useToastNotifications';
 import { OAuthScope, AuthenticationMethod, CookieAuthCredentials } from '../types/authTypes';
 import { AuthUtils } from '../utils/authUtils';
-import { AuthApiService, ApiCallService, SiteApiService } from '../services/apiCallService';
+import { AuthApiService, SiteApiService } from '../services/apiCallService';
 import { encodeUrlParam } from '../utils/urlUtils';
 
 const AddSite: React.FC = () => {
@@ -30,7 +29,6 @@ const AddSite: React.FC = () => {
   const [authMethod, setAuthMethod] = useState<AuthenticationMethod>('token');
   const [cookieAuthLoading, setCookieAuthLoading] = useState(false);
   const [cookieScope, setCookieScope] = useState<OAuthScope>('admin');
-  const [isBrowserStorage, setIsBrowserStorage] = useState(false);
   
   // Detect reauthentication BEFORE useAuth hook processes the callback
   const [isReauthFlow] = useState(() => {
@@ -66,20 +64,6 @@ const AddSite: React.FC = () => {
     },
   });
 
-  // Detect browser storage mode and force cookie authentication
-  useEffect(() => {
-    const detectStorageMode = async () => {
-      const useBrowserStorage = await ApiCallService.isUsingBrowserStorage();
-      setIsBrowserStorage(useBrowserStorage);
-
-      // Force cookie authentication for browser storage
-      if (useBrowserStorage && authMethod === 'token') {
-        setAuthMethod('cookie');
-      }
-    };
-
-    detectStorageMode();
-  }, [authMethod]);
 
   // Handle reauthentication callback if detected
   useEffect(() => {
@@ -186,25 +170,11 @@ const AddSite: React.FC = () => {
               width="full"
             />
 
-            {isBrowserStorage && (
-              <Alert.Root status="info" borderRadius="md">
-                <Alert.Indicator />
-                <Alert.Content>
-                  <Alert.Title>Browser Storage Mode</Alert.Title>
-                  <Alert.Description>
-                    Only cookie authentication is supported. API tokens are not available in browser storage mode for security reasons.
-                  </Alert.Description>
-                </Alert.Content>
-              </Alert.Root>
-            )}
-
-            {!isBrowserStorage && (
-              <AuthMethodSelector
-                value={authMethod}
-                onChange={setAuthMethod}
-                width="full"
-              />
-            )}
+            <AuthMethodSelector
+              value={authMethod}
+              onChange={setAuthMethod}
+              width="full"
+            />
 
             {authMethod === 'token' ? (
               <form onSubmit={handleAuthSubmit} style={{ width: '100%' }}>

@@ -1,10 +1,9 @@
 /**
- * Frontend storage types and interfaces for browser storage support
+ * Storage types and interfaces
  */
 
 export enum StorageType {
   JSON_FILE = 'json_file',
-  BROWSER = 'browser',
   DATABASE = 'database'
 }
 
@@ -75,32 +74,7 @@ export interface StorageMigrationResult {
   warnings?: string[];
 }
 
-export interface BrowserStorageService {
-  // Storage detection and management
-  detectStorageType(): Promise<StorageType>;
-  isStorageAvailable(type: StorageType): Promise<boolean>;
-  getStorageCapabilities(type: StorageType): StorageCapabilities;
-  
-  // Storage information
-  getStorageInfo(): Promise<StorageInfo>;
-  getStorageState(): StorageState;
-  
-  // Configuration management
-  loadConfig(): Promise<any>;
-  saveConfig(config: any): Promise<boolean>;
-  clearConfig(): Promise<boolean>;
-  
-  // Import/Export functionality
-  exportConfig(): Promise<string>;
-  importConfig(data: string): Promise<boolean>;
-  
-  // Migration functionality
-  migrateStorage(options: StorageMigrationOptions): Promise<StorageMigrationResult>;
-  
-  // Event listeners
-  addEventListener(event: 'storageChange' | 'migrationProgress', callback: Function): void;
-  removeEventListener(event: 'storageChange' | 'migrationProgress', callback: Function): void;
-}
+// Browser storage service interface removed - not supported
 
 export interface StoragePreferences {
   preferredType: StorageType;

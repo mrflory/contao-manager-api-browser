@@ -1,6 +1,5 @@
 import { SiteConfigStorage, StorageType, StorageConfig } from './interfaces';
 import { JsonFileStorage } from './JsonFileStorage';
-import { BrowserStorage } from './BrowserStorage';
 import { DatabaseStorage } from './DatabaseStorage';
 
 /**
@@ -15,13 +14,10 @@ export class StorageFactory {
     switch (config.type) {
       case StorageType.JSON_FILE:
         return new JsonFileStorage(config);
-      
-      case StorageType.BROWSER:
-        return new BrowserStorage(config);
-      
+
       case StorageType.DATABASE:
         return new DatabaseStorage(config);
-      
+
       default:
         throw new Error(`Unsupported storage type: ${config.type}`);
     }
@@ -34,42 +30,16 @@ export class StorageFactory {
   static createFromEnvironment(): SiteConfigStorage {
     const storageType = (process.env.STORAGE_TYPE as StorageType) || StorageType.JSON_FILE;
 
-    // Special case: When browser storage is requested on server-side (Node.js),
-    // create a no-op storage that fails gracefully
-    if (storageType === StorageType.BROWSER && typeof window === 'undefined') {
-      return this.createServerSideBrowserStorageStub();
-    }
-
     const config: StorageConfig = {
       type: storageType,
       dataDir: process.env.DATA_DIR,
       connectionString: process.env.DATABASE_URL,
-      tableName: process.env.DATABASE_TABLE,
-      namespace: process.env.STORAGE_NAMESPACE
+      tableName: process.env.DATABASE_TABLE
     };
 
     return this.createStorage(config);
   }
 
-  /**
-   * Create a no-op storage for browser storage on server-side
-   * This allows services to initialize without crashing, they'll handle missing capabilities gracefully
-   */
-  private static createServerSideBrowserStorageStub(): SiteConfigStorage {
-    return {
-      async loadConfig() { return { success: false, error: 'Browser storage not available on server' }; },
-      async saveConfig() { return { success: false, error: 'Browser storage not available on server' }; },
-      async addSite() { return { success: false, error: 'Browser storage not available on server' }; },
-      async removeSite() { return { success: false, error: 'Browser storage not available on server' }; },
-      async updateSite() { return { success: false, error: 'Browser storage not available on server' }; },
-      async setActiveSite() { return { success: false, error: 'Browser storage not available on server' }; },
-      async getActiveSite() { return { success: true, data: null }; },
-      async getAllSites() { return { success: true, data: {} }; },
-      async isAvailable() { return false; },
-      async initialize() { return { success: true }; }, // No-op initialization
-      async cleanup() { }
-    };
-  }
 
   /**
    * Auto-detect the best storage backend for the current environment
@@ -78,7 +48,6 @@ export class StorageFactory {
     // Priority order for auto-detection
     const detectionOrder = [
       StorageType.JSON_FILE,
-      StorageType.BROWSER,
       StorageType.DATABASE
     ];
 
@@ -94,9 +63,6 @@ export class StorageFactory {
           case StorageType.DATABASE:
             config.connectionString = process.env.DATABASE_URL;
             config.tableName = process.env.DATABASE_TABLE;
-            break;
-          case StorageType.BROWSER:
-            config.namespace = process.env.STORAGE_NAMESPACE || 'contao-manager';
             break;
         }
 
@@ -131,14 +97,7 @@ export class StorageFactory {
       case StorageType.JSON_FILE:
         // dataDir is optional, defaults to process.cwd()/data
         break;
-      
-      case StorageType.BROWSER:
-        // namespace is optional, defaults to 'contao-manager'
-        if (typeof window === 'undefined') {
-          errors.push('Browser storage cannot be used in non-browser environments');
-        }
-        break;
-      
+
       case StorageType.DATABASE:
         if (!config.connectionString && !process.env.DATABASE_URL) {
           errors.push('Database storage requires connectionString or DATABASE_URL environment variable');
@@ -183,7 +142,7 @@ export class StorageFactory {
    */
   static async createWithFallback(
     preferredConfig: StorageConfig,
-    fallbackTypes: StorageType[] = [StorageType.JSON_FILE, StorageType.BROWSER]
+    fallbackTypes: StorageType[] = [StorageType.JSON_FILE]
   ): Promise<SiteConfigStorage> {
     // Try preferred storage first
     try {

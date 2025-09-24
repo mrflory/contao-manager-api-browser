@@ -73,14 +73,8 @@ The application supports multiple storage backends through a unified abstraction
 - Multi-site configuration support
 - Automatic backup and migration handling
 
-#### Browser Storage (`STORAGE_TYPE=browser`)
-- Client-side storage using localStorage
-- Privacy-focused deployment (no server-side data storage)
-- Import/export functionality for configuration backup
-- Namespace isolation (`contao-manager:config`)
-
 #### Database Storage (`STORAGE_TYPE=database` - Phase 1)
-- PostgreSQL backend for multi-tenant SaaS deployment
+- MySQL backend for multi-tenant SaaS deployment
 - Connection via `DATABASE_URL` environment variable
 - Multi-tenant support with user isolation
 - Backup and migration capabilities
@@ -102,9 +96,8 @@ The application supports multiple storage backends through a unified abstraction
 - **Full TypeScript Stack** - Both frontend and backend written in TypeScript with strict type safety
 - **Service-Oriented Architecture** - Modular backend services with clear separation of concerns
 - **Workflow Engine** - Generic timeline-based execution system for complex multi-step operations
-- **Storage Abstraction Layer** - Pluggable storage backends (JSON file, Browser localStorage, PostgreSQL)
+- **Storage Abstraction Layer** - Pluggable storage backends (JSON file, MySQL database)
 - **JSON File Storage** - No database dependency, uses `data/config.json` for configuration (default)
-- **Browser Storage Support** - Client-side localStorage for privacy-focused deployments
 - **OAuth Token Authentication** - Supports TOTP/2FA through Contao Manager integration
 - **Request/Response Logging** - Comprehensive audit trails with structured logging
 - **History Tracking** - Workflow execution history with detailed step information
