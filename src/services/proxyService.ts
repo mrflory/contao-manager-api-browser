@@ -337,7 +337,8 @@ export class ProxyService {
         }
 
         // Update the site configuration with version info
-        if (this.configService.updateSiteVersionInfo(activeSite.url, versionInfo)) {
+        const success = await this.configService.updateSiteVersionInfoAsync(activeSite.url, versionInfo);
+        if (success) {
             console.log('Version info updated successfully:', versionInfo);
         } else {
             throw new Error('Failed to save version information');

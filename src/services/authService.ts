@@ -101,8 +101,9 @@ export class AuthService {
             throw new Error('Invalid token');
         }
 
-        // Save to server-side storage
-        if (this.configService.addSite(managerUrl, token)) {
+        // Save to server-side storage using async method
+        const success = await this.configService.addSiteAsync(managerUrl, token);
+        if (success) {
             const activeSite = await this.configService.getActiveSiteAsync();
             return { success: true, activeSite };
         } else {
@@ -248,11 +249,12 @@ export class AuthService {
             throw new Error('Invalid auth method for this endpoint');
         }
 
-        // Save the site configuration for backend API proxying
-        if (this.configService.addSite(managerUrl, undefined, undefined, authMethod, user, scope)) {
+        // Save the site configuration for backend API proxying using async methods
+        const success = await this.configService.addSiteAsync(managerUrl, undefined, undefined, authMethod, user, scope);
+        if (success) {
             // If this is a reauthentication, set the site as active
             if (isReauth) {
-                this.configService.setActiveSite(managerUrl);
+                await this.configService.setActiveSiteAsync(managerUrl);
             }
             const activeSite = await this.configService.getActiveSiteAsync();
             return { success: true, activeSite, isReauth: !!isReauth };

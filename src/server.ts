@@ -154,15 +154,16 @@ app.post('/api/set-active-site', ErrorHandler.asyncWrapper(async (req: ApiReques
     }
 }));
 
-app.delete('/api/sites/:url', (req: ApiRequest, res: Response) => {
+app.delete('/api/sites/:url', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     const url = decodeURIComponent(req.params.url);
-    
-    if (configService.removeSite(url)) {
+
+    const success = await configService.removeSiteAsync(url);
+    if (success) {
         return res.json({ success: true });
     } else {
         return res.status(404).json({ error: 'Site not found' });
     }
-});
+}));
 
 app.post('/api/update-site-name', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     const { url, name } = req.body;
@@ -171,7 +172,8 @@ app.post('/api/update-site-name', ErrorHandler.asyncWrapper(async (req: ApiReque
         return res.status(400).json({ error: 'URL and name are required' });
     }
     
-    if (configService.updateSiteName(url, name)) {
+    const success = await configService.updateSiteNameAsync(url, name);
+    if (success) {
         return res.json({ success: true });
     } else {
         return res.status(404).json({ error: 'Site not found' });

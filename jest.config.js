@@ -5,7 +5,7 @@ module.exports = {
     {
       displayName: 'node',
       testEnvironment: 'node',
-      testMatch: ['<rootDir>/src/test/integration/**/!(polling|errorScenarios|workflow).test.ts', '<rootDir>/src/test/mockServer/**/*.test.ts'],
+      testMatch: ['<rootDir>/src/test/integration/**/!(polling|errorScenarios|workflow).test.ts', '<rootDir>/src/test/mockServer/**/*.test.ts', '<rootDir>/src/storage/**/*.test.ts'],
       transform: {
         '^.+\\.ts$': ['ts-jest', {
           tsconfig: {

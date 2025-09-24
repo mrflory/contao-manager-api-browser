@@ -1,0 +1,135 @@
+// Contao Manager API - Database Schema for Phase 1
+// Multi-tenant SaaS architecture with user isolation
+// Supports JSON file storage migration and backward compatibility
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core user model for multi-tenant architecture
+// Foundation for Phase 2 authentication system
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  emailVerified DateTime?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  sites         Site[]
+  subscriptions Subscription[]
+  sessions      Session[]
+  usageLogs     UsageLog[]
+
+  @@map("users")
+}
+
+// Site configurations with user ownership
+// Maps to existing SiteConfig type structure
+model Site {
+  id             String   @id @default(cuid())
+  userId         String
+  name           String
+  url            String   @db.VarChar(2048)
+  tokenEncrypted String   @db.Text
+  authMethod     String   @default("token")
+  scope          String   @default("read")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  lastUsed       DateTime @updatedAt
+
+  // JSON field for flexible version info storage
+  versionInfo    Json?
+
+  // Relationships
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usageLogs      UsageLog[]
+
+  // Constraints and indexes
+  @@unique([userId, url])
+  @@index([userId])
+  @@index([lastUsed])
+  @@index([isActive])
+  @@map("sites")
+}
+
+// Subscription management for SaaS transformation (Phase 3)
+// Currently supports free tier, extensible for paid plans
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String
+  planType             String   @default("free")
+  status               String   @default("active")
+  startedAt            DateTime @default(now())
+  expiresAt            DateTime?
+  stripeSubscriptionId String?
+
+  // Additional subscription metadata
+  features             Json?    @default("{}")
+
+  // Relationships
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Constraints and indexes
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("subscriptions")
+}
+
+// Session management for Phase 2 authentication
+// Supports JWT token validation and refresh
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  sessionToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  ipAddress    String?
+  userAgent    String?
+
+  // Relationships
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Constraints and indexes
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([sessionToken])
+  @@map("sessions")
+}
+
+// Usage analytics and audit logging
+// Foundation for freemium model analytics
+model UsageLog {
+  id          String   @id @default(cuid())
+  userId      String
+  siteId      String?
+  actionType  String
+  apiEndpoint String
+  ipAddress   String?
+  timestamp   DateTime @default(now())
+
+  // Additional metadata for analytics
+  requestData Json?
+  responseData Json?
+  duration    Int?     // Request duration in milliseconds
+
+  // Relationships
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site        Site?    @relation(fields: [siteId], references: [id], onDelete: SetNull)
+
+  // Constraints and indexes
+  @@index([userId])
+  @@index([timestamp])
+  @@index([actionType])
+  @@index([siteId])
+  @@map("usage_logs")
+}
