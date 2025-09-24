@@ -12,8 +12,8 @@ import { AuthService } from './services/authService';
 import { ProxyService } from './services/proxyService';
 
 // Storage
-import { JsonFileStorageUnified } from './storage';
-import { UnifiedStorage, StorageType } from './storage/interfaces';
+import { StorageFactory } from './storage';
+import { UnifiedStorage } from './storage/interfaces';
 
 // Middleware
 import { ErrorHandler, AuthMiddleware, ScopeMiddleware, ResponseLogger } from './middleware';
@@ -26,10 +26,93 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Initialize storage and services
-const storage: UnifiedStorage = new JsonFileStorageUnified({ 
-    type: StorageType.JSON_FILE,
-    dataDir: process.env.DATA_DIR || path.join(process.cwd(), 'data')
-});
+let storage: UnifiedStorage;
+const storageType = process.env.STORAGE_TYPE;
+
+if (storageType === 'browser') {
+    console.log('Browser storage configured - using JSON file storage for backend cookie sessions');
+    // In browser storage mode, the frontend uses localStorage for site configuration,
+    // but the backend still needs to read/write cookie session data from/to JSON file storage
+    // for API proxying purposes. This creates a hybrid approach.
+
+    const { STORAGE_TYPE_CAPABILITIES } = require('./storage/interfaces');
+    const { JsonFileStorage } = require('./storage/JsonFileStorage');
+
+    // Create JSON file storage for cookie session management
+    const jsonFileStorage = new JsonFileStorage({
+        type: 'json_file' as any,
+        dataDir: process.env.DATA_DIR
+    });
+
+    storage = {
+        // Core SiteConfigStorage methods - read from JSON file for cookie sessions
+        loadConfig: async () => await jsonFileStorage.loadConfig(),
+        saveConfig: async (config: any) => await jsonFileStorage.saveConfig(config),
+        addSite: async (siteData: any) => await jsonFileStorage.addSite(siteData),
+        removeSite: async (url: string) => await jsonFileStorage.removeSite(url),
+        updateSite: async (siteData: any) => await jsonFileStorage.updateSite(siteData),
+        setActiveSite: async (url: string) => await jsonFileStorage.setActiveSite(url),
+        getActiveSite: async () => await jsonFileStorage.getActiveSite(),
+        getAllSites: async () => await jsonFileStorage.getAllSites(),
+        isAvailable: async () => await jsonFileStorage.isAvailable(),
+        initialize: async () => await jsonFileStorage.initialize(),
+        cleanup: async () => await jsonFileStorage.cleanup(),
+
+        // UnifiedStorage interface
+        getCapabilities: () => STORAGE_TYPE_CAPABILITIES.browser,
+        logs: undefined,     // Not supported
+        history: undefined,  // Not supported
+        snapshots: undefined, // Not supported
+        batch: undefined     // Not supported
+    } as UnifiedStorage;
+} else {
+    try {
+        const baseStorage = StorageFactory.createFromEnvironment();
+
+        // Check if the storage implements UnifiedStorage
+        if ('getCapabilities' in baseStorage && typeof baseStorage.getCapabilities === 'function') {
+            storage = baseStorage as UnifiedStorage;
+        } else {
+            // Create a unified adapter for storage backends that don't fully implement UnifiedStorage
+            storage = Object.assign(baseStorage, {
+                getCapabilities: () => ({
+                    canExport: true,
+                    canImport: true,
+                    canMigrate: true,
+                    supportsBackup: false,
+                    isClientSide: true,
+                    maxStorageSize: 10 * 1024 * 1024, // 10MB
+                    supportsSiteConfig: true,
+                    supportsLogs: false,
+                    supportsHistory: false,
+                    supportsSnapshots: false,
+                    supportsTransactions: false,
+                    supportsIndexing: false,
+                    supportsConcurrency: false,
+                    supportsCompression: false,
+                    supportsEncryption: false,
+                    maxFileSize: 5 * 1024 * 1024, // 5MB
+                    maxEntriesPerType: 100,
+                    queryCapabilities: {
+                        canFilter: true,
+                        canSort: true,
+                        canPaginate: true,
+                        canAggregate: true
+                    }
+                }),
+                // Optional properties for logs, history, snapshots are undefined
+                logs: undefined,
+                history: undefined,
+                snapshots: undefined,
+                batch: undefined
+            }) as UnifiedStorage;
+        }
+    } catch (error) {
+        console.error('Failed to initialize storage:', error);
+        process.exit(1);
+    }
+}
+// ConfigService - will automatically handle browser storage gracefully via StorageFactory
 const configService = new ConfigService();
 const loggingService = new LoggingService(storage);
 const historyService = new HistoryService(storage);
@@ -59,14 +142,24 @@ if (process.env.NODE_ENV === 'production') {
 // Configuration endpoints
 app.get('/api/config', async (_req: Request, res: Response) => {
     try {
+        if (storageType === 'browser') {
+            // For browser storage, return empty config - client will load from localStorage
+            res.json({
+                sites: {},
+                activeSite: null,
+                hasActiveSite: false
+            });
+            return;
+        }
+
         const config = await configService.getConfigAsync();
-        
-        const response = { 
+
+        const response = {
             sites: config.sites || {},
             activeSite: config.activeSite,
             hasActiveSite: !!config.activeSite
         };
-        
+
         res.json(response);
     } catch (error) {
         console.error('Error in /api/config:', error);
@@ -77,17 +170,33 @@ app.get('/api/config', async (_req: Request, res: Response) => {
 // Storage management endpoints (for new storage abstraction)
 app.get('/api/storage/type', (_req: Request, res: Response) => {
     try {
-        res.json({ 
-            storageType: 'json_file', // Default storage type (JSON file)
-            available: true,
-            capabilities: {
-                canExport: false,
-                canImport: false,
-                canMigrate: true,
-                supportsBackup: true,
-                isClientSide: false
-            }
-        });
+        const configuredStorageType = process.env.STORAGE_TYPE || 'json_file';
+
+        if (configuredStorageType === 'browser') {
+            res.json({
+                storageType: 'browser',
+                available: true,
+                capabilities: {
+                    canExport: true,
+                    canImport: true,
+                    canMigrate: true,
+                    supportsBackup: false,
+                    isClientSide: true
+                }
+            });
+        } else {
+            res.json({
+                storageType: configuredStorageType,
+                available: true,
+                capabilities: {
+                    canExport: false,
+                    canImport: false,
+                    canMigrate: true,
+                    supportsBackup: true,
+                    isClientSide: false
+                }
+            });
+        }
     } catch (error) {
         console.error('Error getting storage type:', error);
         res.status(500).json({ error: 'Failed to get storage type' });
@@ -97,18 +206,34 @@ app.get('/api/storage/type', (_req: Request, res: Response) => {
 // Storage info endpoint
 app.get('/api/storage/info', (_req: Request, res: Response) => {
     try {
-        const storageInfo = configService.getStorageInfo();
-        res.json({
-            type: storageInfo.type,
-            available: storageInfo.available,
-            capabilities: {
-                canExport: false,
-                canImport: false,
-                canMigrate: true,
-                supportsBackup: true,
-                isClientSide: false
-            }
-        });
+        const configuredStorageType = process.env.STORAGE_TYPE || 'json_file';
+
+        if (configuredStorageType === 'browser') {
+            res.json({
+                type: 'browser',
+                available: true,
+                capabilities: {
+                    canExport: true,
+                    canImport: true,
+                    canMigrate: true,
+                    supportsBackup: false,
+                    isClientSide: true
+                }
+            });
+        } else {
+            const storageInfo = configService.getStorageInfo();
+            res.json({
+                type: storageInfo.type,
+                available: storageInfo.available,
+                capabilities: {
+                    canExport: false,
+                    canImport: false,
+                    canMigrate: true,
+                    supportsBackup: true,
+                    isClientSide: false
+                }
+            });
+        }
     } catch (error) {
         console.error('Error getting storage info:', error);
         res.status(500).json({ error: 'Failed to get storage info' });
@@ -177,21 +302,33 @@ app.post('/api/update-site-name', ErrorHandler.asyncWrapper(async (req: ApiReque
 
 // Authentication endpoints
 app.get('/api/token-info', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
+    // Token endpoints are disabled for browser storage
+    if (storageType === 'browser') {
+        return res.status(400).json({ error: 'Token authentication is not supported with browser storage. Please use cookie authentication.' });
+    }
     const tokenInfo = await authService.getTokenInfo(req.headers.cookie);
-    res.json({
+    return res.json({
         success: true,
         ...tokenInfo
     });
 }));
 
 app.post('/api/save-token', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
+    // Token endpoints are disabled for browser storage
+    if (storageType === 'browser') {
+        return res.status(400).json({ error: 'Token authentication is not supported with browser storage. Please use cookie authentication.' });
+    }
     const result = await authService.saveToken(req.body);
-    res.json(result);
+    return res.json(result);
 }));
 
 app.post('/api/validate-token', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
+    // Token endpoints are disabled for browser storage
+    if (storageType === 'browser') {
+        return res.status(400).json({ error: 'Token authentication is not supported with browser storage. Please use cookie authentication.' });
+    }
     const result = await authService.validateToken(req.body);
-    res.json(result);
+    return res.json(result);
 }));
 
 app.post('/api/cookie-auth', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
@@ -219,8 +356,15 @@ app.post('/api/cookie-logout', ErrorHandler.asyncWrapper(async (req: ApiRequest,
 }));
 
 app.post('/api/save-site-cookie', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
-    const result = authService.saveSiteCookie(req.body);
-    res.json(result);
+    console.log('[SAVE-SITE-COOKIE] Request body:', req.body);
+    try {
+        const result = await authService.saveSiteCookie(req.body);
+        console.log('[SAVE-SITE-COOKIE] Result:', result);
+        res.json(result);
+    } catch (error) {
+        console.error('[SAVE-SITE-COOKIE] Error:', error);
+        throw error;
+    }
 }));
 
 // Status and version endpoints

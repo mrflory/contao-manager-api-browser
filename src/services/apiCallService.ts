@@ -254,6 +254,42 @@ export class SiteApiService {
   }
 
   /**
+   * Save cookie authentication site (supports browser storage)
+   */
+  static async saveSiteCookie(data: { managerUrl: string; user: any; authMethod: string; scope: string; isReauth?: boolean }) {
+    return ApiCallService.routeApiCall(
+      () => api.saveSiteCookie(data),
+      async () => {
+        const config = await browserStorageService.loadConfig();
+
+        // Add or update site in config
+        if (!config.sites) {
+          config.sites = {};
+        }
+
+        config.sites[data.managerUrl] = {
+          name: new URL(data.managerUrl).hostname,
+          url: data.managerUrl,
+          authMethod: 'cookie' as const,
+          scope: data.scope,
+          user: data.user,
+          lastUsed: new Date().toISOString()
+        };
+
+        // Set as active site if no active site exists or if this is a reauthentication
+        if (!config.activeSite || data.isReauth) {
+          config.activeSite = data.managerUrl;
+        }
+
+        await browserStorageService.saveConfig(config);
+        return { success: true, activeSite: config.activeSite, isReauth: !!data.isReauth };
+      },
+      data,
+      'Save cookie authentication site'
+    );
+  }
+
+  /**
    * Set active site (supports browser storage)
    */
   static async setActiveSite(url: string) {
@@ -277,27 +313,8 @@ export class SiteApiService {
 
   /**
    * Update version information for current site
-   * Note: Browser storage mode cannot update version info without server API
    */
   static async updateVersionInfo() {
-    const useBrowserStorage = await ApiCallService.isUsingBrowserStorage();
-    
-    if (useBrowserStorage) {
-      // In browser storage mode, we can't fetch live version info
-      // Return cached info or placeholder
-      return {
-        success: true,
-        data: {
-          success: true,
-          versionInfo: {
-            message: 'Version info not available in browser storage mode',
-            cached: true
-          }
-        },
-        statusCode: 200
-      };
-    }
-    
     return ApiCallService.executeApiCall(api.updateVersionInfo, undefined, 'Update version info');
   }
 }

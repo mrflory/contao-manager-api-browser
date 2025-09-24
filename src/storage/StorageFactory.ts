@@ -33,7 +33,13 @@ export class StorageFactory {
    */
   static createFromEnvironment(): SiteConfigStorage {
     const storageType = (process.env.STORAGE_TYPE as StorageType) || StorageType.JSON_FILE;
-    
+
+    // Special case: When browser storage is requested on server-side (Node.js),
+    // create a no-op storage that fails gracefully
+    if (storageType === StorageType.BROWSER && typeof window === 'undefined') {
+      return this.createServerSideBrowserStorageStub();
+    }
+
     const config: StorageConfig = {
       type: storageType,
       dataDir: process.env.DATA_DIR,
@@ -43,6 +49,26 @@ export class StorageFactory {
     };
 
     return this.createStorage(config);
+  }
+
+  /**
+   * Create a no-op storage for browser storage on server-side
+   * This allows services to initialize without crashing, they'll handle missing capabilities gracefully
+   */
+  private static createServerSideBrowserStorageStub(): SiteConfigStorage {
+    return {
+      async loadConfig() { return { success: false, error: 'Browser storage not available on server' }; },
+      async saveConfig() { return { success: false, error: 'Browser storage not available on server' }; },
+      async addSite() { return { success: false, error: 'Browser storage not available on server' }; },
+      async removeSite() { return { success: false, error: 'Browser storage not available on server' }; },
+      async updateSite() { return { success: false, error: 'Browser storage not available on server' }; },
+      async setActiveSite() { return { success: false, error: 'Browser storage not available on server' }; },
+      async getActiveSite() { return { success: true, data: null }; },
+      async getAllSites() { return { success: true, data: {} }; },
+      async isAvailable() { return false; },
+      async initialize() { return { success: true }; }, // No-op initialization
+      async cleanup() { }
+    };
   }
 
   /**

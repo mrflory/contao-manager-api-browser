@@ -15,8 +15,9 @@ class EnhancedMockServer extends MockServer {
 
   private setupEnhancedRoutes(): void {
     console.log('[EnhancedMockServer] Setting up enhanced routes...');
-    
-    // No need to redefine the route - we'll override the methods instead
+
+    // Add cookie authentication endpoints
+    this.setupCookieAuthentication();
 
     // Add OAuth authorize endpoint
     this.getApp().get('/contao-manager.phar.php/oauth2/authorize', (req: any, res: any) => {
@@ -96,6 +97,138 @@ class EnhancedMockServer extends MockServer {
   // Add method to expose app for route additions
   public getApp() {
     return (this as any).app;
+  }
+
+  // Setup cookie authentication endpoints
+  private setupCookieAuthentication(): void {
+    const app = this.getApp();
+
+    // Override the existing session GET endpoint to support cookies
+    app.get('/api/session', (req: any, res: any) => {
+      console.log(`[MOCK] GET /api/session - checking authentication`);
+
+      // Check for cookie authentication
+      const cookieHeader = req.headers.cookie;
+
+      if (cookieHeader && cookieHeader.includes('CONTAO_MANAGER_AUTH=')) {
+        console.log(`[MOCK] Valid session cookie found`);
+        const mockUser = {
+          username: 'admin',
+          scope: 'admin' as const,
+          passkey: false,
+          totp_enabled: false,
+          limited: false
+        };
+        return res.json(mockUser);
+      }
+
+      // No valid session
+      console.log(`[MOCK] No valid session found`);
+      res.status(401).json({ error: 'Not authenticated' });
+    });
+
+    app.get('/contao-manager.phar.php/api/session', (req: any, res: any) => {
+      console.log(`[MOCK] GET /contao-manager.phar.php/api/session - checking authentication`);
+
+      // Check for cookie authentication
+      const cookieHeader = req.headers.cookie;
+
+      if (cookieHeader && cookieHeader.includes('CONTAO_MANAGER_AUTH=')) {
+        console.log(`[MOCK] Valid session cookie found`);
+        const mockUser = {
+          username: 'admin',
+          scope: 'admin' as const,
+          passkey: false,
+          totp_enabled: false,
+          limited: false
+        };
+        return res.json(mockUser);
+      }
+
+      // No valid session
+      console.log(`[MOCK] No valid session found`);
+      res.status(401).json({ error: 'Not authenticated' });
+    });
+
+    // Add POST /api/session for username/password login
+    app.post('/api/session', (req: any, res: any) => {
+      const { username, password, totp } = req.body;
+      console.log(`[MOCK] POST /api/session - cookie auth login attempt:`, { username, password: password ? '[REDACTED]' : 'undefined', totp });
+
+      if (!username || !password) {
+        return res.status(400).json({
+          error: 'Username and password are required',
+          detail: 'Missing credentials'
+        });
+      }
+
+      const mockUser = {
+        username: username,
+        scope: 'admin' as const,
+        passkey: false,
+        totp_enabled: false,
+        limited: false
+      };
+
+      const sessionValue = `mock_session_${Math.random().toString(36).substring(2, 14)}`;
+      res.setHeader('Set-Cookie', [
+        `CONTAO_MANAGER_AUTH=${sessionValue}; Path=/; HttpOnly; SameSite=Lax`,
+        `CONTAO_MANAGER_USER=${username}; Path=/; SameSite=Lax`
+      ]);
+
+      console.log(`[MOCK] Cookie auth successful for user: ${username}`);
+      return res.status(200).json(mockUser);
+    });
+
+    app.post('/contao-manager.phar.php/api/session', (req: any, res: any) => {
+      const { username, password, totp } = req.body;
+      console.log(`[MOCK] POST /contao-manager.phar.php/api/session - cookie auth login attempt:`, { username, password: password ? '[REDACTED]' : 'undefined', totp });
+
+      if (!username || !password) {
+        return res.status(400).json({
+          error: 'Username and password are required',
+          detail: 'Missing credentials'
+        });
+      }
+
+      const mockUser = {
+        username: username,
+        scope: 'admin' as const,
+        passkey: false,
+        totp_enabled: false,
+        limited: false
+      };
+
+      const sessionValue = `mock_session_${Math.random().toString(36).substring(2, 14)}`;
+      res.setHeader('Set-Cookie', [
+        `CONTAO_MANAGER_AUTH=${sessionValue}; Path=/; HttpOnly; SameSite=Lax`,
+        `CONTAO_MANAGER_USER=${username}; Path=/; SameSite=Lax`
+      ]);
+
+      console.log(`[MOCK] Cookie auth successful for user: ${username}`);
+      return res.status(200).json(mockUser);
+    });
+
+    // Add DELETE endpoints for logout
+    app.delete('/api/session', (_req: any, res: any) => {
+      console.log(`[MOCK] DELETE /api/session - cookie auth logout`);
+      res.setHeader('Set-Cookie', [
+        'CONTAO_MANAGER_AUTH=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
+        'CONTAO_MANAGER_USER=; Path=/; SameSite=Lax; Max-Age=0'
+      ]);
+      res.status(204).send();
+    });
+
+    app.delete('/contao-manager.phar.php/api/session', (_req: any, res: any) => {
+      console.log(`[MOCK] DELETE /contao-manager.phar.php/api/session - cookie auth logout`);
+      res.setHeader('Set-Cookie', [
+        'CONTAO_MANAGER_AUTH=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
+        'CONTAO_MANAGER_USER=; Path=/; SameSite=Lax; Max-Age=0'
+      ]);
+      res.status(204).send();
+    });
+
+    console.log('[MOCK] Cookie authentication endpoints added');
   }
 
   // Override OAuth handling to implement proper authorization dialog

@@ -13,7 +13,7 @@ import { CookieAuthForm } from './CookieAuthForm';
 import { Field } from '../ui/field';
 import { useToastNotifications } from '../../hooks/useToastNotifications';
 import { useAuth } from '../../hooks/useAuth';
-import { AuthApiService } from '../../services/apiCallService';
+import { AuthApiService, SiteApiService } from '../../services/apiCallService';
 import { OAuthScope, AuthenticationMethod, CookieAuthCredentials } from '../../types/authTypes';
 
 export interface ReauthenticationFormProps {
@@ -52,7 +52,7 @@ export const ReauthenticationForm: React.FC<ReauthenticationFormProps> = ({
       
       if (result.success) {
         // Update site configuration with new cookie authentication
-        const configResult = await AuthApiService.saveSiteCookie({
+        const configResult = await SiteApiService.saveSiteCookie({
           managerUrl: site.url,
           user: result.user,
           authMethod: 'cookie',

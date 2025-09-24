@@ -78,8 +78,14 @@ export class AuthService {
     }
 
     public async saveToken(request: SaveTokenRequest): Promise<{ success: boolean; activeSite: any }> {
+        // Browser storage mode only supports cookie authentication
+        const storageType = process.env.STORAGE_TYPE;
+        if (storageType === 'browser') {
+            throw new Error('Token authentication is not supported with browser storage. Please use cookie authentication.');
+        }
+
         const { token, managerUrl } = request;
-        
+
         if (!token || !managerUrl) {
             throw new Error('Token and manager URL are required');
         }
@@ -100,6 +106,7 @@ export class AuthService {
             throw new Error('Invalid token');
         }
 
+        // Save to server-side storage
         if (this.configService.addSite(managerUrl, token)) {
             const activeSite = await this.configService.getActiveSiteAsync();
             return { success: true, activeSite };
@@ -237,7 +244,7 @@ export class AuthService {
 
     public async saveSiteCookie(request: SaveSiteCookieRequest): Promise<{ success: boolean; activeSite: any; isReauth: boolean }> {
         const { managerUrl, user, authMethod, scope, isReauth } = request;
-        
+
         if (!managerUrl || !user || !authMethod) {
             throw new Error('Manager URL, user data, and auth method are required');
         }
@@ -246,23 +253,38 @@ export class AuthService {
             throw new Error('Invalid auth method for this endpoint');
         }
 
-        // Save site configuration with cookie authentication and scope
-        // For reauthentication, this will update the existing site configuration
+        // For cookie authentication, always store backend session info for API proxying
+        // even in browser storage mode (frontend handles site config separately)
+        const storageType = process.env.STORAGE_TYPE;
+
+        // Save the site configuration for backend API proxying
         if (this.configService.addSite(managerUrl, undefined, undefined, authMethod, user, scope)) {
-            // If this is a reauthentication, set the site as active
-            if (isReauth) {
-                this.configService.setActiveSite(managerUrl);
+            // For server storage mode, manage active site
+            if (storageType !== 'browser') {
+                // If this is a reauthentication, set the site as active
+                if (isReauth) {
+                    this.configService.setActiveSite(managerUrl);
+                }
+                const activeSite = await this.configService.getActiveSiteAsync();
+                return { success: true, activeSite, isReauth: !!isReauth };
+            } else {
+                // For browser storage mode, don't set active site but confirm session stored
+                return { success: true, activeSite: null, isReauth: !!isReauth };
             }
-            const activeSite = await this.configService.getActiveSiteAsync();
-            return { success: true, activeSite, isReauth: !!isReauth };
         } else {
             throw new Error('Failed to save site configuration');
         }
     }
 
     public async getTokenInfo(cookieHeader?: string): Promise<SessionInfo> {
+        // Check if browser storage is configured - if so, no active site on server
+        const storageType = process.env.STORAGE_TYPE;
+        if (storageType === 'browser') {
+            throw new Error('No active site configured (browser storage mode)');
+        }
+
         const activeSite = await this.configService.getActiveSiteAsync();
-        
+
         if (!activeSite) {
             throw new Error('No active site configured');
         }

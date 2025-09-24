@@ -41,14 +41,16 @@ export class MockServer {
   private setupMiddleware(): void {
     this.app.use(cors());
     this.app.use(express.json());
-    
+
     // Logging middleware for debugging
     this.app.use((req: Request, _res: Response, next) => {
       const queryString = Object.keys(req.query).length > 0 ? '?' + new URLSearchParams(req.query as any).toString() : '';
-      console.log(`[MOCK] ${req.method} ${req.path}${queryString}`, 
+      console.log(`[MOCK] ${req.method} ${req.path}${queryString}`,
         req.body ? JSON.stringify(req.body) : '');
       next();
     });
+
+    // Logging middleware for debugging
   }
 
   private setupRoutes(): void {
@@ -466,6 +468,16 @@ export class MockServer {
                     http://localhost:${this.port}/contao-manager.phar.php/#oauth?response_type=token&scope=admin&client_id=TestApp&redirect_uri=http://localhost:5173/callback
                     </code>
                     <p><small>Note the <strong>#oauth?</strong> fragment - this mimics the real Contao Manager URL format</small></p>
+                </div>
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <h4>🍪 Cookie Authentication</h4>
+                    <p>For testing cookie authentication (browser storage mode):</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>POST</strong> /api/session - Login with username/password</li>
+                        <li><strong>GET</strong> /api/session - Check session status</li>
+                        <li><strong>DELETE</strong> /api/session - Logout</li>
+                    </ul>
+                    <p><small>Accepts any non-empty username/password combination</small></p>
                 </div>
                 <p><a href="/" style="color: #007bff;">← Back to Mock Server Control Panel</a></p>
             </div>
