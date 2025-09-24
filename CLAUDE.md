@@ -16,6 +16,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test:coverage` - Generate test coverage reports
 - `npm run mock:server` - Start TypeScript mock server for testing
 
+### Database Commands (Phase 1)
+- `npm run db:generate` - Generate Prisma client from schema
+- `npm run db:push` - Push schema changes to database
+- `npm run db:studio` - Open Prisma Studio for database management
+- `npm run db:migrate` - Run database migrations
+- `npm run seed:database` - Seed database with test data
+- `npm run migrate:database` - Migrate from JSON file to database storage
+
 ## Architecture Overview
 
 This is a Node.js proxy application that provides a modern web interface for interacting with Contao Manager APIs. The application uses a modular, service-oriented architecture with three main layers:
@@ -73,11 +81,14 @@ The application supports multiple storage backends through a unified abstraction
 - Multi-site configuration support
 - Automatic backup and migration handling
 
-#### Database Storage (`STORAGE_TYPE=database` - Phase 1)
-- MySQL backend for multi-tenant SaaS deployment
-- Connection via `DATABASE_URL` environment variable
-- Multi-tenant support with user isolation
-- Backup and migration capabilities
+#### Database Storage (`STORAGE_TYPE=database` - Phase 1) ✅ COMPLETED
+- PostgreSQL backend with Neon.tech cloud hosting for multi-tenant SaaS deployment
+- Prisma ORM with full TypeScript integration for type-safe database operations
+- Connection via `DATABASE_URL` environment variable (Neon.tech connection string)
+- Multi-tenant support with user isolation and comprehensive relationships
+- Backup and migration capabilities with JSON file to PostgreSQL migration tools
+- Usage analytics foundation with detailed logging for SaaS metrics
+- Hybrid architecture: database for configs, files for logs/history/snapshots
 
 ### Authentication Flow (OAuth Token-based)
 1. User enters Contao Manager URL and selects required permissions (scope)
@@ -96,8 +107,9 @@ The application supports multiple storage backends through a unified abstraction
 - **Full TypeScript Stack** - Both frontend and backend written in TypeScript with strict type safety
 - **Service-Oriented Architecture** - Modular backend services with clear separation of concerns
 - **Workflow Engine** - Generic timeline-based execution system for complex multi-step operations
-- **Storage Abstraction Layer** - Pluggable storage backends (JSON file, MySQL database)
+- **Storage Abstraction Layer** - Pluggable storage backends (JSON file, PostgreSQL database)
 - **JSON File Storage** - No database dependency, uses `data/config.json` for configuration (default)
+- **PostgreSQL Database** - Production-ready multi-tenant backend with Prisma ORM and Neon.tech hosting
 - **OAuth Token Authentication** - Supports TOTP/2FA through Contao Manager integration
 - **Request/Response Logging** - Comprehensive audit trails with structured logging
 - **History Tracking** - Workflow execution history with detailed step information
@@ -116,12 +128,18 @@ The application supports multiple storage backends through a unified abstraction
 ## Project Structure
 
 ### Backend Services (`src/services/`)
-- `configService.ts` - Site configuration and JSON storage management
+- `configService.ts` - Site configuration with pluggable storage backends (JSON file, PostgreSQL)
 - `authService.ts` - OAuth token validation and authentication logic
 - `proxyService.ts` - API forwarding to Contao Manager instances
 - `loggingService.ts` - Request/response logging and audit trails
 - `historyService.ts` - Workflow execution history tracking
 - `snapshotService.ts` - System state capture and management
+
+### Storage Layer (`src/storage/`)
+- `interfaces.ts` - Storage abstraction interfaces and base classes
+- `JsonFileStorage.ts` - JSON file storage implementation (default)
+- `DatabaseStorage.ts` - PostgreSQL storage with Prisma ORM (Phase 1)
+- `storageFactory.ts` - Factory pattern for storage backend selection
 
 ### Workflow System (`src/workflow/`)
 - `engine/` - Generic timeline-based workflow execution engine
@@ -138,9 +156,18 @@ The application supports multiple storage backends through a unified abstraction
 ### Development Guidelines
 - **TypeScript First** - All new code must be TypeScript with proper typing
 - **Service Architecture** - Use dependency injection and service abstraction
+- **Storage Patterns** - Use storage abstraction for all data persistence operations
+- **Database Operations** - Use Prisma ORM with async/await patterns for database interactions
 - **Workflow Design** - Extend timeline items for new workflow steps
 - **Component Patterns** - Follow Chakra UI v3 composition patterns
 - **Error Handling** - Implement proper error boundaries and user feedback
+
+### Database Development (Phase 1)
+- **Schema Changes** - Use Prisma migrations (`npm run db:migrate`) for schema updates
+- **Data Seeding** - Use `npm run seed:database` for consistent test data
+- **Database Studio** - Use `npm run db:studio` for database inspection and debugging
+- **Migration Strategy** - Use `npm run migrate:database` for JSON file to PostgreSQL migration
+- **Connection Management** - Database connections handled automatically by Prisma with connection pooling
 
 ## Testing Infrastructure
 
