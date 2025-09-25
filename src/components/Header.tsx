@@ -1,22 +1,27 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Box,
   Flex,
-  Heading
+  Heading,
+  Button,
+  Stack
 } from '@chakra-ui/react';
 import { ColorModeButton, useColorModeValue } from './ui/color-mode'
+import { useAuth } from '../contexts/AuthContext';
+import { UserProfile } from './auth/UserProfile';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, isLoading } = useAuth();
   const bg = useColorModeValue('brand.500', 'brand.700');
   const color = 'white';
 
   return (
     <Box bg={bg} color={color} px={6} py={4} boxShadow="md">
       <Flex align="center" justify="space-between">
-        <Heading 
-          size="lg" 
+        <Heading
+          size="lg"
           fontWeight="bold"
           cursor="pointer"
           onClick={() => navigate('/')}
@@ -24,7 +29,40 @@ const Header: React.FC = () => {
         >
           Contao Manager API Browser
         </Heading>
-        <ColorModeButton />
+
+        <Stack direction="row" align="center" gap={4}>
+          <ColorModeButton />
+
+          {!isLoading && (
+            <>
+              {isAuthenticated ? (
+                <UserProfile variant="dropdown" />
+              ) : (
+                <Stack direction="row" gap={2}>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    color="white"
+                    _hover={{ bg: 'whiteAlpha.200' }}
+                    size="sm"
+                  >
+                    <Link to="/login">Sign In</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="solid"
+                    bg="white"
+                    color="brand.500"
+                    _hover={{ bg: 'whiteAlpha.900' }}
+                    size="sm"
+                  >
+                    <Link to="/register">Sign Up</Link>
+                  </Button>
+                </Stack>
+              )}
+            </>
+          )}
+        </Stack>
       </Flex>
     </Box>
   );

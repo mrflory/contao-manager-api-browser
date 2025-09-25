@@ -1,0 +1,201 @@
+import React, { useState } from 'react';
+import {
+    Box,
+    Button,
+    Input,
+    Text,
+    Stack,
+    Card,
+    Field,
+    Checkbox,
+    Link as ChakraLink,
+} from '@chakra-ui/react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
+
+interface LoginFormProps {
+    onSuccess?: () => void;
+    redirectTo?: string;
+}
+
+export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, redirectTo = '/' }) => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+    const { login, error, clearError } = useAuth();
+    const navigate = useNavigate();
+
+    const validateForm = (): boolean => {
+        const errors: Record<string, string> = {};
+
+        if (!email.trim()) {
+            errors.email = 'Email is required';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errors.email = 'Please enter a valid email address';
+        }
+
+        if (!password.trim()) {
+            errors.password = 'Password is required';
+        } else if (password.length < 8) {
+            errors.password = 'Password must be at least 8 characters';
+        }
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!validateForm()) {
+            return;
+        }
+
+        setIsLoading(true);
+        clearError();
+
+        try {
+            await login(email.trim(), password, rememberMe);
+
+            if (onSuccess) {
+                onSuccess();
+            } else {
+                navigate(redirectTo);
+            }
+        } catch (error) {
+            console.error('Login failed:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleInputChange = (field: string) => {
+        // Clear validation error when user starts typing
+        if (validationErrors[field]) {
+            setValidationErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors[field];
+                return newErrors;
+            });
+        }
+
+        // Clear auth error
+        if (error) {
+            clearError();
+        }
+    };
+
+    return (
+        <Card.Root maxWidth="md" mx="auto" p={6}>
+            <Card.Header>
+                <Text fontSize="2xl" fontWeight="bold" textAlign="center">
+                    Sign In
+                </Text>
+                <Text color="gray.600" textAlign="center" mt={2}>
+                    Welcome back to Contao Manager API Browser
+                </Text>
+            </Card.Header>
+
+            <Card.Body>
+                <form onSubmit={handleSubmit}>
+                    <Stack gap={4}>
+                        <Field.Root invalid={!!validationErrors.email}>
+                            <Field.Label>Email Address</Field.Label>
+                            <Input
+                                type="email"
+                                value={email}
+                                onChange={(e) => {
+                                    setEmail(e.target.value);
+                                    handleInputChange('email');
+                                }}
+                                placeholder="Enter your email"
+                                disabled={isLoading}
+                            />
+                            {validationErrors.email && (
+                                <Field.ErrorText>{validationErrors.email}</Field.ErrorText>
+                            )}
+                        </Field.Root>
+
+                        <Field.Root invalid={!!validationErrors.password}>
+                            <Field.Label>Password</Field.Label>
+                            <Input
+                                type="password"
+                                value={password}
+                                onChange={(e) => {
+                                    setPassword(e.target.value);
+                                    handleInputChange('password');
+                                }}
+                                placeholder="Enter your password"
+                                disabled={isLoading}
+                            />
+                            {validationErrors.password && (
+                                <Field.ErrorText>{validationErrors.password}</Field.ErrorText>
+                            )}
+                        </Field.Root>
+
+                        <Box>
+                            <Checkbox.Root
+                                checked={rememberMe}
+                                onCheckedChange={(e) => setRememberMe(!!e.checked)}
+                                disabled={isLoading}
+                            >
+                                <Checkbox.HiddenInput />
+                                <Checkbox.Control>
+                                    <Checkbox.Indicator />
+                                </Checkbox.Control>
+                                <Checkbox.Label>Remember me for 30 days</Checkbox.Label>
+                            </Checkbox.Root>
+                        </Box>
+
+                        {error && (
+                            <Box
+                                p={3}
+                                borderRadius="md"
+                                bg="red.50"
+                                borderWidth="1px"
+                                borderColor="red.200"
+                            >
+                                <Text color="red.600" fontSize="sm">
+                                    {error}
+                                </Text>
+                            </Box>
+                        )}
+
+                        <Button
+                            type="submit"
+                            colorScheme="blue"
+                            size="lg"
+                            width="full"
+                            loading={isLoading}
+                            loadingText="Signing in..."
+                        >
+                            Sign In
+                        </Button>
+                    </Stack>
+                </form>
+            </Card.Body>
+
+            <Card.Footer>
+                <Stack gap={3} width="full">
+                    <Text textAlign="center" fontSize="sm" color="gray.600">
+                        <ChakraLink asChild color="blue.500">
+                            <Link to="/forgot-password">Forgot your password?</Link>
+                        </ChakraLink>
+                    </Text>
+
+                    <Box textAlign="center">
+                        <Text fontSize="sm" color="gray.600">
+                            Don't have an account?{' '}
+                            <ChakraLink asChild color="blue.500" fontWeight="medium">
+                                <Link to="/register">Sign up</Link>
+                            </ChakraLink>
+                        </Text>
+                    </Box>
+                </Stack>
+            </Card.Footer>
+        </Card.Root>
+    );
+};

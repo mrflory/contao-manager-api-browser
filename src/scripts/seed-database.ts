@@ -12,6 +12,7 @@
  */
 
 import { PrismaClient } from '../generated/prisma';
+import bcrypt from 'bcrypt';
 
 class DatabaseSeeder {
   private prisma: PrismaClient;
@@ -42,12 +43,16 @@ class DatabaseSeeder {
   async createUsers(): Promise<void> {
     console.log('👤 Creating sample users...');
 
+    // Hash passwords for test users
+    const adminPassword = await bcrypt.hash('Admin123!', 12);
+    const devPassword = await bcrypt.hash('Developer123!', 12);
+
     // Create default user for Phase 1
     const defaultUser = await this.prisma.user.create({
       data: {
         id: 'default_user',
         email: 'admin@example.com',
-        passwordHash: '$2b$10$placeholder.hash.for.phase1.testing.purposes',
+        passwordHash: adminPassword,
         emailVerified: new Date(),
         isActive: true,
         subscriptions: {
@@ -69,7 +74,7 @@ class DatabaseSeeder {
       data: {
         id: 'test_user_2',
         email: 'developer@example.com',
-        passwordHash: '$2b$10$placeholder.hash.for.phase1.testing.purposes',
+        passwordHash: devPassword,
         emailVerified: new Date(),
         isActive: true,
         subscriptions: {

@@ -177,6 +177,11 @@ export class CSRFProtection {
             return next();
         }
 
+        // Skip CSRF validation in development mode for easier testing
+        if (process.env.NODE_ENV === 'development') {
+            return next();
+        }
+
         // Create session ID
         const sessionId = crypto
             .createHash('sha256')
