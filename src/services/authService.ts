@@ -77,7 +77,7 @@ export class AuthService {
         }
     }
 
-    public async saveToken(request: SaveTokenRequest): Promise<{ success: boolean; activeSite: any }> {
+    public async saveToken(request: SaveTokenRequest, userId?: string): Promise<{ success: boolean; activeSite: any }> {
 
         const { token, managerUrl } = request;
 
@@ -101,10 +101,10 @@ export class AuthService {
             throw new Error('Invalid token');
         }
 
-        // Save to server-side storage using async method
-        const success = await this.configService.addSiteAsync(managerUrl, token);
+        // Save to server-side storage using async method with user context
+        const success = await this.configService.addSiteAsync(managerUrl, token, undefined, 'token', undefined, undefined, userId);
         if (success) {
-            const activeSite = await this.configService.getActiveSiteAsync();
+            const activeSite = await this.configService.getActiveSiteAsync(userId);
             return { success: true, activeSite };
         } else {
             throw new Error('Failed to save site configuration');
@@ -238,7 +238,7 @@ export class AuthService {
         };
     }
 
-    public async saveSiteCookie(request: SaveSiteCookieRequest): Promise<{ success: boolean; activeSite: any; isReauth: boolean }> {
+    public async saveSiteCookie(request: SaveSiteCookieRequest, userId?: string): Promise<{ success: boolean; activeSite: any; isReauth: boolean }> {
         const { managerUrl, user, authMethod, scope, isReauth } = request;
 
         if (!managerUrl || !user || !authMethod) {
@@ -249,23 +249,23 @@ export class AuthService {
             throw new Error('Invalid auth method for this endpoint');
         }
 
-        // Save the site configuration for backend API proxying using async methods
-        const success = await this.configService.addSiteAsync(managerUrl, undefined, undefined, authMethod, user, scope);
+        // Save the site configuration for backend API proxying using async methods with user context
+        const success = await this.configService.addSiteAsync(managerUrl, undefined, undefined, authMethod, user, scope, userId);
         if (success) {
             // If this is a reauthentication, set the site as active
             if (isReauth) {
-                await this.configService.setActiveSiteAsync(managerUrl);
+                await this.configService.setActiveSiteAsync(managerUrl, userId);
             }
-            const activeSite = await this.configService.getActiveSiteAsync();
+            const activeSite = await this.configService.getActiveSiteAsync(userId);
             return { success: true, activeSite, isReauth: !!isReauth };
         } else {
             throw new Error('Failed to save site configuration');
         }
     }
 
-    public async getTokenInfo(cookieHeader?: string): Promise<SessionInfo> {
+    public async getTokenInfo(cookieHeader?: string, userId?: string): Promise<SessionInfo> {
 
-        const activeSite = await this.configService.getActiveSiteAsync();
+        const activeSite = await this.configService.getActiveSiteAsync(userId);
 
         if (!activeSite) {
             throw new Error('No active site configured');

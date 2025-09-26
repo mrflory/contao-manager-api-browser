@@ -112,7 +112,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Set up axios interceptor for adding auth token
     useEffect(() => {
-        const httpClient = new HttpClient();
+        const httpClient = HttpClient.getInstance();
 
         const requestInterceptor = httpClient.axios.interceptors.request.use(
             (config: any) => {
@@ -168,7 +168,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (token) {
                 try {
                     // Verify token by fetching current user
-                    const httpClient = new HttpClient();
+                    const httpClient = HttpClient.getInstance();
                     const response = await httpClient.makeApiCall('/api/auth/me', {
                         method: 'GET',
                         headers: { Authorization: `Bearer ${token}` },
@@ -207,7 +207,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         dispatch({ type: 'CLEAR_ERROR' });
 
         try {
-            const httpClient = new HttpClient();
+            const httpClient = HttpClient.getInstance();
             const response = await httpClient.makeApiCall('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -241,7 +241,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         dispatch({ type: 'CLEAR_ERROR' });
 
         try {
-            const httpClient = new HttpClient();
+            const httpClient = HttpClient.getInstance();
             const response = await httpClient.makeApiCall('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -265,7 +265,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const logout = async (): Promise<void> => {
         try {
             // Call logout endpoint
-            const httpClient = new HttpClient();
+            const httpClient = HttpClient.getInstance();
             await httpClient.makeApiCall('/api/auth/logout', {
                 method: 'POST',
             });
@@ -280,7 +280,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const refreshToken = async (): Promise<void> => {
         try {
-            const httpClient = new HttpClient();
+            const httpClient = HttpClient.getInstance();
             const response = await httpClient.makeApiCall('/api/auth/refresh', {
                 method: 'POST',
             });
@@ -307,7 +307,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const getCsrfToken = async (): Promise<void> => {
         try {
-            const httpClient = new HttpClient();
+            const httpClient = HttpClient.getInstance();
             const response = await httpClient.makeApiCall('/api/auth/csrf-token', {
                 method: 'GET',
             });

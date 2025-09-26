@@ -18,6 +18,7 @@ import { Tooltip } from "../components/ui/tooltip";
 import { EnhancedTable } from '../components/ui/enhanced-table';
 import { Config, Site } from '../types';
 import { useApiCall } from '../hooks/useApiCall';
+import { useAuth } from '../contexts/AuthContext';
 import { SiteApiService } from '../services/apiCallService';
 import { LoadingState } from '../components/display/LoadingState';
 import { EmptyState } from '../components/display/EmptyState';
@@ -26,6 +27,7 @@ import { extractDomain, encodeUrlParam } from '../utils/urlUtils';
 
 const SitesOverview: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   const configApi = useApiCall(
     () => SiteApiService.getConfig(),
@@ -45,8 +47,11 @@ const SitesOverview: React.FC = () => {
   );
 
   useEffect(() => {
-    configApi.execute();
-  }, []);
+    // Only execute API call if user is authenticated and not loading
+    if (isAuthenticated && !isAuthLoading) {
+      configApi.execute();
+    }
+  }, [isAuthenticated, isAuthLoading]);
 
   const handleSiteClick = async (url: string) => {
     await setActiveSiteApi.execute(url);

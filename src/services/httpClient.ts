@@ -1,10 +1,12 @@
 import axios, { AxiosInstance } from 'axios';
 
 /**
- * Simple HTTP client for authentication API calls
+ * Singleton HTTP client for authentication API calls
+ * Ensures all components use the same axios instance with interceptors
  */
 export class HttpClient {
   public axios: AxiosInstance;
+  private static instance: HttpClient;
 
   constructor() {
     this.axios = axios.create({
@@ -12,6 +14,17 @@ export class HttpClient {
       timeout: 10000,
       withCredentials: true,
     });
+  }
+
+  /**
+   * Get the singleton instance of HttpClient
+   * This ensures all components use the same axios instance with shared interceptors
+   */
+  public static getInstance(): HttpClient {
+    if (!HttpClient.instance) {
+      HttpClient.instance = new HttpClient();
+    }
+    return HttpClient.instance;
   }
 
   /**

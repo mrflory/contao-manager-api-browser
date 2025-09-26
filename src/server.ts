@@ -17,7 +17,8 @@ import { JsonFileStorageUnified } from './storage';
 import { UnifiedStorage, StorageType } from './storage/interfaces';
 
 // Middleware
-import { ErrorHandler, AuthMiddleware, ScopeMiddleware, ResponseLogger } from './middleware';
+import { ErrorHandler, ResponseLogger } from './middleware';
+import { UserAuthMiddleware } from './middleware/userAuthMiddleware';
 import {
     securityHeaders,
     corsOptions,
@@ -55,8 +56,7 @@ const authService = new AuthService(configService, loggingService);
 const proxyService = new ProxyService(configService, loggingService, authService);
 
 // Initialize middleware
-const authMiddleware = new AuthMiddleware(configService);
-const scopeMiddleware = new ScopeMiddleware(authService);
+const userAuthMiddleware = new UserAuthMiddleware(prisma);
 const responseLogger = new ResponseLogger(loggingService);
 
 // Security middleware
@@ -81,22 +81,27 @@ if (process.env.NODE_ENV === 'production') {
 app.use('/api/auth', createAuthRoutes(prisma));
 
 // Configuration endpoints
-app.get('/api/config', async (_req: Request, res: Response) => {
-    try {
-        const config = await configService.getConfigAsync();
+// Phase 3: Updated to use JWT authentication and user context
+app.get('/api/config',
+    userAuthMiddleware.requireAuth,
+    async (req: Request, res: Response) => {
+        try {
+            const userId = req.userId!; // TypeScript knows this exists due to middleware
+            const config = await configService.getConfigAsync(userId);
 
-        const response = {
-            sites: config.sites || {},
-            activeSite: config.activeSite,
-            hasActiveSite: !!config.activeSite
-        };
+            const response = {
+                sites: config.sites || {},
+                activeSite: config.activeSite,
+                hasActiveSite: !!config.activeSite
+            };
 
-        res.json(response);
-    } catch (error) {
-        console.error('Error in /api/config:', error);
-        res.status(500).json({ error: 'Failed to load configuration' });
+            res.json(response);
+        } catch (error) {
+            console.error('Error in /api/config:', error);
+            res.status(500).json({ error: 'Failed to load configuration' });
+        }
     }
-});
+);
 
 // Storage management endpoints (for new storage abstraction)
 app.get('/api/storage/type', (_req: Request, res: Response) => {
@@ -156,66 +161,86 @@ app.get('/api/storage/database/status', (_req: Request, res: Response) => {
     }
 });
 
-app.post('/api/set-active-site', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
-    const { url } = req.body;
-    
-    if (!url) {
-        return res.status(400).json({ error: 'Site URL is required' });
-    }
-    
-    try {
-        const success = await configService.setActiveSiteAsync(url);
-        if (success) {
-            const activeSite = await configService.getActiveSiteAsync();
-            return res.json({ success: true, activeSite });
-        } else {
-            return res.status(404).json({ error: 'Site not found' });
+app.post('/api/set-active-site',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        const { url } = req.body;
+        const userId = req.userId!;
+
+        if (!url) {
+            return res.status(400).json({ error: 'Site URL is required' });
         }
-    } catch (error) {
-        console.error('Error setting active site:', error);
-        return res.status(500).json({ error: 'Failed to set active site' });
-    }
-}));
 
-app.delete('/api/sites/:url', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
-    const url = decodeURIComponent(req.params.url);
+        try {
+            const success = await configService.setActiveSiteAsync(url, userId);
+            if (success) {
+                const activeSite = await configService.getActiveSiteAsync(userId);
+                return res.json({ success: true, activeSite });
+            } else {
+                return res.status(404).json({ error: 'Site not found or not owned by user' });
+            }
+        } catch (error) {
+            console.error('Error setting active site:', error);
+            return res.status(500).json({ error: 'Failed to set active site' });
+        }
+    })
+);
 
-    const success = await configService.removeSiteAsync(url);
-    if (success) {
-        return res.json({ success: true });
-    } else {
-        return res.status(404).json({ error: 'Site not found' });
-    }
-}));
+app.delete('/api/sites/:url',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        const url = decodeURIComponent(req.params.url);
+        const userId = req.userId!;
 
-app.post('/api/update-site-name', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
-    const { url, name } = req.body;
-    
-    if (!url || !name) {
-        return res.status(400).json({ error: 'URL and name are required' });
-    }
-    
-    const success = await configService.updateSiteNameAsync(url, name);
-    if (success) {
-        return res.json({ success: true });
-    } else {
-        return res.status(404).json({ error: 'Site not found' });
-    }
-}));
+        const success = await configService.removeSiteAsync(url, userId);
+        if (success) {
+            return res.json({ success: true });
+        } else {
+            return res.status(404).json({ error: 'Site not found or not owned by user' });
+        }
+    })
+);
+
+app.post('/api/update-site-name',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        const { url, name } = req.body;
+        const userId = req.userId!;
+
+        if (!url || !name) {
+            return res.status(400).json({ error: 'URL and name are required' });
+        }
+
+        const success = await configService.updateSiteNameAsync(url, name, userId);
+        if (success) {
+            return res.json({ success: true });
+        } else {
+            return res.status(404).json({ error: 'Site not found or not owned by user' });
+        }
+    })
+);
 
 // Authentication endpoints
-app.get('/api/token-info', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
-    const tokenInfo = await authService.getTokenInfo(req.headers.cookie);
-    res.json({
-        success: true,
-        ...tokenInfo
-    });
-}));
+app.get('/api/token-info',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        const userId = req.userId!;
+        const tokenInfo = await authService.getTokenInfo(req.headers.cookie, userId);
+        res.json({
+            success: true,
+            ...tokenInfo
+        });
+    })
+);
 
-app.post('/api/save-token', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
-    const result = await authService.saveToken(req.body);
-    res.json(result);
-}));
+app.post('/api/save-token',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        const userId = req.userId!;
+        const result = await authService.saveToken(req.body, userId);
+        res.json(result);
+    })
+);
 
 app.post('/api/validate-token', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
     const result = await authService.validateToken(req.body);
@@ -246,35 +271,59 @@ app.post('/api/cookie-logout', ErrorHandler.asyncWrapper(async (req: ApiRequest,
     res.json(result);
 }));
 
-app.post('/api/save-site-cookie', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
-    console.log('[SAVE-SITE-COOKIE] Request body:', req.body);
-    try {
-        const result = await authService.saveSiteCookie(req.body);
-        console.log('[SAVE-SITE-COOKIE] Result:', result);
-        res.json(result);
-    } catch (error) {
-        console.error('[SAVE-SITE-COOKIE] Error:', error);
-        throw error;
-    }
-}));
-
-// Status and version endpoints
-app.post('/api/update-status', 
-    authMiddleware.requireActiveSite,
-    scopeMiddleware.dynamicScopeCheck,
-    ErrorHandler.asyncWrapper(async (_req: ApiRequest, res: Response) => {
-        const result = await proxyService.updateStatus();
-        res.json(result);
+app.post('/api/save-site-cookie',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        console.log('[SAVE-SITE-COOKIE] Request body:', req.body);
+        const userId = req.userId!;
+        try {
+            const result = await authService.saveSiteCookie(req.body, userId);
+            console.log('[SAVE-SITE-COOKIE] Result:', result);
+            res.json(result);
+        } catch (error) {
+            console.error('[SAVE-SITE-COOKIE] Error:', error);
+            throw error;
+        }
     })
 );
 
-app.post('/api/update-version-info', 
-    authMiddleware.requireActiveSite,
-    scopeMiddleware.dynamicScopeCheck,
-    ErrorHandler.asyncWrapper(async (_req: ApiRequest, res: Response) => {
+// Status and version endpoints
+app.post('/api/update-status',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        const userId = req.userId!;
+
+        // Get the active site for this user
+        const activeSite = await configService.getActiveSiteAsync(userId);
+        if (!activeSite) {
+            return res.status(400).json({ error: 'No active site configured for user' });
+        }
+
+        // Set the active site context for the proxy service (temporary compatibility)
+        (req as any).activeSite = activeSite;
+
+        const result = await proxyService.updateStatus();
+        return res.json(result);
+    })
+);
+
+app.post('/api/update-version-info',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        const userId = req.userId!;
+
+        // Get the active site for this user
+        const activeSite = await configService.getActiveSiteAsync(userId);
+        if (!activeSite) {
+            return res.status(400).json({ error: 'No active site configured for user' });
+        }
+
+        // Set the active site context for the proxy service (temporary compatibility)
+        (req as any).activeSite = activeSite;
+
         const result = await proxyService.updateVersionInfo();
-        res.json({ 
-            success: true, 
+        return res.json({
+            success: true,
             versionInfo: result
         });
     })
@@ -353,21 +402,31 @@ app.get('/api/site/:siteUrl/maintenance-mode', ErrorHandler.asyncWrapper(async (
 // Create proxy routes for all HTTP methods
 proxyEndpoints.forEach(endpoint => {
     const methods: ('get' | 'post' | 'put' | 'patch' | 'delete')[] = ['get', 'post', 'put', 'patch', 'delete'];
-    
+
     methods.forEach(method => {
-        app[method](endpoint, 
-            authMiddleware.requireAuth,
-            scopeMiddleware.dynamicScopeCheck,
-            ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
+        app[method](endpoint,
+            userAuthMiddleware.requireAuth,
+            ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+                const userId = req.userId!;
+
+                // Get the active site for this user
+                const activeSite = await configService.getActiveSiteAsync(userId);
+                if (!activeSite) {
+                    return res.status(400).json({ error: 'No active site configured for user' });
+                }
+
+                // Set the active site context for the proxy service (temporary compatibility)
+                (req as any).activeSite = activeSite;
+
                 const response = await proxyService.proxyToContaoManager(
-                    req.path, 
-                    req.method as any, 
+                    req.path,
+                    req.method as any,
                     req.body,
                     req.headers.cookie
                 );
-                
+
                 const result = proxyService.handleApiResponse(req.path, response);
-                res.status(result.status).json(result.data);
+                return res.status(result.status).json(result.data);
             })
         );
     });

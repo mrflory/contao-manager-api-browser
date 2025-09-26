@@ -283,47 +283,56 @@ export interface SnapshotsStorage {
 
 /**
  * Core storage interface that all storage backends must implement
+ * Phase 3: Updated to support user isolation
  */
 export interface SiteConfigStorage {
   /**
-   * Load the complete application configuration
+   * Load the complete application configuration for a specific user
+   * Phase 3: userId parameter added for user isolation
    */
-  loadConfig(): Promise<StorageResult<AppConfig>>;
+  loadConfig(userId?: string): Promise<StorageResult<AppConfig>>;
 
   /**
-   * Save the complete application configuration
+   * Save the complete application configuration for a specific user
+   * Phase 3: userId parameter added for user isolation
    */
-  saveConfig(config: AppConfig): Promise<StorageResult<boolean>>;
+  saveConfig(config: AppConfig, userId?: string): Promise<StorageResult<boolean>>;
 
   /**
    * Add a new site or update existing site
+   * Phase 3: userId parameter added for user isolation
    */
-  addSite(params: AddSiteParams): Promise<StorageResult<boolean>>;
+  addSite(params: AddSiteParams, userId?: string): Promise<StorageResult<boolean>>;
 
   /**
    * Remove a site by URL
+   * Phase 3: userId parameter added for user isolation
    */
-  removeSite(url: string): Promise<StorageResult<boolean>>;
+  removeSite(url: string, userId?: string): Promise<StorageResult<boolean>>;
 
   /**
    * Update site configuration
+   * Phase 3: userId parameter added for user isolation
    */
-  updateSite(params: UpdateSiteParams): Promise<StorageResult<boolean>>;
+  updateSite(params: UpdateSiteParams, userId?: string): Promise<StorageResult<boolean>>;
 
   /**
    * Set the active site
+   * Phase 3: userId parameter added for user isolation
    */
-  setActiveSite(url: string): Promise<StorageResult<boolean>>;
+  setActiveSite(url: string, userId?: string): Promise<StorageResult<boolean>>;
 
   /**
    * Get the currently active site
+   * Phase 3: userId parameter added for user isolation
    */
-  getActiveSite(): Promise<StorageResult<SiteConfig | null>>;
+  getActiveSite(userId?: string): Promise<StorageResult<SiteConfig | null>>;
 
   /**
    * Get all sites
+   * Phase 3: userId parameter added for user isolation
    */
-  getAllSites(): Promise<StorageResult<Record<string, SiteConfig>>>;
+  getAllSites(userId?: string): Promise<StorageResult<Record<string, SiteConfig>>>;
 
   /**
    * Check if storage is available and functional
@@ -352,8 +361,9 @@ export abstract class BaseStorage implements SiteConfigStorage {
   }
 
   // Abstract methods that must be implemented by concrete storage classes
-  abstract loadConfig(): Promise<StorageResult<AppConfig>>;
-  abstract saveConfig(config: AppConfig): Promise<StorageResult<boolean>>;
+  // Phase 3: Updated to support user isolation
+  abstract loadConfig(userId?: string): Promise<StorageResult<AppConfig>>;
+  abstract saveConfig(config: AppConfig, userId?: string): Promise<StorageResult<boolean>>;
   abstract isAvailable(): Promise<boolean>;
   abstract initialize(): Promise<StorageResult<boolean>>;
   abstract cleanup(): Promise<void>;
@@ -373,9 +383,10 @@ export abstract class BaseStorage implements SiteConfigStorage {
   }
 
   // Default implementations that use loadConfig/saveConfig
-  async addSite(params: AddSiteParams): Promise<StorageResult<boolean>> {
+  // Phase 3: Updated to support user isolation
+  async addSite(params: AddSiteParams, userId?: string): Promise<StorageResult<boolean>> {
     try {
-      const configResult = await this.loadConfig();
+      const configResult = await this.loadConfig(userId);
       if (!configResult.success || !configResult.data) {
         return this.createStorageResult(false, false, configResult.error || 'Failed to load config');
       }
@@ -431,13 +442,13 @@ export abstract class BaseStorage implements SiteConfigStorage {
         }
       }
 
-      return await this.saveConfig(config);
+      return await this.saveConfig(config, userId);
     } catch (error) {
       return this.createStorageResult(false, false, error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
-  async removeSite(url: string): Promise<StorageResult<boolean>> {
+  async removeSite(url: string, userId?: string): Promise<StorageResult<boolean>> {
     try {
       const configResult = await this.loadConfig();
       if (!configResult.success || !configResult.data) {
@@ -455,18 +466,18 @@ export abstract class BaseStorage implements SiteConfigStorage {
           config.activeSite = remainingSites.length > 0 ? remainingSites[0] : null;
         }
         
-        return await this.saveConfig(config);
+        return await this.saveConfig(config, userId);
       }
-      
+
       return this.createStorageResult(false, false, 'Site not found');
     } catch (error) {
       return this.createStorageResult(false, false, error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
-  async updateSite(params: UpdateSiteParams): Promise<StorageResult<boolean>> {
+  async updateSite(params: UpdateSiteParams, userId?: string): Promise<StorageResult<boolean>> {
     try {
-      const configResult = await this.loadConfig();
+      const configResult = await this.loadConfig(userId);
       if (!configResult.success || !configResult.data) {
         return this.createStorageResult(false, false, configResult.error || 'Failed to load config');
       }
@@ -493,16 +504,16 @@ export abstract class BaseStorage implements SiteConfigStorage {
       
       // Update lastUsed timestamp
       config.sites[url].lastUsed = new Date().toISOString();
-      
-      return await this.saveConfig(config);
+
+      return await this.saveConfig(config, userId);
     } catch (error) {
       return this.createStorageResult(false, false, error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
-  async setActiveSite(url: string): Promise<StorageResult<boolean>> {
+  async setActiveSite(url: string, userId?: string): Promise<StorageResult<boolean>> {
     try {
-      const configResult = await this.loadConfig();
+      const configResult = await this.loadConfig(userId);
       if (!configResult.success || !configResult.data) {
         return this.createStorageResult(false, false, configResult.error || 'Failed to load config');
       }
@@ -512,18 +523,18 @@ export abstract class BaseStorage implements SiteConfigStorage {
       if (config.sites[url]) {
         config.activeSite = url;
         config.sites[url].lastUsed = new Date().toISOString();
-        return await this.saveConfig(config);
+        return await this.saveConfig(config, userId);
       }
-      
+
       return this.createStorageResult(false, false, 'Site not found');
     } catch (error) {
       return this.createStorageResult(false, false, error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
-  async getActiveSite(): Promise<StorageResult<SiteConfig | null>> {
+  async getActiveSite(userId?: string): Promise<StorageResult<SiteConfig | null>> {
     try {
-      const configResult = await this.loadConfig();
+      const configResult = await this.loadConfig(userId);
       if (!configResult.success || !configResult.data) {
         return this.createStorageResult(false, null, configResult.error || 'Failed to load config');
       }
@@ -540,9 +551,9 @@ export abstract class BaseStorage implements SiteConfigStorage {
     }
   }
 
-  async getAllSites(): Promise<StorageResult<Record<string, SiteConfig>>> {
+  async getAllSites(userId?: string): Promise<StorageResult<Record<string, SiteConfig>>> {
     try {
-      const configResult = await this.loadConfig();
+      const configResult = await this.loadConfig(userId);
       if (!configResult.success || !configResult.data) {
         return this.createStorageResult(false, {}, configResult.error || 'Failed to load config');
       }

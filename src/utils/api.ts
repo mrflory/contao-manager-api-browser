@@ -1,119 +1,83 @@
 import { Config, UpdateStatus, TokenInfo, ApiResponse, Site } from '../types';
+import { HttpClient } from '../services/httpClient';
 
 const API_BASE = '/api';
 
-// Helper function for API calls with better error handling
+// Create a global HTTP client instance that will use axios interceptors for authentication
+const httpClient = HttpClient.getInstance();
+
+// Helper function for API calls with JWT authentication via axios interceptors
 async function makeApiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
-  console.log(`[CLIENT] Making API call to: ${endpoint}`);
+  console.log(`[CLIENT] Making authenticated API call to: ${endpoint}`);
   console.log(`[CLIENT] Request options:`, options);
-  
-  const response = await fetch(`${API_BASE}${endpoint}`, options);
-  
-  console.log(`[CLIENT] Response status: ${response.status}`);
-  console.log(`[CLIENT] Response headers:`, Object.fromEntries(response.headers.entries()));
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[CLIENT] Error response text:`, errorText);
-    throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-  }
 
-  // Handle 204 No Content
-  if (response.status === 204) {
-    console.log(`[CLIENT] No content response (204)`);
-    return {};
-  }
+  try {
+    const result = await httpClient.makeApiCall(`${API_BASE}${endpoint}`, options);
 
-  const contentType = response.headers.get('content-type');
-  console.log(`[CLIENT] Content-Type: ${contentType}`);
-
-  if (contentType && contentType.includes('application/json')) {
-    const text = await response.text();
-    console.log(`[CLIENT] Response text:`, text);
-    console.log(`[CLIENT] Response text length:`, text.length);
-    
-    if (!text || text.trim() === '') {
-      console.log(`[CLIENT] Empty response body, returning empty object`);
-      return {};
+    if (result.success) {
+      console.log(`[CLIENT] API call successful:`, result.data);
+      return result.data;
+    } else {
+      console.error(`[CLIENT] API call failed:`, result.error);
+      throw new Error(result.error || 'API call failed');
     }
-    
-    try {
-      const parsed = JSON.parse(text);
-      console.log(`[CLIENT] Parsed JSON:`, parsed);
-      return parsed;
-    } catch (e) {
-      console.error(`[CLIENT] JSON parse error:`, e);
-      console.error(`[CLIENT] Failed to parse text:`, text);
-      throw new Error(`Invalid JSON response: ${text}`);
-    }
-  } else {
-    const text = await response.text();
-    console.log(`[CLIENT] Non-JSON response:`, text);
-    return text;
+  } catch (error) {
+    console.error(`[CLIENT] API call error:`, error);
+    throw error;
   }
 }
 
 export const api = {
   async getConfig(): Promise<Config> {
-    const response = await fetch(`${API_BASE}/config`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+    return makeApiCall('/config');
   },
 
   async setActiveSite(url: string): Promise<{ activeSite: Site }> {
-    const response = await fetch(`${API_BASE}/set-active-site`, {
+    return makeApiCall('/set-active-site', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url })
     });
-    return response.json();
   },
 
   async saveToken(token: string, managerUrl: string): Promise<ApiResponse> {
-    const response = await fetch(`${API_BASE}/save-token`, {
+    return makeApiCall('/save-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, managerUrl })
     });
-    return response.json();
   },
 
   async removeSite(url: string): Promise<void> {
-    await fetch(`${API_BASE}/sites/${encodeURIComponent(url)}`, {
+    await makeApiCall(`/sites/${encodeURIComponent(url)}`, {
       method: 'DELETE'
     });
   },
 
   async updateSiteName(url: string, newName: string): Promise<ApiResponse> {
-    const response = await fetch(`${API_BASE}/update-site-name`, {
+    return makeApiCall('/update-site-name', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, name: newName })
     });
-    return response.json();
   },
 
   async getUpdateStatus(): Promise<UpdateStatus> {
-    const response = await fetch(`${API_BASE}/update-status`, {
+    return makeApiCall('/update-status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
-    return response.json();
   },
 
   async updateVersionInfo(): Promise<{ success: boolean; versionInfo: any; error?: string }> {
-    const response = await fetch(`${API_BASE}/update-version-info`, {
+    return makeApiCall('/update-version-info', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
-    return response.json();
   },
 
   async getTokenInfo(): Promise<{ success: boolean; tokenInfo: TokenInfo; error?: string }> {
-    const response = await fetch(`${API_BASE}/token-info`);
-    return response.json();
+    return makeApiCall('/token-info');
   },
 
   // Server Configuration endpoints
@@ -307,24 +271,8 @@ export const api = {
 
   // Files endpoint
   async getFiles(file: 'composer.json' | 'composer.lock'): Promise<string> {
-    console.log(`[CLIENT] Making file API call to: /files/${encodeURIComponent(file)}`);
-    
-    const response = await fetch(`${API_BASE}/files/${encodeURIComponent(file)}`);
-    
-    console.log(`[CLIENT] File API response status: ${response.status}`);
-    console.log(`[CLIENT] File API response headers:`, Object.fromEntries(response.headers.entries()));
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[CLIENT] File API error response text:`, errorText);
-      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-    }
-
-    // Always get text content for files, regardless of content-type header
-    const text = await response.text();
-    console.log(`[CLIENT] File API response text length:`, text.length);
-    console.log(`[CLIENT] File API response text preview:`, text.substring(0, 200));
-    return text;
+    console.log(`[CLIENT] Making authenticated file API call to: /files/${encodeURIComponent(file)}`);
+    return makeApiCall(`/files/${encodeURIComponent(file)}`);
   },
 
   // History endpoints
@@ -429,19 +377,24 @@ export const api = {
   },
 
   async downloadSnapshot(snapshotId: string, filename: 'composer.json' | 'composer.lock'): Promise<Blob> {
-    const response = await fetch(`${API_BASE}/snapshots/${encodeURIComponent(snapshotId)}/${filename}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    console.log(`[CLIENT] Making authenticated blob download to: /snapshots/${encodeURIComponent(snapshotId)}/${filename}`);
+
+    try {
+      // Use the HttpClient's axios instance directly for blob downloads
+      const response = await httpClient.axios.get(`${API_BASE}/snapshots/${encodeURIComponent(snapshotId)}/${filename}`, {
+        responseType: 'blob'
+      });
+
+      console.log(`[CLIENT] Blob download successful:`, response.status);
+      return response.data;
+    } catch (error) {
+      console.error(`[CLIENT] Blob download error:`, error);
+      throw error;
     }
-    return response.blob();
   },
 
   async getSnapshotFileContent(snapshotId: string, filename: 'composer.json' | 'composer.lock'): Promise<string> {
-    const response = await fetch(`${API_BASE}/snapshots/${encodeURIComponent(snapshotId)}/${filename}/content`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.text();
+    return makeApiCall(`/snapshots/${encodeURIComponent(snapshotId)}/${filename}/content`);
   },
 
   async listSnapshots(siteUrl: string): Promise<any> {

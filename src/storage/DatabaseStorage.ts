@@ -12,7 +12,7 @@ export class DatabaseStorage extends BaseStorage {
   private readonly connectionString: string;
   private prisma: PrismaClient | null = null;
   private initialized = false;
-  private currentUserId: string = 'default_user'; // Phase 1: single user, Phase 2: will be from authentication
+  // Phase 3: User ID is now passed as parameter to methods instead of instance variable
   private tokenEncryption: TokenEncryptionService | null = null;
 
   constructor(config: StorageConfig) {
@@ -89,7 +89,7 @@ export class DatabaseStorage extends BaseStorage {
     }
   }
 
-  async loadConfig(): Promise<StorageResult<AppConfig>> {
+  async loadConfig(userId?: string): Promise<StorageResult<AppConfig>> {
     try {
       if (!this.initialized) {
         const initResult = await this.initialize();
@@ -102,10 +102,13 @@ export class DatabaseStorage extends BaseStorage {
         return this.createStorageResult(false, { sites: {}, activeSite: null }, 'Prisma client not initialized');
       }
 
+      // Use provided userId or fall back to default for backward compatibility
+      const currentUserId = userId || 'default_user';
+
       // Load user's sites from database
       const sites = await this.prisma.site.findMany({
         where: {
-          userId: this.currentUserId,
+          userId: currentUserId,
           isActive: true
         },
         orderBy: {
@@ -116,7 +119,7 @@ export class DatabaseStorage extends BaseStorage {
       // Load user's subscription to determine active site (for Phase 1, just use the first site)
       // Note: user data not currently used but prepared for Phase 2 features
       await this.prisma.user.findUnique({
-        where: { id: this.currentUserId },
+        where: { id: currentUserId },
         include: {
           subscriptions: {
             where: { status: 'active' },
@@ -173,7 +176,7 @@ export class DatabaseStorage extends BaseStorage {
     }
   }
 
-  async saveConfig(config: AppConfig): Promise<StorageResult<boolean>> {
+  async saveConfig(config: AppConfig, userId?: string): Promise<StorageResult<boolean>> {
     try {
       if (!this.initialized) {
         const initResult = await this.initialize();
@@ -186,11 +189,14 @@ export class DatabaseStorage extends BaseStorage {
         return this.createStorageResult(false, false, 'Prisma client not initialized');
       }
 
+      // Use provided userId or fall back to default for backward compatibility
+      const currentUserId = userId || 'default_user';
+
       // Use transaction to ensure data consistency
       await this.prisma.$transaction(async (tx) => {
         // First, get current sites from database to determine what to update/delete
         const existingSites = await tx.site.findMany({
-          where: { userId: this.currentUserId }
+          where: { userId: currentUserId }
         });
 
         const configUrls = new Set(Object.keys(config.sites));
@@ -200,7 +206,7 @@ export class DatabaseStorage extends BaseStorage {
         if (sitesToDelete.length > 0) {
           await tx.site.deleteMany({
             where: {
-              userId: this.currentUserId,
+              userId: currentUserId,
               url: { in: sitesToDelete }
             }
           });
@@ -219,7 +225,7 @@ export class DatabaseStorage extends BaseStorage {
           await tx.site.upsert({
             where: {
               userId_url: {
-                userId: this.currentUserId,
+                userId: currentUserId,
                 url: url
               }
             },
@@ -232,7 +238,7 @@ export class DatabaseStorage extends BaseStorage {
               versionInfo: siteConfig.versionInfo ? JSON.parse(JSON.stringify(siteConfig.versionInfo)) : undefined
             },
             create: {
-              userId: this.currentUserId,
+              userId: currentUserId,
               name: siteConfig.name,
               url: url,
               tokenEncrypted: tokenEncrypted || '',
@@ -257,7 +263,7 @@ export class DatabaseStorage extends BaseStorage {
 
   /**
    * Ensure default user exists for Phase 1
-   * In Phase 2, this will be replaced with proper user authentication
+   * In Phase 3, this ensures backward compatibility for existing installations
    */
   private async ensureDefaultUser(): Promise<void> {
     if (!this.prisma) {
@@ -265,13 +271,14 @@ export class DatabaseStorage extends BaseStorage {
     }
 
     try {
+      const defaultUserId = 'default_user';
       await this.prisma.user.upsert({
-        where: { id: this.currentUserId },
+        where: { id: defaultUserId },
         update: {
           updatedAt: new Date()
         },
         create: {
-          id: this.currentUserId,
+          id: defaultUserId,
           email: 'default@example.com',
           passwordHash: 'placeholder_hash_for_phase1',
           isActive: true,
@@ -290,26 +297,18 @@ export class DatabaseStorage extends BaseStorage {
   }
 
   /**
-   * Get current user ID for multi-tenant support
-   * Phase 1: Returns default user ID
-   * Phase 2: Will integrate with authentication system
+   * Get default user ID for backward compatibility
+   * Phase 3: Methods now accept userId as parameter
    */
-  getCurrentUserId(): string {
-    return this.currentUserId;
-  }
-
-  /**
-   * Set current user ID (for Phase 2 authentication integration)
-   */
-  setCurrentUserId(userId: string): void {
-    this.currentUserId = userId;
+  getDefaultUserId(): string {
+    return 'default_user';
   }
 
   /**
    * Database-specific method to get user configuration history
    * Phase 1 feature for audit trails using usage logs
    */
-  async getConfigHistory(limit: number = 10): Promise<StorageResult<Array<{config: AppConfig, timestamp: string}>>> {
+  async getConfigHistory(userId: string, limit: number = 10): Promise<StorageResult<Array<{config: AppConfig, timestamp: string}>>> {
     try {
       if (!this.prisma) {
         return this.createStorageResult(false, [], 'Prisma client not initialized');
@@ -318,7 +317,7 @@ export class DatabaseStorage extends BaseStorage {
       // Get recent config-related actions from usage logs
       const logs = await this.prisma.usageLog.findMany({
         where: {
-          userId: this.currentUserId,
+          userId: userId,
           actionType: { in: ['config_save', 'site_add', 'site_update', 'site_remove'] }
         },
         orderBy: { timestamp: 'desc' },
@@ -330,9 +329,9 @@ export class DatabaseStorage extends BaseStorage {
       const history: Array<{config: AppConfig, timestamp: string}> = [];
 
       for (const log of logs) {
-        // For Phase 1, we'll return the current config with the log timestamp
-        // In Phase 2+, we'd implement proper config versioning
-        const currentConfig = await this.loadConfig();
+        // For Phase 3, we'll return the current config with the log timestamp
+        // In future versions, we'd implement proper config versioning
+        const currentConfig = await this.loadConfig(userId);
         if (currentConfig.success && currentConfig.data) {
           history.push({
             config: currentConfig.data,
@@ -351,23 +350,23 @@ export class DatabaseStorage extends BaseStorage {
    * Database-specific method to backup configuration
    * Phase 1 implementation using usage logs for backup tracking
    */
-  async backupConfig(): Promise<StorageResult<string>> {
+  async backupConfig(userId: string): Promise<StorageResult<string>> {
     try {
       if (!this.prisma) {
         return this.createStorageResult(false, '', 'Prisma client not initialized');
       }
 
-      const configResult = await this.loadConfig();
+      const configResult = await this.loadConfig(userId);
       if (!configResult.success || !configResult.data) {
         return this.createStorageResult(false, '', configResult.error || 'Failed to load config');
       }
 
       // Create a backup by creating a usage log entry with the current config
-      const backupId = `backup_${Date.now()}_${this.getCurrentUserId()}`;
+      const backupId = `backup_${Date.now()}_${userId}`;
 
       await this.prisma.usageLog.create({
         data: {
-          userId: this.currentUserId,
+          userId: userId,
           actionType: 'config_backup',
           apiEndpoint: '/backup',
           requestData: JSON.parse(JSON.stringify({
@@ -388,7 +387,7 @@ export class DatabaseStorage extends BaseStorage {
    * Database-specific method to restore from backup
    * Phase 1 implementation using usage logs for backup retrieval
    */
-  async restoreFromBackup(backupId: string): Promise<StorageResult<boolean>> {
+  async restoreFromBackup(userId: string, backupId: string): Promise<StorageResult<boolean>> {
     try {
       if (!this.prisma) {
         return this.createStorageResult(false, false, 'Prisma client not initialized');
@@ -397,7 +396,7 @@ export class DatabaseStorage extends BaseStorage {
       // Find the backup in usage logs
       const backupLog = await this.prisma.usageLog.findFirst({
         where: {
-          userId: this.currentUserId,
+          userId: userId,
           actionType: 'config_backup',
           requestData: {
             path: ['backupId'],
@@ -417,7 +416,7 @@ export class DatabaseStorage extends BaseStorage {
       }
 
       // Restore the configuration
-      const restoreResult = await this.saveConfig(backupData.config);
+      const restoreResult = await this.saveConfig(backupData.config, userId);
       if (!restoreResult.success) {
         return restoreResult;
       }
@@ -425,7 +424,7 @@ export class DatabaseStorage extends BaseStorage {
       // Log the restore operation
       await this.prisma.usageLog.create({
         data: {
-          userId: this.currentUserId,
+          userId: userId,
           actionType: 'config_restore',
           apiEndpoint: '/restore',
           requestData: {
@@ -444,9 +443,9 @@ export class DatabaseStorage extends BaseStorage {
 
   /**
    * Log usage for analytics and audit trails
-   * Phase 1 foundation for SaaS analytics
+   * Phase 3 foundation for SaaS analytics with user context
    */
-  async logUsage(actionType: string, apiEndpoint: string, siteUrl?: string, requestData?: any, responseData?: any, duration?: number): Promise<StorageResult<boolean>> {
+  async logUsage(userId: string, actionType: string, apiEndpoint: string, siteUrl?: string, requestData?: any, responseData?: any, duration?: number): Promise<StorageResult<boolean>> {
     try {
       if (!this.prisma) {
         return this.createStorageResult(false, false, 'Prisma client not initialized');
@@ -457,7 +456,7 @@ export class DatabaseStorage extends BaseStorage {
       if (siteUrl) {
         const site = await this.prisma.site.findFirst({
           where: {
-            userId: this.currentUserId,
+            userId: userId,
             url: siteUrl
           }
         });
@@ -466,7 +465,7 @@ export class DatabaseStorage extends BaseStorage {
 
       await this.prisma.usageLog.create({
         data: {
-          userId: this.currentUserId,
+          userId: userId,
           siteId: siteId,
           actionType: actionType,
           apiEndpoint: apiEndpoint,
@@ -488,7 +487,7 @@ export class DatabaseStorage extends BaseStorage {
    * Get usage statistics for analytics
    * Phase 1 foundation for freemium model insights
    */
-  async getUsageStats(siteUrl?: string, days: number = 30): Promise<StorageResult<{
+  async getUsageStats(userId: string, siteUrl?: string, days: number = 30): Promise<StorageResult<{
     totalRequests: number;
     errorCount: number;
     averageResponseTime: number;
@@ -507,7 +506,7 @@ export class DatabaseStorage extends BaseStorage {
       since.setDate(since.getDate() - days);
 
       let whereClause: any = {
-        userId: this.currentUserId,
+        userId: userId,
         timestamp: {
           gte: since
         }
@@ -517,7 +516,7 @@ export class DatabaseStorage extends BaseStorage {
       if (siteUrl) {
         const site = await this.prisma.site.findFirst({
           where: {
-            userId: this.currentUserId,
+            userId: userId,
             url: siteUrl
           }
         });

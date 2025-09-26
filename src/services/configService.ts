@@ -73,14 +73,15 @@ export class ConfigService {
 
     /**
      * Async version of loadConfig - preferred for new code
+     * Phase 3: Added userId parameter for user isolation
      */
-    public async loadConfigAsync(): Promise<AppConfig> {
+    public async loadConfigAsync(userId?: string): Promise<AppConfig> {
         try {
-            const result = await this.storage.loadConfig();
+            const result = await this.storage.loadConfig(userId);
             if (result.success && result.data) {
                 return result.data;
             }
-            
+
             console.error('Error loading config:', result.error);
             return { sites: {}, activeSite: null };
         } catch (error) {
@@ -132,10 +133,11 @@ export class ConfigService {
 
     /**
      * Async version of saveConfig - preferred for new code
+     * Phase 3: Added userId parameter for user isolation
      */
-    public async saveConfigAsync(config: AppConfig): Promise<boolean> {
+    public async saveConfigAsync(config: AppConfig, userId?: string): Promise<boolean> {
         try {
-            const result = await this.storage.saveConfig(config);
+            const result = await this.storage.saveConfig(config, userId);
             return result.success;
         } catch (error) {
             console.error('Error saving config:', error instanceof Error ? error.message : 'Unknown error');
@@ -144,15 +146,16 @@ export class ConfigService {
     }
 
     public addSite(
-        url: string, 
-        token?: string, 
-        name?: string, 
-        authMethod: AuthMethod = 'token', 
-        user?: any, 
-        scope?: string
+        url: string,
+        token?: string,
+        name?: string,
+        authMethod: AuthMethod = 'token',
+        user?: any,
+        scope?: string,
+        userId?: string
     ): boolean {
         try {
-            const result = this.addSiteAsync(url, token, name, authMethod, user, scope);
+            const result = this.addSiteAsync(url, token, name, authMethod, user, scope, userId);
             return this.blockingAsyncCall(result);
         } catch (error) {
             console.error('Error adding site:', error instanceof Error ? error.message : 'Unknown error');
@@ -162,14 +165,16 @@ export class ConfigService {
 
     /**
      * Async version of addSite - preferred for new code
+     * Phase 3: Added userId parameter for user isolation
      */
     public async addSiteAsync(
-        url: string, 
-        token?: string, 
-        name?: string, 
-        authMethod: AuthMethod = 'token', 
-        user?: any, 
-        scope?: string
+        url: string,
+        token?: string,
+        name?: string,
+        authMethod: AuthMethod = 'token',
+        user?: any,
+        scope?: string,
+        userId?: string
     ): Promise<boolean> {
         try {
             const result = await this.storage.addSite({
@@ -179,7 +184,18 @@ export class ConfigService {
                 authMethod,
                 user,
                 scope
-            });
+            }, userId);
+
+            // Add audit logging for site addition
+            if (result.success && userId && this.storage instanceof (await import('../storage/DatabaseStorage')).DatabaseStorage) {
+                await (this.storage as any).logUsage(userId, 'site_add', '/api/add-site', url, {
+                    url,
+                    name: name || 'Auto-generated',
+                    authMethod,
+                    scope
+                }, { success: true });
+            }
+
             return result.success;
         } catch (error) {
             console.error('Error adding site:', error instanceof Error ? error.message : 'Unknown error');
@@ -197,9 +213,9 @@ export class ConfigService {
         }
     }
 
-    public async getActiveSiteAsync(): Promise<SiteConfig | null> {
+    public async getActiveSiteAsync(userId?: string): Promise<SiteConfig | null> {
         try {
-            const result = await this.storage.getActiveSite();
+            const result = await this.storage.getActiveSite(userId);
             return result.success ? (result.data || null) : null;
         } catch (error) {
             console.error('Error getting active site:', error instanceof Error ? error.message : 'Unknown error');
@@ -207,9 +223,9 @@ export class ConfigService {
         }
     }
 
-    public setActiveSite(url: string): boolean {
+    public setActiveSite(url: string, userId?: string): boolean {
         try {
-            const result = this.setActiveSiteAsync(url);
+            const result = this.setActiveSiteAsync(url, userId);
             return this.blockingAsyncCall(result);
         } catch (error) {
             console.error('Error setting active site:', error instanceof Error ? error.message : 'Unknown error');
@@ -217,9 +233,17 @@ export class ConfigService {
         }
     }
 
-    public async setActiveSiteAsync(url: string): Promise<boolean> {
+    public async setActiveSiteAsync(url: string, userId?: string): Promise<boolean> {
         try {
-            const result = await this.storage.setActiveSite(url);
+            const result = await this.storage.setActiveSite(url, userId);
+
+            // Add audit logging for active site change
+            if (result.success && userId && this.storage instanceof (await import('../storage/DatabaseStorage')).DatabaseStorage) {
+                await (this.storage as any).logUsage(userId, 'site_set_active', '/api/set-active-site', url, {
+                    url
+                }, { success: true });
+            }
+
             return result.success;
         } catch (error) {
             console.error('Error setting active site:', error instanceof Error ? error.message : 'Unknown error');
@@ -227,9 +251,9 @@ export class ConfigService {
         }
     }
 
-    public removeSite(url: string): boolean {
+    public removeSite(url: string, userId?: string): boolean {
         try {
-            const result = this.removeSiteAsync(url);
+            const result = this.removeSiteAsync(url, userId);
             return this.blockingAsyncCall(result);
         } catch (error) {
             console.error('Error removing site:', error instanceof Error ? error.message : 'Unknown error');
@@ -237,9 +261,17 @@ export class ConfigService {
         }
     }
 
-    public async removeSiteAsync(url: string): Promise<boolean> {
+    public async removeSiteAsync(url: string, userId?: string): Promise<boolean> {
         try {
-            const result = await this.storage.removeSite(url);
+            const result = await this.storage.removeSite(url, userId);
+
+            // Add audit logging for site removal
+            if (result.success && userId && this.storage instanceof (await import('../storage/DatabaseStorage')).DatabaseStorage) {
+                await (this.storage as any).logUsage(userId, 'site_remove', '/api/remove-site', url, {
+                    url
+                }, { success: true });
+            }
+
             return result.success;
         } catch (error) {
             console.error('Error removing site:', error instanceof Error ? error.message : 'Unknown error');
@@ -247,9 +279,9 @@ export class ConfigService {
         }
     }
 
-    public updateSiteName(url: string, name: string): boolean {
+    public updateSiteName(url: string, name: string, userId?: string): boolean {
         try {
-            const result = this.updateSiteNameAsync(url, name);
+            const result = this.updateSiteNameAsync(url, name, userId);
             return this.blockingAsyncCall(result);
         } catch (error) {
             console.error('Error updating site name:', error instanceof Error ? error.message : 'Unknown error');
@@ -257,9 +289,18 @@ export class ConfigService {
         }
     }
 
-    public async updateSiteNameAsync(url: string, name: string): Promise<boolean> {
+    public async updateSiteNameAsync(url: string, name: string, userId?: string): Promise<boolean> {
         try {
-            const result = await this.storage.updateSite({ url, name });
+            const result = await this.storage.updateSite({ url, name }, userId);
+
+            // Add audit logging for site name update
+            if (result.success && userId && this.storage instanceof (await import('../storage/DatabaseStorage')).DatabaseStorage) {
+                await (this.storage as any).logUsage(userId, 'site_update_name', '/api/update-site-name', url, {
+                    url,
+                    newName: name
+                }, { success: true });
+            }
+
             return result.success;
         } catch (error) {
             console.error('Error updating site name:', error instanceof Error ? error.message : 'Unknown error');
@@ -267,9 +308,9 @@ export class ConfigService {
         }
     }
 
-    public updateSiteVersionInfo(url: string, versionInfo: Omit<VersionInfo, 'lastUpdated'>): boolean {
+    public updateSiteVersionInfo(url: string, versionInfo: Omit<VersionInfo, 'lastUpdated'>, userId?: string): boolean {
         try {
-            const result = this.updateSiteVersionInfoAsync(url, versionInfo);
+            const result = this.updateSiteVersionInfoAsync(url, versionInfo, userId);
             return this.blockingAsyncCall(result);
         } catch (error) {
             console.error('Error updating site version info:', error instanceof Error ? error.message : 'Unknown error');
@@ -277,9 +318,9 @@ export class ConfigService {
         }
     }
 
-    public async updateSiteVersionInfoAsync(url: string, versionInfo: Omit<VersionInfo, 'lastUpdated'>): Promise<boolean> {
+    public async updateSiteVersionInfoAsync(url: string, versionInfo: Omit<VersionInfo, 'lastUpdated'>, userId?: string): Promise<boolean> {
         try {
-            const result = await this.storage.updateSite({ url, versionInfo });
+            const result = await this.storage.updateSite({ url, versionInfo }, userId);
             return result.success;
         } catch (error) {
             console.error('Error updating site version info:', error instanceof Error ? error.message : 'Unknown error');
@@ -287,9 +328,9 @@ export class ConfigService {
         }
     }
 
-    public getAllSites(): Record<string, SiteConfig> {
+    public getAllSites(userId?: string): Record<string, SiteConfig> {
         try {
-            const result = this.getAllSitesAsync();
+            const result = this.getAllSitesAsync(userId);
             return this.blockingAsyncCall(result);
         } catch (error) {
             console.error('Error getting all sites:', error instanceof Error ? error.message : 'Unknown error');
@@ -297,9 +338,9 @@ export class ConfigService {
         }
     }
 
-    public async getAllSitesAsync(): Promise<Record<string, SiteConfig>> {
+    public async getAllSitesAsync(userId?: string): Promise<Record<string, SiteConfig>> {
         try {
-            const result = await this.storage.getAllSites();
+            const result = await this.storage.getAllSites(userId);
             return result.success ? result.data || {} : {};
         } catch (error) {
             console.error('Error getting all sites:', error instanceof Error ? error.message : 'Unknown error');
@@ -311,8 +352,8 @@ export class ConfigService {
         return this.loadConfig();
     }
 
-    public async getConfigAsync(): Promise<AppConfig> {
-        return this.loadConfigAsync();
+    public async getConfigAsync(userId?: string): Promise<AppConfig> {
+        return this.loadConfigAsync(userId);
     }
 
     /**

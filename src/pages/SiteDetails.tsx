@@ -16,6 +16,7 @@ import {
 import { LuArrowLeft as ArrowLeft, LuPencil as Edit, LuCheck as Check, LuX as X } from 'react-icons/lu';
 import { Config } from '../types';
 import { useApiCall } from '../hooks/useApiCall';
+import { useAuth } from '../contexts/AuthContext';
 import { SiteApiService } from '../services/apiCallService';
 import { LoadingState } from '../components/display/LoadingState';
 import { SiteInfoTab } from '../components/site-details/SiteInfoTab';
@@ -37,9 +38,10 @@ import { Tooltip } from '../components/ui/tooltip';
 const SiteDetails: React.FC = () => {
   const { siteUrl } = useParams<{ siteUrl: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [config, setConfig] = useState<Config | null>(null);
   const [activeTab, setActiveTab] = useState("site-info");
-  
+
   const toast = useToastNotifications();
 
 
@@ -76,8 +78,11 @@ const SiteDetails: React.FC = () => {
   );
 
   useEffect(() => {
-    loadConfig.execute();
-  }, []);
+    // Only execute API call if user is authenticated and not loading
+    if (isAuthenticated && !isAuthLoading) {
+      loadConfig.execute();
+    }
+  }, [isAuthenticated, isAuthLoading]);
 
   // Handle tab switching when storage capabilities change
 
@@ -86,13 +91,13 @@ const SiteDetails: React.FC = () => {
   const decodedSiteUrl = decodeUrlParam(siteUrl || '');
   const site = config?.sites?.[decodedSiteUrl];
 
-  // Load maintenance mode status when site is available
+  // Load maintenance mode status when site is available and user is authenticated
   useEffect(() => {
-    if (site) {
+    if (site && isAuthenticated && !isAuthLoading) {
       // Just load maintenance mode directly - let the backend handle active site internally
       getMaintenanceMode.execute();
     }
-  }, [site]);
+  }, [site, isAuthenticated, isAuthLoading]);
 
   const handleUpdateSiteName = async (newName: string) => {
     if (!site || newName === site.name) return;

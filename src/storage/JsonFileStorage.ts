@@ -86,29 +86,39 @@ export class JsonFileStorage extends BaseStorage {
     return Promise.resolve();
   }
 
-  async loadConfig(): Promise<StorageResult<AppConfig>> {
+  async loadConfig(userId?: string): Promise<StorageResult<AppConfig>> {
     try {
+      // Note: JsonFileStorage ignores userId parameter since it's single-tenant by design
+      if (userId) {
+        console.warn('JsonFileStorage: userId parameter ignored - this storage type does not support multi-tenancy');
+      }
+
       if (fs.existsSync(this.tokenFile)) {
         const data = fs.readFileSync(this.tokenFile, 'utf8');
         const config = JSON.parse(data);
-        
+
         // Handle migrations and token decryption
         const migratedConfig = await this.handleMigrations(config);
-        
+
         return this.createStorageResult(true, migratedConfig);
       }
-      
+
       // Return empty config if file doesn't exist
       return this.createStorageResult(true, { sites: {}, activeSite: null });
     } catch (error) {
       console.error('Error loading config:', error instanceof Error ? error.message : 'Unknown error');
-      return this.createStorageResult(false, { sites: {}, activeSite: null }, 
+      return this.createStorageResult(false, { sites: {}, activeSite: null },
         error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
-  async saveConfig(config: AppConfig): Promise<StorageResult<boolean>> {
+  async saveConfig(config: AppConfig, userId?: string): Promise<StorageResult<boolean>> {
     try {
+      // Note: JsonFileStorage ignores userId parameter since it's single-tenant by design
+      if (userId) {
+        console.warn('JsonFileStorage: userId parameter ignored - this storage type does not support multi-tenancy');
+      }
+
       // Create a deep copy to avoid modifying the original config
       const configToSave = JSON.parse(JSON.stringify(config));
       
