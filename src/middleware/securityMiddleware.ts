@@ -228,16 +228,6 @@ export const validateRegistration: ValidationChain[] = [
         .withMessage('Password must be at least 8 characters long')
         .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
         .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
-    body('firstName')
-        .optional()
-        .trim()
-        .isLength({ max: 50 })
-        .withMessage('First name must be less than 50 characters'),
-    body('lastName')
-        .optional()
-        .trim()
-        .isLength({ max: 50 })
-        .withMessage('Last name must be less than 50 characters')
 ];
 
 export const validateLogin: ValidationChain[] = [

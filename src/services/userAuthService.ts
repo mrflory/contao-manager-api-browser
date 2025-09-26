@@ -7,8 +7,6 @@ import { PrismaClient } from '@prisma/client';
 export interface UserRegistrationData {
     email: string;
     password: string;
-    firstName?: string;
-    lastName?: string;
 }
 
 export interface UserLoginData {
@@ -25,9 +23,7 @@ export interface JWTTokens {
 export interface AuthenticatedUser {
     id: string;
     email: string;
-    firstName?: string;
-    lastName?: string;
-    emailVerified: boolean;
+    emailVerified: Date | null;
     isActive: boolean;
     createdAt: Date;
 }
@@ -160,7 +156,7 @@ export class UserAuthService {
      * Register a new user
      */
     public async register(userData: UserRegistrationData): Promise<{ user: AuthenticatedUser; requiresVerification: boolean }> {
-        const { email, password, firstName, lastName } = userData;
+        const { email, password } = userData;
 
         // Check if user already exists
         const existingUser = await this.prisma.user.findUnique({
@@ -184,16 +180,14 @@ export class UserAuthService {
             data: {
                 email,
                 passwordHash,
-                firstName,
-                lastName,
-                emailVerified: !this.emailTransporter, // Auto-verify if email is disabled
+                emailVerified: !this.emailTransporter ? new Date() : null, // Auto-verify if email is disabled
                 isActive: true
             }
         });
 
         // Send verification email if email service is available
         let requiresVerification = false;
-        if (this.emailTransporter && !newUser.emailVerified) {
+        if (this.emailTransporter && newUser.emailVerified === null) {
             await this.sendVerificationEmail(newUser.email, newUser.id);
             requiresVerification = true;
         }
@@ -240,7 +234,7 @@ export class UserAuthService {
         }
 
         // Check if email is verified (if verification is enabled)
-        if (this.emailTransporter && !user.emailVerified) {
+        if (this.emailTransporter && user.emailVerified === null) {
             throw new Error('Email address not verified. Please check your email for verification link.');
         }
 
@@ -456,8 +450,6 @@ export class UserAuthService {
         return {
             id: user.id,
             email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
             emailVerified: user.emailVerified,
             isActive: user.isActive,
             createdAt: user.createdAt

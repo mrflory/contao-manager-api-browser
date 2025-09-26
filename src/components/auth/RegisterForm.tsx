@@ -18,15 +18,13 @@ interface RegisterFormProps {
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
     const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
         email: '',
         password: '',
         confirmPassword: '',
     });
     const [isLoading, setIsLoading] = useState(false);
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-    const [registrationSuccess, setRegistrationSuccess] = useState(false);
+
 
     const { register, error, clearError } = useAuth();
     const navigate = useNavigate();
@@ -57,15 +55,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
             errors.confirmPassword = 'Passwords do not match';
         }
 
-        // First name validation (optional but if provided, should be valid)
-        if (formData.firstName && formData.firstName.length > 50) {
-            errors.firstName = 'First name must be less than 50 characters';
-        }
-
-        // Last name validation (optional but if provided, should be valid)
-        if (formData.lastName && formData.lastName.length > 50) {
-            errors.lastName = 'Last name must be less than 50 characters';
-        }
 
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
@@ -84,12 +73,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         try {
             await register(
                 formData.email.trim(),
-                formData.password,
-                formData.firstName.trim() || undefined,
-                formData.lastName.trim() || undefined
+                formData.password
             );
 
-            setRegistrationSuccess(true);
+            // Redirect to login page with success message
+            navigate('/login?registered=true');
 
             if (onSuccess) {
                 onSuccess();
@@ -119,32 +107,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         }
     };
 
-    if (registrationSuccess) {
-        return (
-            <Card.Root maxWidth="md" mx="auto" p={6}>
-                <Card.Body textAlign="center">
-                    <Box mb={4}>
-                        <Text fontSize="2xl" fontWeight="bold" color="green.600">
-                            Registration Successful!
-                        </Text>
-                    </Box>
-                    <Stack gap={4}>
-                        <Text color="gray.600">
-                            Your account has been created successfully.
-                            {/* Note: Add email verification message when email service is configured */}
-                        </Text>
-                        <Button
-                            onClick={() => navigate('/login')}
-                            colorScheme="blue"
-                            size="lg"
-                        >
-                            Continue to Sign In
-                        </Button>
-                    </Stack>
-                </Card.Body>
-            </Card.Root>
-        );
-    }
 
     return (
         <Card.Root maxWidth="md" mx="auto" p={6}>
@@ -152,7 +114,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
                 <Text fontSize="2xl" fontWeight="bold" textAlign="center">
                     Create Account
                 </Text>
-                <Text color="gray.600" textAlign="center" mt={2}>
+                <Text color="fg.muted" textAlign="center" mt={2}>
                     Join Contao Manager API Browser
                 </Text>
             </Card.Header>
@@ -160,35 +122,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
             <Card.Body>
                 <form onSubmit={handleSubmit}>
                     <Stack gap={4}>
-                        <Stack direction={{ base: 'column', sm: 'row' }} gap={4}>
-                            <Field.Root invalid={!!validationErrors.firstName}>
-                                <Field.Label>First Name (Optional)</Field.Label>
-                                <Input
-                                    type="text"
-                                    value={formData.firstName}
-                                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                                    placeholder="Enter your first name"
-                                    disabled={isLoading}
-                                />
-                                {validationErrors.firstName && (
-                                    <Field.ErrorText>{validationErrors.firstName}</Field.ErrorText>
-                                )}
-                            </Field.Root>
-
-                            <Field.Root invalid={!!validationErrors.lastName}>
-                                <Field.Label>Last Name (Optional)</Field.Label>
-                                <Input
-                                    type="text"
-                                    value={formData.lastName}
-                                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                                    placeholder="Enter your last name"
-                                    disabled={isLoading}
-                                />
-                                {validationErrors.lastName && (
-                                    <Field.ErrorText>{validationErrors.lastName}</Field.ErrorText>
-                                )}
-                            </Field.Root>
-                        </Stack>
 
                         <Field.Root invalid={!!validationErrors.email}>
                             <Field.Label>Email Address *</Field.Label>
@@ -237,11 +170,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
                             <Box
                                 p={3}
                                 borderRadius="md"
-                                bg="red.50"
+                                bg="red.subtle"
                                 borderWidth="1px"
-                                borderColor="red.200"
+                                borderColor="red.emphasized"
                             >
-                                <Text color="red.600" fontSize="sm">
+                                <Text color="red.fg" fontSize="sm">
                                     {error}
                                 </Text>
                             </Box>
@@ -263,9 +196,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
 
             <Card.Footer>
                 <Box textAlign="center" width="full">
-                    <Text fontSize="sm" color="gray.600">
+                    <Text fontSize="sm" color="fg.muted">
                         Already have an account?{' '}
-                        <ChakraLink asChild color="blue.500" fontWeight="medium">
+                        <ChakraLink asChild color="blue.solid" fontWeight="medium">
                             <Link to="/login">Sign in</Link>
                         </ChakraLink>
                     </Text>

@@ -11,7 +11,7 @@ import {
     Link as ChakraLink,
 } from '@chakra-ui/react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 
 interface LoginFormProps {
     onSuccess?: () => void;
@@ -27,6 +27,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, redirectTo = '/
 
     const { login, error, clearError } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Check if coming from successful registration
+    const searchParams = new URLSearchParams(location.search);
+    const showRegistrationSuccess = searchParams.get('registered') === 'true';
 
     const validateForm = (): boolean => {
         const errors: Record<string, string> = {};
@@ -94,10 +99,30 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, redirectTo = '/
                 <Text fontSize="2xl" fontWeight="bold" textAlign="center">
                     Sign In
                 </Text>
-                <Text color="gray.600" textAlign="center" mt={2}>
+                <Text color="fg.muted" textAlign="center" mt={2}>
                     Welcome back to Contao Manager API Browser
                 </Text>
             </Card.Header>
+
+            {showRegistrationSuccess && (
+                <Box
+                    mx={6}
+                    mt={4}
+                    mb={6}
+                    p={4}
+                    borderRadius="md"
+                    bg="green.subtle"
+                    borderWidth="1px"
+                    borderColor="green.emphasized"
+                >
+                    <Text color="green.fg" fontSize="sm" fontWeight="medium">
+                        Registration successful! You can now sign in with your credentials.
+                    </Text>
+                    <Text color="green.fg" fontSize="xs" mt={2} opacity={0.8}>
+                        Your account has been automatically verified since email verification is currently disabled.
+                    </Text>
+                </Box>
+            )}
 
             <Card.Body>
                 <form onSubmit={handleSubmit}>
@@ -154,11 +179,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, redirectTo = '/
                             <Box
                                 p={3}
                                 borderRadius="md"
-                                bg="red.50"
+                                bg="red.subtle"
                                 borderWidth="1px"
-                                borderColor="red.200"
+                                borderColor="red.emphasized"
                             >
-                                <Text color="red.600" fontSize="sm">
+                                <Text color="red.fg" fontSize="sm">
                                     {error}
                                 </Text>
                             </Box>
@@ -180,16 +205,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, redirectTo = '/
 
             <Card.Footer>
                 <Stack gap={3} width="full">
-                    <Text textAlign="center" fontSize="sm" color="gray.600">
-                        <ChakraLink asChild color="blue.500">
+                    <Text textAlign="center" fontSize="sm" color="fg.muted">
+                        <ChakraLink asChild color="blue.solid">
                             <Link to="/forgot-password">Forgot your password?</Link>
                         </ChakraLink>
                     </Text>
 
                     <Box textAlign="center">
-                        <Text fontSize="sm" color="gray.600">
+                        <Text fontSize="sm" color="fg.muted">
                             Don't have an account?{' '}
-                            <ChakraLink asChild color="blue.500" fontWeight="medium">
+                            <ChakraLink asChild color="blue.solid" fontWeight="medium">
                                 <Link to="/register">Sign up</Link>
                             </ChakraLink>
                         </Text>

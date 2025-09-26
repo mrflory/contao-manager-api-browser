@@ -5,9 +5,7 @@ import { HttpClient } from '../services/httpClient';
 export interface User {
     id: string;
     email: string;
-    firstName?: string;
-    lastName?: string;
-    emailVerified: boolean;
+    emailVerified: Date | null;
     createdAt: string;
 }
 
@@ -22,7 +20,7 @@ export interface AuthState {
 
 export interface AuthContextType extends AuthState {
     login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
-    register: (email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
+    register: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     refreshToken: () => Promise<void>;
     clearError: () => void;
@@ -237,9 +235,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const register = async (
         email: string,
-        password: string,
-        firstName?: string,
-        lastName?: string
+        password: string
     ): Promise<void> => {
         dispatch({ type: 'SET_LOADING', payload: true });
         dispatch({ type: 'CLEAR_ERROR' });
@@ -249,14 +245,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const response = await httpClient.makeApiCall('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, firstName, lastName }),
+                body: JSON.stringify({ email, password }),
             }, state.csrfToken || undefined);
 
             if (response.success) {
                 dispatch({ type: 'SET_LOADING', payload: false });
                 // Don't automatically log in - let user handle email verification
             } else {
-                throw new Error(response.error || 'Registration failed');
+                throw new Error(response.error || response.data?.error || 'Registration failed');
             }
         } catch (error: any) {
             console.error('Registration error:', error);

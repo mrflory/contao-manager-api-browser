@@ -29,13 +29,11 @@ export function createAuthRoutes(prisma: PrismaClient) {
         handleValidationErrors,
         async (req: Request, res: Response): Promise<void> => {
             try {
-                const { email, password, firstName, lastName } = req.body;
+                const { email, password } = req.body;
 
                 const result = await userAuthService.register({
                     email,
-                    password,
-                    firstName,
-                    lastName
+                    password
                 });
 
                 res.status(201).json({
@@ -47,8 +45,6 @@ export function createAuthRoutes(prisma: PrismaClient) {
                         user: {
                             id: result.user.id,
                             email: result.user.email,
-                            firstName: result.user.firstName,
-                            lastName: result.user.lastName,
                             emailVerified: result.user.emailVerified
                         },
                         requiresVerification: result.requiresVerification
@@ -107,8 +103,6 @@ export function createAuthRoutes(prisma: PrismaClient) {
                         user: {
                             id: result.user.id,
                             email: result.user.email,
-                            firstName: result.user.firstName,
-                            lastName: result.user.lastName,
                             emailVerified: result.user.emailVerified
                         },
                         accessToken: result.tokens.accessToken
@@ -234,8 +228,6 @@ export function createAuthRoutes(prisma: PrismaClient) {
                     user: {
                         id: req.user!.id,
                         email: req.user!.email,
-                        firstName: req.user!.firstName,
-                        lastName: req.user!.lastName,
                         emailVerified: req.user!.emailVerified,
                         createdAt: req.user!.createdAt
                     }

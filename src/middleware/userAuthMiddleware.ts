@@ -97,7 +97,7 @@ export class UserAuthMiddleware {
             return;
         }
 
-        if (!req.user.emailVerified) {
+        if (req.user.emailVerified === null) {
             res.status(403).json({
                 success: false,
                 error: 'Email verification required'
