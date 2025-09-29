@@ -1,0 +1,141 @@
+import React from 'react';
+import {
+    Alert,
+    AlertIcon,
+    AlertTitle,
+    AlertDescription,
+    Button,
+    HStack,
+    VStack,
+    Text,
+    Box
+} from '@chakra-ui/react';
+
+interface UpgradePromptProps {
+    reason: 'site_limit' | 'feature_access' | 'expired';
+    currentTier: 'free' | 'advanced' | 'premium';
+    feature?: string;
+    sitesUsed?: number;
+    sitesMax?: number;
+    onUpgrade?: () => void;
+    onDismiss?: () => void;
+}
+
+export function UpgradePrompt({
+    reason,
+    currentTier,
+    feature,
+    sitesUsed,
+    sitesMax,
+    onUpgrade,
+    onDismiss
+}: UpgradePromptProps) {
+    const getAlertStatus = () => {
+        switch (reason) {
+            case 'expired':
+                return 'error';
+            case 'site_limit':
+                return 'warning';
+            case 'feature_access':
+                return 'info';
+            default:
+                return 'warning';
+        }
+    };
+
+    const getTitle = () => {
+        switch (reason) {
+            case 'site_limit':
+                return 'Site Limit Reached';
+            case 'feature_access':
+                return 'Feature Not Available';
+            case 'expired':
+                return 'Subscription Expired';
+            default:
+                return 'Upgrade Required';
+        }
+    };
+
+    const getDescription = () => {
+        switch (reason) {
+            case 'site_limit':
+                return `You have reached your limit of ${sitesMax} sites on the ${currentTier} plan. Upgrade to add more sites and unlock additional features.`;
+            case 'feature_access':
+                return `${feature || 'This feature'} is not available on your current ${currentTier} plan. Upgrade to access advanced features and capabilities.`;
+            case 'expired':
+                return `Your ${currentTier} subscription has expired. Renew your subscription to continue using advanced features.`;
+            default:
+                return 'Upgrade your plan to continue.';
+        }
+    };
+
+    const getRecommendedTier = () => {
+        if (currentTier === 'free') {
+            return 'Advanced';
+        }
+        if (currentTier === 'advanced') {
+            return 'Premium';
+        }
+        return 'Premium';
+    };
+
+    const getUpgradeButtonText = () => {
+        if (reason === 'expired') {
+            return 'Renew Subscription';
+        }
+        return `Upgrade to ${getRecommendedTier()}`;
+    };
+
+    return (
+        <Alert
+            status={getAlertStatus()}
+            variant="subtle"
+            flexDirection="column"
+            alignItems="start"
+            borderRadius="md"
+            p={4}
+        >
+            <HStack w="full" justify="space-between" align="start">
+                <HStack align="start">
+                    <AlertIcon />
+                    <Box>
+                        <AlertTitle fontSize="sm" mb={1}>
+                            {getTitle()}
+                        </AlertTitle>
+                        <AlertDescription fontSize="sm" color="gray.600">
+                            {getDescription()}
+                        </AlertDescription>
+
+                        {reason === 'site_limit' && sitesUsed && sitesMax && (
+                            <Text fontSize="xs" color="gray.500" mt={2}>
+                                Currently using {sitesUsed} of {sitesMax} sites
+                            </Text>
+                        )}
+                    </Box>
+                </HStack>
+
+                <VStack spacing={2}>
+                    {onUpgrade && (
+                        <Button
+                            colorScheme={reason === 'expired' ? 'red' : 'blue'}
+                            size="sm"
+                            onClick={onUpgrade}
+                        >
+                            {getUpgradeButtonText()}
+                        </Button>
+                    )}
+
+                    {onDismiss && reason !== 'expired' && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onDismiss}
+                        >
+                            Dismiss
+                        </Button>
+                    )}
+                </VStack>
+            </HStack>
+        </Alert>
+    );
+}

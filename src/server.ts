@@ -19,6 +19,7 @@ import { UnifiedStorage, StorageType } from './storage/interfaces';
 // Middleware
 import { ErrorHandler, ResponseLogger } from './middleware';
 import { UserAuthMiddleware } from './middleware/userAuthMiddleware';
+import { SubscriptionMiddleware } from './middleware/subscriptionMiddleware';
 import {
     securityHeaders,
     corsOptions,
@@ -57,6 +58,7 @@ const proxyService = new ProxyService(configService, loggingService, authService
 
 // Initialize middleware
 const userAuthMiddleware = new UserAuthMiddleware(prisma);
+const subscriptionMiddleware = new SubscriptionMiddleware(prisma);
 const responseLogger = new ResponseLogger(loggingService);
 
 // Security middleware
@@ -69,6 +71,10 @@ app.use(cookieParser());
 
 // Response logging middleware
 app.use(responseLogger.logRequest);
+
+// Subscription middleware for header injection and expiration handling
+app.use(subscriptionMiddleware.handleExpiredSubscriptions);
+app.use(subscriptionMiddleware.addSubscriptionHeaders);
 
 // Serve React build in production, public in development
 if (process.env.NODE_ENV === 'production') {
@@ -235,6 +241,7 @@ app.get('/api/token-info',
 
 app.post('/api/save-token',
     userAuthMiddleware.requireAuth,
+    subscriptionMiddleware.checkSiteLimit,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         const userId = req.userId!;
         const result = await authService.saveToken(req.body, userId);
@@ -761,13 +768,132 @@ app.get('/', (_req, res) => {
     }
 });
 
+// Phase 3.2: Subscription Management API Endpoints
+app.get('/api/subscription/status',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        try {
+            const userId = req.userId!;
+            const context = await subscriptionMiddleware.subscriptionService.getSubscriptionContext(userId);
+
+            if (!context) {
+                return res.status(500).json({ error: 'Failed to load subscription' });
+            }
+
+            return res.json({
+                subscription: {
+                    tier: context.subscription.planType,
+                    status: context.subscription.status,
+                    startedAt: context.subscription.startedAt,
+                    expiresAt: context.subscription.expiresAt
+                },
+                limits: context.limits,
+                features: context.features
+            });
+        } catch (error) {
+            console.error('Error getting subscription status:', error);
+            return res.status(500).json({ error: 'Failed to get subscription status' });
+        }
+    })
+);
+
+app.get('/api/subscription/features',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        try {
+            const userId = req.userId!;
+            const subscription = await subscriptionMiddleware.subscriptionService.getUserSubscription(userId);
+
+            if (!subscription) {
+                return res.status(500).json({ error: 'No subscription found' });
+            }
+
+            return res.json({
+                features: subscription.features,
+                tier: subscription.planType
+            });
+        } catch (error) {
+            console.error('Error getting subscription features:', error);
+            return res.status(500).json({ error: 'Failed to get subscription features' });
+        }
+    })
+);
+
+app.get('/api/subscription/limits',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        try {
+            const userId = req.userId!;
+            const limits = await subscriptionMiddleware.subscriptionService.getSubscriptionLimits(userId);
+
+            if (!limits) {
+                return res.status(500).json({ error: 'Failed to get subscription limits' });
+            }
+
+            return res.json({
+                limits,
+                canAddSites: limits.canAddSites,
+                sitesRemaining: limits.sitesMax - limits.sitesUsed
+            });
+        } catch (error) {
+            console.error('Error getting subscription limits:', error);
+            return res.status(500).json({ error: 'Failed to get subscription limits' });
+        }
+    })
+);
+
+app.post('/api/subscription/validate-action',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        try {
+            const userId = req.userId!;
+            const { action } = req.body;
+
+            if (!action) {
+                return res.status(400).json({ error: 'Action is required' });
+            }
+
+            const validation = await subscriptionMiddleware.subscriptionService.validateAction(userId, action);
+            return res.json(validation);
+        } catch (error) {
+            console.error('Error validating subscription action:', error);
+            return res.status(500).json({ error: 'Failed to validate action' });
+        }
+    })
+);
+
+app.get('/api/subscription/plans',
+    ErrorHandler.asyncWrapper(async (_req: Request, res: Response) => {
+        try {
+            // Import subscription types dynamically to avoid circular dependencies
+            const { SUBSCRIPTION_TIERS } = await import('./types/subscriptionTypes');
+
+            const plans = Object.values(SUBSCRIPTION_TIERS).map(plan => ({
+                tier: plan.tier,
+                name: plan.name,
+                price: plan.price,
+                currency: plan.currency,
+                interval: plan.interval,
+                features: plan.features,
+                description: plan.description,
+                popular: plan.popular || false
+            }));
+
+            return res.json({ plans });
+        } catch (error) {
+            console.error('Error getting subscription plans:', error);
+            return res.status(500).json({ error: 'Failed to get subscription plans' });
+        }
+    })
+);
+
 // Catch-all handler for React Router (MUST be last)
 app.get('/*splat', (req, res) => {
     // Don't handle API routes
     if (req.path.startsWith('/api')) {
         return res.status(404).json({ error: 'API endpoint not found' });
     }
-    
+
     // Serve React app for all other routes
     if (process.env.NODE_ENV === 'production') {
         return res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));

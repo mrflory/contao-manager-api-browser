@@ -43,7 +43,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
               executionRecord={record}
               isCurrent={isCurrent}
               onUserAction={(actionId) => engine.handleUserAction(item.id, actionId)}
-              onRetry={() => engine.retryItem(index)}
+              _onRetry={() => engine.retryItem(index)}
               onSkip={() => engine.skipItem(index)}
               onStartFromStep={onStartFromStep ? () => onStartFromStep(index) : undefined}
               isWorkflowRunning={isWorkflowRunning}

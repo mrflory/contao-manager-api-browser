@@ -18,7 +18,7 @@ import { StorageFactory } from '../storage/StorageFactory';
 import { StorageType, StorageConfig } from '../storage/interfaces';
 import { JsonFileStorageUnified } from '../storage/JsonFileStorageUnified';
 import { DatabaseStorage } from '../storage/DatabaseStorage';
-import { AppConfig } from '../types';
+// import { AppConfig } from '../types';
 
 class DatabaseMigrator {
   private prisma: PrismaClient;

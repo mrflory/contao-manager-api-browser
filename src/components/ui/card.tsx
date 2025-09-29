@@ -1,5 +1,5 @@
 import { Card as ChakraCard } from "@chakra-ui/react"
-import * as React from "react"
+// import * as React from "react"
 
 // Create a Card object with all components for easier importing
 export const Card = {

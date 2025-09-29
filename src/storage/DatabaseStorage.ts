@@ -1,7 +1,8 @@
-import { BaseStorage, StorageConfig, StorageResult } from './interfaces';
+import { BaseStorage, StorageConfig, StorageResult, AddSiteParams } from './interfaces';
 import { AppConfig, SiteConfig, AuthMethod } from '../types';
 import { PrismaClient } from '../generated/prisma';
 import TokenEncryptionService from '../services/tokenEncryption';
+import { SubscriptionService } from '../services/subscriptionService';
 
 /**
  * PostgreSQL database storage implementation using Prisma ORM
@@ -14,6 +15,7 @@ export class DatabaseStorage extends BaseStorage {
   private initialized = false;
   // Phase 3: User ID is now passed as parameter to methods instead of instance variable
   private tokenEncryption: TokenEncryptionService | null = null;
+  private subscriptionService: SubscriptionService | null = null;
 
   constructor(config: StorageConfig) {
     super(config);
@@ -37,8 +39,11 @@ export class DatabaseStorage extends BaseStorage {
 
         // Initialize token encryption service
         this.tokenEncryption = new TokenEncryptionService();
+
+        // Initialize subscription service for site limit validation
+        this.subscriptionService = new SubscriptionService(this.prisma);
       } catch (error) {
-        console.error('Failed to initialize Prisma client or token encryption:', error);
+        console.error('Failed to initialize Prisma client, token encryption, or subscription service:', error);
       }
     }
   }
@@ -559,6 +564,86 @@ export class DatabaseStorage extends BaseStorage {
         errorCount: 0,
         averageResponseTime: 0
       }, error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+
+  /**
+   * Phase 3.2: Override addSite method to enforce subscription limits
+   * Checks site limits before allowing new sites to be added
+   */
+  override async addSite(params: AddSiteParams, userId?: string): Promise<StorageResult<boolean>> {
+    try {
+      // Use provided userId or fall back to default for backward compatibility
+      const currentUserId = userId || this.getDefaultUserId();
+
+      // Check subscription limits before adding site
+      if (this.subscriptionService && currentUserId !== this.getDefaultUserId()) {
+        const canAdd = await this.subscriptionService.canAddSite(currentUserId);
+        if (!canAdd) {
+          const limits = await this.subscriptionService.getSubscriptionLimits(currentUserId);
+          if (limits) {
+            return this.createStorageResult(
+              false,
+              false,
+              `Site limit exceeded. You have ${limits.sitesUsed} of ${limits.sitesMax} sites. Upgrade your subscription to add more sites.`
+            );
+          }
+          return this.createStorageResult(false, false, 'Site limit exceeded');
+        }
+      }
+
+      // Call parent implementation to handle the actual site addition
+      const result = await super.addSite(params, userId);
+
+      // Log the operation for audit purposes
+      if (result.success && this.subscriptionService && currentUserId !== this.getDefaultUserId()) {
+        await this.logUsage(
+          currentUserId,
+          'site_add',
+          '/api/add-site',
+          params.url,
+          {
+            url: params.url,
+            name: params.name || this.extractSiteName(params.url),
+            authMethod: params.authMethod,
+            scope: params.scope
+          },
+          { success: true }
+        );
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error adding site with subscription validation:', error);
+      return this.createStorageResult(false, false, error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+
+  /**
+   * Phase 3.2: Override removeSite method to update subscription context
+   * Logs site removal for audit purposes
+   */
+  override async removeSite(url: string, userId?: string): Promise<StorageResult<boolean>> {
+    try {
+      // Call parent implementation to handle the actual site removal
+      const result = await super.removeSite(url, userId);
+
+      // Log the operation for audit purposes
+      if (result.success && this.subscriptionService && userId && userId !== this.getDefaultUserId()) {
+        await this.logUsage(
+          userId,
+          'site_remove',
+          '/api/remove-site',
+          url,
+          { url },
+          { success: true }
+        );
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error removing site with subscription logging:', error);
+      return this.createStorageResult(false, false, error instanceof Error ? error.message : 'Unknown error');
     }
   }
 }

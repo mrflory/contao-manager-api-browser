@@ -25,5 +25,5 @@ export const AvatarComponents = {
   Image: ChakraAvatar.Image,
   Fallback: ChakraAvatar.Fallback,
   Icon: ChakraAvatar.Icon,
-  Group: ChakraAvatar.Group,
+  // Group: ChakraAvatar.Group,
 }

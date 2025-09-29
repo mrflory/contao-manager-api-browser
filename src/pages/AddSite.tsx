@@ -17,6 +17,8 @@ import { CookieAuthForm } from '../components/forms/CookieAuthForm';
 import { Field } from '../components/ui/field';
 import { useAuth } from '../hooks/useAuth';
 import { useToastNotifications } from '../hooks/useToastNotifications';
+import { useSubscription } from '../hooks/useSubscription';
+import { UpgradePromptSimple } from '../components/subscription';
 import { OAuthScope, AuthenticationMethod, CookieAuthCredentials } from '../types/authTypes';
 import { AuthUtils } from '../utils/authUtils';
 import { AuthApiService, SiteApiService } from '../services/apiCallService';
@@ -25,6 +27,7 @@ import { encodeUrlParam } from '../utils/urlUtils';
 const AddSite: React.FC = () => {
   const navigate = useNavigate();
   const { showApiError, showApiSuccess } = useToastNotifications();
+  const { limits, subscription } = useSubscription();
   const [url, setUrl] = useState('');
   const [authMethod, setAuthMethod] = useState<AuthenticationMethod>('token');
   const [cookieAuthLoading, setCookieAuthLoading] = useState(false);
@@ -160,6 +163,17 @@ const AddSite: React.FC = () => {
       >
         {!state.showTokenForm ? (
           <VStack gap={6} width="full">
+            {/* Subscription Limit Warning */}
+            {!limits.canAddSites && (
+              <UpgradePromptSimple
+                reason="site_limit"
+                currentTier={subscription.tier}
+                sitesUsed={limits.sitesUsed}
+                sitesMax={limits.sitesMax}
+                onUpgrade={() => navigate('/subscription')}
+              />
+            )}
+
             <UrlInput
               label="Contao Manager URL"
               value={url}

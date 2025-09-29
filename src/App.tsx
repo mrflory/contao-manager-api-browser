@@ -11,6 +11,8 @@ import Header from './components/Header';
 import SitesOverview from './pages/SitesOverview';
 import SiteDetails from './pages/SiteDetails';
 import AddSite from './pages/AddSite';
+import SubscriptionPage from './pages/Subscription';
+import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 
@@ -62,6 +64,30 @@ const App: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <AddSite />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/billing"
+                element={
+                  <ProtectedRoute>
+                    <SubscriptionPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/subscription"
+                element={
+                  <ProtectedRoute>
+                    <SubscriptionPage />
                   </ProtectedRoute>
                 }
               />

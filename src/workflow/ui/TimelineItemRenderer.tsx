@@ -25,7 +25,7 @@ interface TimelineItemRendererProps {
   executionRecord?: TimelineExecutionRecord;
   isCurrent?: boolean;
   onUserAction: (actionId: string) => Promise<void>;
-  onRetry: () => Promise<void>;
+  _onRetry: () => Promise<void>;
   onSkip: () => Promise<void>;
   onStartFromStep?: () => Promise<void>;
   isWorkflowRunning?: boolean;
@@ -70,7 +70,7 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
   item,
   executionRecord,
   onUserAction,
-  onRetry,
+  _onRetry: _,
   onStartFromStep,
   isWorkflowRunning
 }) => {
@@ -274,8 +274,8 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
                     <ErrorDisplay
                       error={executionRecord?.result?.enhancedError || item.lastEnhancedError!}
                       variant="inline"
-                      showRecoveryActions={true}
-                      onRetry={item.canRetry() ? onRetry : undefined}
+                      // showRecoveryActions={true}
+                      // onRetry={item.canRetry() ? onRetry : undefined}
                     />
                   ) : (executionRecord?.result?.error || item.lastError) ? (
                     <Text
@@ -360,7 +360,7 @@ export const TimelineItemRenderer: React.FC<TimelineItemRendererProps> = ({
                     <UserActionPanel
                       actions={executionRecord.result.userActions}
                       onAction={onUserAction}
-                      onRetry={item.canRetry() ? onRetry : undefined}
+                      // onRetry={item.canRetry() ? onRetry : undefined}
                     />
                   ) : (
                     <Alert.Root status="warning" size="sm">

@@ -24,10 +24,11 @@ import { LoadingState } from '../components/display/LoadingState';
 import { EmptyState } from '../components/display/EmptyState';
 import { VersionBadges } from '../components/display/VersionBadges';
 import { extractDomain, encodeUrlParam } from '../utils/urlUtils';
+import { SubscriptionStatusSimple } from '../components/subscription';
 
 const SitesOverview: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isTokenReady, isLoading: authLoading } = useAuth();
 
   const configApi = useApiCall(
     () => SiteApiService.getConfig(),
@@ -47,11 +48,11 @@ const SitesOverview: React.FC = () => {
   );
 
   useEffect(() => {
-    // Only execute API call if user is authenticated and not loading
-    if (isAuthenticated && !isAuthLoading) {
+    // Only execute API call when auth is complete and token is ready
+    if (!authLoading && isTokenReady) {
       configApi.execute();
     }
-  }, [isAuthenticated, isAuthLoading]);
+  }, [authLoading, isTokenReady]);
 
   const handleSiteClick = async (url: string) => {
     await setActiveSiteApi.execute(url);
@@ -189,6 +190,11 @@ const SitesOverview: React.FC = () => {
           <Plus size={16} /> Add New Site
         </Button>
       </Flex>
+
+      {/* Subscription Status */}
+      <VStack align="stretch" gap={6} mb={8}>
+        <SubscriptionStatusSimple />
+      </VStack>
 
       {sites.length === 0 ? (
         <EmptyState
