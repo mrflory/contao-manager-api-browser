@@ -145,7 +145,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             async (error: any) => {
                 const originalRequest = error.config;
 
-                if (error.response?.status === 401 && !originalRequest._retry) {
+                // Skip retry for refresh endpoint and already retried requests
+                if (error.response?.status === 401 &&
+                    !originalRequest._retry &&
+                    !originalRequest.url?.includes('/api/auth/refresh')) {
                     originalRequest._retry = true;
 
                     try {
@@ -156,9 +159,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             return httpClient.axios(originalRequest);
                         }
                     } catch (refreshError) {
-                        logout();
+                        // Clear stored token and logout on refresh failure
+                        removeStoredToken();
+                        dispatch({ type: 'LOGOUT' });
                         return Promise.reject(refreshError);
                     }
+                }
+
+                // If refresh endpoint fails, logout immediately
+                if (error.response?.status === 401 && originalRequest.url?.includes('/api/auth/refresh')) {
+                    removeStoredToken();
+                    dispatch({ type: 'LOGOUT' });
                 }
 
                 return Promise.reject(error);
