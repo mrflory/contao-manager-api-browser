@@ -19,7 +19,7 @@
 **What to Test:**
 - [x] Page loads showing subscription status
 - [x] Site usage display (X of Y sites used)
-- [fails] "Add Site" button state based on limits
+- [x] "Add Site" button state based on limits
 
 **Expected Results:**
 - ✅ Should see: **"Free Plan: 2 sites"**
@@ -56,9 +56,9 @@
 
 ### **4. Subscription Status Components**
 **What to Test:**
-- [ ] Find subscription status in UI (likely in header/sidebar)
-- [ ] Check subscription badge display
-- [ ] Verify feature availability indicators
+- [x] Find subscription status in UI (likely in header/sidebar)
+- [x] Check subscription badge display
+- [x] Verify feature availability indicators
 
 **Expected Visual Elements:**
 - ✅ **Subscription Badge**: "Free" with appropriate styling

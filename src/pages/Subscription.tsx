@@ -5,7 +5,6 @@ import {
     VStack,
     Heading,
     Text,
-    SimpleGrid,
     Card
 } from '@chakra-ui/react';
 import { SubscriptionStatus, SubscriptionPlans } from '../components/subscription';
@@ -72,52 +71,25 @@ const SubscriptionPage: React.FC = () => {
                 {/* Page Header */}
                 <Box textAlign="center">
                     <Heading size="xl" mb={4}>
-                        Subscription Management
+                        Subscription & Billing
                     </Heading>
-                    <Text fontSize="lg" color="gray.600">
+                    <Text fontSize="lg" color="gray.600" _dark={{ color: "gray.300" }}>
                         Manage your subscription and billing preferences
                     </Text>
                 </Box>
 
-                {/* Current Status and Plans */}
-                <SimpleGrid columns={{ base: 1, lg: 2 }} gap={8}>
-                    {/* Current Subscription Status */}
-                    <Box>
-                        <Heading size="md" mb={4}>
-                            Current Subscription
-                        </Heading>
-                        <SubscriptionStatus />
-                    </Box>
-
-                    {/* Quick Plan Comparison */}
-                    <Box>
-                        <Heading size="md" mb={4}>
-                            Plan Comparison
-                        </Heading>
-                        <Card.Root p={4}>
-                            <VStack align="stretch" gap={3}>
-                                <Text fontSize="sm" fontWeight="semibold">
-                                    Available Plans:
-                                </Text>
-                                {plans.map((plan) => (
-                                    <Box key={plan.tier} p={3} bg="gray.50" borderRadius="md">
-                                        <Text fontWeight="medium">
-                                            {plan.name} - ${plan.price}/{plan.interval}
-                                        </Text>
-                                        <Text fontSize="sm" color="gray.600">
-                                            {plan.features.maxSites} sites, {plan.features.hasHistory ? 'with' : 'without'} advanced features
-                                        </Text>
-                                    </Box>
-                                ))}
-                            </VStack>
-                        </Card.Root>
-                    </Box>
-                </SimpleGrid>
-
-                {/* Detailed Plans */}
+                {/* Current Subscription Status */}
                 <Box>
-                    <Heading size="md" mb={6} textAlign="center">
-                        Choose Your Plan
+                    <Heading size="lg" mb={6}>
+                        Current Subscription
+                    </Heading>
+                    <SubscriptionStatus />
+                </Box>
+
+                {/* Available Plans */}
+                <Box>
+                    <Heading size="lg" mb={6}>
+                        Available Plans
                     </Heading>
                     <SubscriptionPlans
                         plans={plans}
@@ -128,16 +100,16 @@ const SubscriptionPage: React.FC = () => {
                 </Box>
 
                 {/* Additional Information */}
-                <Card.Root p={6}>
+                <Card.Root p={6} bg="gray.50" _dark={{ bg: "gray.800" }}>
                     <VStack align="stretch" gap={4}>
-                        <Heading size="sm">
+                        <Heading size="md" color="gray.900" _dark={{ color: "gray.100" }}>
                             Need Help?
                         </Heading>
-                        <Text fontSize="sm" color="gray.600">
+                        <Text fontSize="sm" color="gray.700" _dark={{ color: "gray.300" }}>
                             If you have questions about billing, features, or need assistance with your subscription,
                             please contact our support team. Premium subscribers receive priority support.
                         </Text>
-                        <Text fontSize="xs" color="gray.500">
+                        <Text fontSize="xs" color="gray.600" _dark={{ color: "gray.400" }}>
                             All plans include secure token storage, site management, and basic Contao Manager integration.
                             Advanced features like history tracking, snapshots, and workflows are available with paid plans.
                         </Text>

@@ -10,13 +10,11 @@ import {
 import { ColorModeButton, useColorModeValue } from './ui/color-mode'
 import { useAuth } from '../contexts/AuthContext';
 import { UserProfile } from './auth/UserProfile';
-import { SubscriptionBadge } from './subscription';
-import { useSubscription } from '../hooks/useSubscription';
+import { SubscriptionPopover } from './subscription';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAuth();
-  const { subscription } = useSubscription();
   const bg = useColorModeValue('brand.500', 'brand.700');
   const color = 'white';
 
@@ -40,12 +38,7 @@ const Header: React.FC = () => {
             <>
               {isAuthenticated ? (
                 <Stack direction="row" align="center" gap={3}>
-                  <SubscriptionBadge
-                    tier={subscription.tier}
-                    status={subscription.status}
-                    variant="solid"
-                    size="sm"
-                  />
+                  <SubscriptionPopover />
                   <UserProfile variant="dropdown" />
                 </Stack>
               ) : (

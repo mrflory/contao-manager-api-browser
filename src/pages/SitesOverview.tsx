@@ -24,11 +24,12 @@ import { LoadingState } from '../components/display/LoadingState';
 import { EmptyState } from '../components/display/EmptyState';
 import { VersionBadges } from '../components/display/VersionBadges';
 import { extractDomain, encodeUrlParam } from '../utils/urlUtils';
-import { SubscriptionStatusSimple } from '../components/subscription';
+import { useSubscription } from '../hooks/useSubscription';
 
 const SitesOverview: React.FC = () => {
   const navigate = useNavigate();
   const { isTokenReady, isLoading: authLoading } = useAuth();
+  const { limits } = useSubscription();
 
   const configApi = useApiCall(
     () => SiteApiService.getConfig(),
@@ -186,22 +187,18 @@ const SitesOverview: React.FC = () => {
         <Button
           colorPalette="green"
           onClick={handleAddSite}
+          disabled={!limits.canAddSites}
         >
           <Plus size={16} /> Add New Site
         </Button>
       </Flex>
 
-      {/* Subscription Status */}
-      <VStack align="stretch" gap={6} mb={8}>
-        <SubscriptionStatusSimple />
-      </VStack>
-
       {sites.length === 0 ? (
         <EmptyState
           title="No sites configured yet"
-          description="Click 'Add New Site' to get started"
-          actionLabel="Add New Site"
-          onAction={handleAddSite}
+          description={limits.canAddSites ? "Click 'Add New Site' to get started" : "Site limit reached. Upgrade your plan to add sites."}
+          actionLabel={limits.canAddSites ? "Add New Site" : "Upgrade Plan"}
+          onAction={limits.canAddSites ? handleAddSite : () => navigate('/billing')}
           icon="🌐"
         />
       ) : (
