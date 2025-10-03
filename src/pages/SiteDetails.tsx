@@ -30,15 +30,17 @@ import { useToastNotifications, TOAST_MESSAGES } from '../hooks/useToastNotifica
 import { SiteContext } from '../hooks/useWorkflowHistory';
 import { TaskApiService } from '../services/apiCallService';
 import { MaintenanceMode } from '../types';
-import { LuShieldAlert as ShieldAlert, LuPlay as Play } from 'react-icons/lu';
+import { LuShieldAlert as ShieldAlert, LuPlay as Play, LuLock as Lock } from 'react-icons/lu';
 import { Badge } from '@chakra-ui/react';
 import { Tooltip } from '../components/ui/tooltip';
+import { useSubscription } from '../hooks/useSubscription';
 
 
 const SiteDetails: React.FC = () => {
   const { siteUrl } = useParams<{ siteUrl: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { features, subscription } = useSubscription();
   const [config, setConfig] = useState<Config | null>(null);
   const [activeTab, setActiveTab] = useState("site-info");
 
@@ -275,9 +277,13 @@ const SiteDetails: React.FC = () => {
               <Tabs.Trigger value="site-info">Site Info</Tabs.Trigger>
               <Tabs.Trigger value="packages">Packages</Tabs.Trigger>
               <Tabs.Trigger value="update">Update</Tabs.Trigger>
-              <Tabs.Trigger value="history">History</Tabs.Trigger>
+              <Tabs.Trigger value="history" disabled={!features.hasHistory}>
+                History {!features.hasHistory && <Lock size={14} />}
+              </Tabs.Trigger>
               <Tabs.Trigger value="expert">Expert</Tabs.Trigger>
-              <Tabs.Trigger value="logs">Logs</Tabs.Trigger>
+              <Tabs.Trigger value="logs" disabled={!features.hasLogging}>
+                Logs {!features.hasLogging && <Lock size={14} />}
+              </Tabs.Trigger>
             </Tabs.List>
 
             {/* Tab 1: Site Info */}
@@ -304,9 +310,11 @@ const SiteDetails: React.FC = () => {
             </Tabs.Content>
 
             {/* Tab 4: History */}
-            <Tabs.Content value="history">
-              <HistoryTab site={site} />
-            </Tabs.Content>
+            {features.hasHistory && (
+              <Tabs.Content value="history">
+                <HistoryTab site={site} />
+              </Tabs.Content>
+            )}
 
             {/* Tab 5: Expert */}
             <Tabs.Content value="expert">
@@ -314,9 +322,11 @@ const SiteDetails: React.FC = () => {
             </Tabs.Content>
 
             {/* Tab 6: Logs */}
-            <Tabs.Content value="logs">
-              <LogsTab site={site} />
-            </Tabs.Content>
+            {features.hasLogging && (
+              <Tabs.Content value="logs">
+                <LogsTab site={site} />
+              </Tabs.Content>
+            )}
           </Tabs.Root>
         </Box>
         
