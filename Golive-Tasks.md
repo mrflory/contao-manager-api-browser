@@ -330,7 +330,7 @@ interface SubscriptionFeatures {
 **Priority: High** - Test deployment before service separation
 - [x] Configure build and deployment pipeline
 - [x] Set up environment variables and secrets management documentation
-- [x] Create Railway configuration files (railway.json, Procfile, .railwayignore)
+- [x] Create Railway configuration files (railway.json, .railwayignore)
 - [x] Add health check endpoint for Railway monitoring
 - [x] Create comprehensive deployment documentation
 - [ ] Set up Railway project and environment configuration (manual step)
@@ -358,7 +358,7 @@ interface SubscriptionFeatures {
 **Status: READY FOR DEPLOYMENT** - All preparation work completed, ready for manual Railway deployment.
 
 **What was implemented:**
-- **Railway Configuration Files**: Complete deployment setup with railway.json, Procfile, and .railwayignore
+- **Railway Configuration Files**: Complete deployment setup with railway.json and .railwayignore
 - **Health Check Endpoint**: Production-ready health monitoring at `/api/health` with database connectivity checks
 - **Build Pipeline**: Verified build process works correctly (`npm run build:all` successful)
 - **Environment Documentation**: Comprehensive environment variable guide with secret generation commands
@@ -370,8 +370,7 @@ interface SubscriptionFeatures {
 
 **Configuration files created:**
 ```
-railway.json              # Railway build and deploy configuration
-Procfile                  # Process definitions (web server + DB migrations)
+railway.json              # Railway build and deploy configuration (with migrations in startCommand)
 .railwayignore            # Files excluded from deployment
 .railway/QUICK_START.md   # Quick deployment guide
 .railway/deployment-checklist.md  # Deployment checklist
@@ -393,7 +392,7 @@ RAILWAY_DEPLOYMENT.md     # Full deployment documentation
 
 **Technical achievements:**
 - Zero-downtime deployment strategy with health checks
-- Automatic database migrations on deployment via Procfile release command
+- Automatic database migrations before server start via Railway startCommand
 - Production-ready build configuration validated locally
 - Comprehensive troubleshooting documentation for common deployment issues
 - Cost estimation and scaling guidance provided

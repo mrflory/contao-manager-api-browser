@@ -19,7 +19,6 @@ Created all necessary Railway deployment configuration:
 | File | Purpose | Status |
 |------|---------|--------|
 | `railway.json` | Build and deployment configuration | ✅ Created |
-| `Procfile` | Process definitions (web + migrations) | ✅ Created |
 | `.railwayignore` | Deployment file exclusions | ✅ Created |
 
 ### 2. Health Check Endpoint ✅
@@ -126,14 +125,17 @@ Updated main README with Railway deployment section:
 }
 ```
 
-### Procfile
-```
-web: npm start
-release: npx prisma migrate deploy
+### railway.json - Start Command
+```json
+{
+  "deploy": {
+    "startCommand": "npx prisma migrate deploy && npm start"
+  }
+}
 ```
 
 **Key Features**:
-- Automatic database migrations on deployment
+- Automatic database migrations before server start
 - Zero-downtime deployment strategy
 - Health check monitoring
 - Automatic restart on failure
@@ -260,7 +262,6 @@ EMAIL_FROM=noreply@your-domain.com
 ### New Files
 ```
 railway.json                          # Railway configuration
-Procfile                              # Process definitions
 .railwayignore                        # Deployment exclusions
 RAILWAY_DEPLOYMENT.md                 # Full deployment guide
 .railway/QUICK_START.md               # Quick deployment guide

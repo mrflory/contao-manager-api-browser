@@ -133,10 +133,10 @@ If needed, override in the **"Settings"** tab:
 
 ### Step 5: Database Migration
 
-Railway will automatically run Prisma migrations on deployment via the `Procfile`:
+Railway automatically runs Prisma migrations before starting the application via the `startCommand` in `railway.json`:
 
 ```
-release: npx prisma migrate deploy
+"startCommand": "npx prisma migrate deploy && npm start"
 ```
 
 This ensures the database schema is up-to-date before the application starts.
