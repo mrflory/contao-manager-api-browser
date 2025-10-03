@@ -46,11 +46,31 @@ A modern web-based interface for managing multiple Contao Manager instances thro
    - Select the appropriate permissions scope
    - Complete OAuth authentication through your Contao Manager
 
-## Production Setup
+## Production Deployment
+
+### Railway Deployment (Recommended) 🚀
+
+Deploy to Railway in 5 minutes:
+
+1. **Fork this repository** to your GitHub account
+
+2. **Deploy to Railway**:
+   - Visit [railway.app](https://railway.app)
+   - Click "Deploy from GitHub repo"
+   - Select your forked repository
+   - Add PostgreSQL database service
+
+3. **Configure environment variables** (see [.railway/QUICK_START.md](.railway/QUICK_START.md))
+
+4. **Deploy automatically** on every git push!
+
+📚 **Full Railway deployment guide**: [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md)
+
+### Self-Hosted Production
 
 1. **Build the application**:
    ```bash
-   npm run build
+   npm run build:all
    ```
 
 2. **Start production server**:

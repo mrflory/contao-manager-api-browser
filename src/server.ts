@@ -83,6 +83,29 @@ if (process.env.NODE_ENV === 'production') {
     app.use(express.static('public'));
 }
 
+// Health check endpoint for Railway deployment
+app.get('/api/health', async (_req: Request, res: Response) => {
+    try {
+        // Check database connection
+        await prisma.$queryRaw`SELECT 1`;
+
+        res.status(200).json({
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime(),
+            environment: process.env.NODE_ENV || 'development',
+            storage: process.env.STORAGE_TYPE || 'json_file'
+        });
+    } catch (error) {
+        console.error('Health check failed:', error);
+        res.status(503).json({
+            status: 'unhealthy',
+            timestamp: new Date().toISOString(),
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+
 // Phase 2: User Authentication Routes
 app.use('/api/auth', createAuthRoutes(prisma));
 

@@ -1,0 +1,45 @@
+# Railway ignore file - exclude unnecessary files from deployment
+
+# Development files
+node_modules/
+.git/
+.github/
+.vscode/
+.claude/
+
+# Test files
+src/test/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Build artifacts (will be rebuilt on Railway)
+dist/
+dist-server/
+
+# Local data files
+data/
+server.log
+*.log
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Environment files (use Railway environment variables instead)
+.env
+.env.local
+.env.development
+.env.test
+
+# Testing and coverage
+coverage/
+.nyc_output/
+
+# Misc
+.DS_Store
+*.swp
+*.swo
+*~
