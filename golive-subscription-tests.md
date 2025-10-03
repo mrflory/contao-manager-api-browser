@@ -70,8 +70,8 @@
 
 ### **5. Feature Access Restrictions**
 **What to Test:**
-- [ ] Try accessing premium features (if UI exists for them)
-- [ ] Look for disabled/grayed out premium features
+- [x] Try accessing premium features (if UI exists for them)
+- [x] Look for disabled/grayed out premium features
 
 **Expected Restrictions on Free Tier:**
 - ❌ **History & Logging**: Should be disabled/hidden
@@ -86,8 +86,8 @@
 
 #### **Site Creation at Limit**
 **What to Test:**
-- [ ] Create 2 sites first
-- [ ] Try to create a 3rd site
+- [x] Create 2 sites first
+- [x] Try to create a 3rd site
 
 **Expected Error:**
 ```
@@ -108,9 +108,9 @@
 
 ### **7. Console Testing**
 **What to Monitor:**
-- [ ] No 404 errors for subscription endpoints
-- [ ] Subscription data loads successfully
-- [ ] API calls use correct URLs (no double /api prefix)
+- [x] No 404 errors for subscription endpoints
+- [x] Subscription data loads successfully
+- [x] API calls use correct URLs (no double /api prefix)
 
 **Console Commands to Test:**
 ```javascript
