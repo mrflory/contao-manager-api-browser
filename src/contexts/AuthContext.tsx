@@ -121,6 +121,9 @@ const removeStoredToken = (): void => {
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [state, dispatch] = useReducer(authReducer, initialState);
 
+    // Track ongoing refresh promise to prevent multiple concurrent refresh attempts
+    const refreshPromiseRef = useRef<Promise<void> | null>(null);
+
     // Set up axios interceptor for adding auth token
     useEffect(() => {
         const httpClient = HttpClient.getInstance();
@@ -139,7 +142,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             (error: any) => Promise.reject(error)
         );
 
-        // Response interceptor for handling token expiration
+        // Response interceptor for handling token expiration with deduplication
         const responseInterceptor = httpClient.axios.interceptors.response.use(
             (response: any) => response,
             async (error: any) => {
@@ -152,7 +155,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     originalRequest._retry = true;
 
                     try {
-                        await refreshToken();
+                        // Use existing refresh promise if one is in progress (deduplication)
+                        if (!refreshPromiseRef.current) {
+                            refreshPromiseRef.current = refreshToken().finally(() => {
+                                refreshPromiseRef.current = null;
+                            });
+                        }
+
+                        await refreshPromiseRef.current;
+
                         const token = getStoredToken();
                         if (token) {
                             originalRequest.headers.Authorization = `Bearer ${token}`;
@@ -185,10 +196,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Manage token readiness state
     useEffect(() => {
         if (state.accessToken && state.isAuthenticated) {
-            // Use setTimeout with 0 to ensure this runs after axios interceptor is set up
-            setTimeout(() => {
-                dispatch({ type: 'SET_TOKEN_READY', payload: true });
-            }, 0);
+            dispatch({ type: 'SET_TOKEN_READY', payload: true });
         } else {
             dispatch({ type: 'SET_TOKEN_READY', payload: false });
         }
@@ -224,43 +232,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             },
                         });
                     } else {
-                        // If auth endpoint doesn't exist or fails, assume token is valid for development
-                        console.warn('Auth verification endpoint not available - assuming valid token for development');
-                        dispatch({
-                            type: 'LOGIN_SUCCESS',
-                            payload: {
-                                user: { id: 'dev-user', email: 'dev@example.com', name: 'Development User' },
-                                accessToken: token,
-                            },
-                        });
+                        // Token verification failed - clear invalid token
+                        console.log('[AUTH] Token verification failed - clearing invalid token');
+                        removeStoredToken();
+                        dispatch({ type: 'SET_LOADING', payload: false });
                     }
                 } catch (error) {
-                    console.warn('Auth initialization failed - assuming valid token for development:', error);
-                    // For development, assume token is valid even if verification fails
-                    dispatch({
-                        type: 'LOGIN_SUCCESS',
-                        payload: {
-                            user: { id: 'dev-user', email: 'dev@example.com', name: 'Development User' },
-                            accessToken: token,
-                        },
-                    });
-                }
-            } else {
-                // Only create development token if we're not on login page
-                if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-                    console.log('[AUTH] No token found - creating development token for testing');
-                    const devToken = 'dev-token-' + Date.now();
-                    setStoredToken(devToken);
-                    dispatch({
-                        type: 'LOGIN_SUCCESS',
-                        payload: {
-                            user: { id: 'dev-user', email: 'dev@example.com', name: 'Development User' },
-                            accessToken: devToken,
-                        },
-                    });
-                } else {
+                    console.log('[AUTH] Token verification error - clearing invalid token:', error);
+                    // Token is invalid or expired - clear it
+                    removeStoredToken();
                     dispatch({ type: 'SET_LOADING', payload: false });
                 }
+            } else {
+                // No token found - user needs to log in
+                dispatch({ type: 'SET_LOADING', payload: false });
             }
 
             // Always fetch CSRF token

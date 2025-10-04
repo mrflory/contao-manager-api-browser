@@ -11,7 +11,6 @@ import {
     Input,
     Field,
     Avatar,
-    Stack,
     Badge,
     Separator
 } from '@chakra-ui/react';
@@ -19,7 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToastNotifications } from '../hooks/useToastNotifications';
 
 const ProfilePage: React.FC = () => {
-    const { user, updateProfile } = useAuth();
+    const { user } = useAuth();
     const { showSuccess, showError } = useToastNotifications();
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({

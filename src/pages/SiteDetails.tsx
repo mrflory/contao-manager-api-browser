@@ -40,7 +40,7 @@ const SiteDetails: React.FC = () => {
   const { siteUrl } = useParams<{ siteUrl: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const { features, subscription } = useSubscription();
+  const { features } = useSubscription();
   const [config, setConfig] = useState<Config | null>(null);
   const [activeTab, setActiveTab] = useState("site-info");
 

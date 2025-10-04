@@ -48,7 +48,7 @@ export class UserAuthService {
     private jwtRefreshSecret: string;
     private emailTransporter: nodemailer.Transporter | null = null;
     private readonly SALT_ROUNDS = 12;
-    private readonly ACCESS_TOKEN_EXPIRES = '15m';
+    private readonly ACCESS_TOKEN_EXPIRES = '1h';  // Extended from 15m to 1h for better UX
     private readonly REFRESH_TOKEN_EXPIRES = '7d';
     private readonly REMEMBER_ME_EXPIRES = '30d';
 

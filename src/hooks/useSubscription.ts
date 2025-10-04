@@ -91,9 +91,9 @@ export function useSubscription(): SubscriptionContext {
                 // If subscription endpoints don't exist, set default values
                 if (statusErr instanceof Error && statusErr.message.includes('401')) {
                     console.warn('Subscription endpoints not available - using defaults');
-                    setSubscription({ tier: 'free', status: 'active' });
-                    setLimits({ maxSites: 1, usedSites: 0 });
-                    setFeatures({ hasHistory: false, hasSnapshots: false, hasAdvancedWorkflows: false, hasApiAccess: false, hasPrioritySupport: false });
+                    setSubscription({ tier: 'free', status: 'active', startedAt: new Date().toISOString() });
+                    setLimits({ sitesUsed: 0, sitesMax: 1, canAddSites: true, isInGracePeriod: false });
+                    setFeatures({ maxSites: 1, hasLogging: true, hasHistory: false, hasSnapshots: false, hasAdvancedWorkflows: false, hasApiAccess: false, hasPrioritySupport: false });
                 } else {
                     throw statusErr;
                 }
@@ -113,9 +113,10 @@ export function useSubscription(): SubscriptionContext {
                         tier: 'free',
                         name: 'Free',
                         price: 0,
+                        currency: 'USD',
                         interval: 'month',
                         description: 'Basic site management',
-                        features: { maxSites: 1, hasHistory: false, hasSnapshots: false, hasAdvancedWorkflows: false, hasApiAccess: false, hasPrioritySupport: false },
+                        features: { maxSites: 1, hasLogging: true, hasHistory: false, hasSnapshots: false, hasAdvancedWorkflows: false, hasApiAccess: false, hasPrioritySupport: false },
                         popular: false
                     }
                 ]);
