@@ -400,33 +400,36 @@ const proxyEndpoints = [
 ];
 
 // Add site-specific maintenance mode endpoint that bypasses active site issues
-app.get('/api/site/:siteUrl/maintenance-mode', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
-    try {
-        const siteUrl = decodeURIComponent(req.params.siteUrl);
-        
-        // Get site configuration directly without setting as active
-        const config = await configService.getConfigAsync();
-        const site = config.sites?.[siteUrl];
-        
-        if (!site) {
-            return res.status(404).json({ error: 'Site not found' });
+app.get('/api/site/:siteUrl/maintenance-mode',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        try {
+            const userId = req.userId!;
+            const siteUrl = decodeURIComponent(req.params.siteUrl);
+
+            // Get site configuration with user context
+            const config = await configService.getConfigAsync(userId);
+            const site = config.sites?.[siteUrl];
+
+            if (!site) {
+                return res.status(404).json({ error: 'Site not found' });
+            }
+
+            // Use proxyService directly with site information, bypassing active site
+            const response = await proxyService.proxyToSpecificSite(
+                site,
+                '/api/contao/maintenance-mode',
+                'GET',
+                null,
+                req.headers.cookie
+            );
+
+            const result = proxyService.handleApiResponse('/contao/maintenance-mode', response);
+            return res.status(result.status).json(result.data);
+        } catch (error) {
+            console.error('Maintenance mode error:', error);
+            return res.status(500).json({ error: 'Failed to get maintenance mode status' });
         }
-        
-        // Use proxyService directly with site information, bypassing active site
-        const response = await proxyService.proxyToSpecificSite(
-            site,
-            '/api/contao/maintenance-mode', 
-            'GET',
-            null,
-            req.headers.cookie
-        );
-        
-        const result = proxyService.handleApiResponse('/contao/maintenance-mode', response);
-        return res.status(result.status).json(result.data);
-    } catch (error) {
-        console.error('Maintenance mode error:', error);
-        return res.status(500).json({ error: 'Failed to get maintenance mode status' });
-    }
 }));
 
 // Create proxy routes for all HTTP methods
