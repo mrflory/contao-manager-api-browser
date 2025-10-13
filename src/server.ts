@@ -392,7 +392,7 @@ const proxyEndpoints = [
     
     // Packages endpoints
     '/api/packages/root',
-    '/api/packages/local/',
+    '/api/packages/local/:packageName?',
     '/api/packages/cloud',
     
     // Logs endpoints from Contao Manager
