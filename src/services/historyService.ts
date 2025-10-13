@@ -9,7 +9,7 @@ export class HistoryService {
     }
 
 
-    public async saveHistoryEntry(siteUrl: string, historyEntry: HistoryEntry): Promise<boolean> {
+    public async saveHistoryEntry(siteUrl: string, historyEntry: HistoryEntry, userId?: string): Promise<boolean> {
         try {
             // Check if storage supports history
             const capabilities = this.storage.getCapabilities();
@@ -22,17 +22,18 @@ export class HistoryService {
                 console.warn('Storage history interface not available');
                 return false;
             }
-            
+
             // Use storage abstraction to update the history entry
             const historyParams: HistoryParams = {
                 siteUrl,
+                userId,
                 workflowType: historyEntry.workflowType,
                 status: historyEntry.status,
                 startTime: historyEntry.startTime,
                 endTime: historyEntry.endTime,
                 steps: historyEntry.steps
             };
-            
+
             const result = await this.storage.history.updateHistoryEntry(historyEntry.id, historyParams);
             
             if (!result.success) {
@@ -47,7 +48,7 @@ export class HistoryService {
         }
     }
 
-    public async loadHistoryForSite(siteUrl: string): Promise<HistoryEntry[]> {
+    public async loadHistoryForSite(siteUrl: string, userId?: string): Promise<HistoryEntry[]> {
         try {
             // Check if storage supports history
             const capabilities = this.storage.getCapabilities();
@@ -59,8 +60,8 @@ export class HistoryService {
                 console.warn('Storage history interface not available');
                 return [];
             }
-            
-            const result = await this.storage.history.getHistory(siteUrl);
+
+            const result = await this.storage.history.getHistory(siteUrl, userId);
             
             if (!result.success) {
                 console.error('Failed to load history:', result.error);
@@ -74,7 +75,7 @@ export class HistoryService {
         }
     }
 
-    public async findHistoryEntry(siteUrl: string, historyId: string): Promise<HistoryEntry | null> {
+    public async findHistoryEntry(siteUrl: string, historyId: string, userId?: string): Promise<HistoryEntry | null> {
         try {
             // Check if storage supports history
             const capabilities = this.storage.getCapabilities();
@@ -86,8 +87,8 @@ export class HistoryService {
                 console.warn('Storage history interface not available');
                 return null;
             }
-            
-            const result = await this.storage.history.getHistoryEntry(siteUrl, historyId);
+
+            const result = await this.storage.history.getHistoryEntry(siteUrl, historyId, userId);
             
             if (!result.success) {
                 console.error('Failed to find history entry:', result.error);
@@ -101,10 +102,10 @@ export class HistoryService {
         }
     }
 
-    public async createHistoryEntry(request: CreateHistoryRequest): Promise<HistoryEntry | null> {
+    public async createHistoryEntry(request: CreateHistoryRequest, userId?: string): Promise<HistoryEntry | null> {
         try {
             const { siteUrl, workflowType } = request;
-            
+
             if (!siteUrl || !workflowType) {
                 throw new Error('siteUrl and workflowType are required');
             }
@@ -120,9 +121,10 @@ export class HistoryService {
                 console.warn('Storage history interface not available');
                 return null;
             }
-            
+
             const historyParams: HistoryParams = {
                 siteUrl,
+                userId,
                 workflowType,
                 status: 'started',
                 startTime: new Date().toISOString(),
@@ -143,17 +145,17 @@ export class HistoryService {
         }
     }
 
-    public async updateHistoryEntry(id: string, request: UpdateHistoryRequest): Promise<HistoryEntry | null> {
+    public async updateHistoryEntry(id: string, request: UpdateHistoryRequest, userId?: string): Promise<HistoryEntry | null> {
         console.log('[HISTORY SERVICE] updateHistoryEntry called:', {
             id,
             request: JSON.stringify(request, null, 2)
         });
-        
+
         try {
             const { siteUrl, status, endTime, steps } = request;
-            
+
             console.log('[HISTORY SERVICE] Extracted params:', { siteUrl, status, endTime, stepsCount: steps?.length });
-            
+
             if (!siteUrl) {
                 throw new Error('siteUrl is required');
             }
@@ -172,6 +174,7 @@ export class HistoryService {
 
             const historyParams: HistoryParams = {
                 siteUrl,
+                userId,
                 status: status as any,
                 endTime,
                 steps
@@ -195,10 +198,10 @@ export class HistoryService {
         }
     }
 
-    public async getHistoryForSite(siteUrl: string): Promise<HistoryResponse> {
+    public async getHistoryForSite(siteUrl: string, userId?: string): Promise<HistoryResponse> {
         try {
             // Load history from storage abstraction
-            const history = await this.loadHistoryForSite(siteUrl);
+            const history = await this.loadHistoryForSite(siteUrl, userId);
             
             return { 
                 success: true,
@@ -211,7 +214,7 @@ export class HistoryService {
         }
     }
 
-    public async deleteHistoryEntry(siteUrl: string, historyId: string): Promise<boolean> {
+    public async deleteHistoryEntry(siteUrl: string, historyId: string, userId?: string): Promise<boolean> {
         try {
             // Check if storage supports history
             const capabilities = this.storage.getCapabilities();
@@ -224,8 +227,8 @@ export class HistoryService {
                 console.warn('Storage history interface not available');
                 return false;
             }
-            
-            const result = await this.storage.history.deleteHistoryEntry(siteUrl, historyId);
+
+            const result = await this.storage.history.deleteHistoryEntry(siteUrl, historyId, userId);
             
             if (!result.success) {
                 console.error('Failed to delete history entry:', result.error);
@@ -239,7 +242,7 @@ export class HistoryService {
         }
     }
 
-    public async clearHistoryForSite(siteUrl: string): Promise<boolean> {
+    public async clearHistoryForSite(siteUrl: string, userId?: string): Promise<boolean> {
         try {
             // Check if storage supports history
             const capabilities = this.storage.getCapabilities();
@@ -252,8 +255,8 @@ export class HistoryService {
                 console.warn('Storage history interface not available');
                 return false;
             }
-            
-            const result = await this.storage.history.clearHistory(siteUrl);
+
+            const result = await this.storage.history.clearHistory(siteUrl, userId);
             
             if (!result.success) {
                 console.error('Failed to clear history:', result.error);
@@ -267,12 +270,12 @@ export class HistoryService {
         }
     }
 
-    public async getHistoryStats(siteUrl: string): Promise<{ 
-        total: number; 
-        completed: number; 
-        failed: number; 
-        running: number; 
-        lastActivity?: string 
+    public async getHistoryStats(siteUrl: string, userId?: string): Promise<{
+        total: number;
+        completed: number;
+        failed: number;
+        running: number;
+        lastActivity?: string
     }> {
         try {
             // Check if storage supports history
@@ -295,8 +298,8 @@ export class HistoryService {
                     running: 0
                 };
             }
-            
-            const result = await this.storage.history.getHistoryStats(siteUrl);
+
+            const result = await this.storage.history.getHistoryStats(siteUrl, userId);
             
             if (!result.success) {
                 console.error('Failed to get history stats:', result.error);

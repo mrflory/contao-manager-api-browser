@@ -102,9 +102,11 @@ export interface QueryParams {
 
 /**
  * Parameters for log operations
+ * Phase 4: Added userId for multi-tenant user isolation
  */
 export interface LogParams {
   siteUrl: string;
+  userId?: string;
   method?: string;
   endpoint?: string;
   statusCode?: number;
@@ -115,9 +117,11 @@ export interface LogParams {
 
 /**
  * Parameters for history operations
+ * Phase 4: Added userId for multi-tenant user isolation
  */
 export interface HistoryParams {
   siteUrl: string;
+  userId?: string;
   workflowType?: string;
   status?: HistoryEntry['status'];
   startTime?: string;
@@ -127,9 +131,11 @@ export interface HistoryParams {
 
 /**
  * Parameters for snapshot operations
+ * Phase 4: Added userId for multi-tenant user isolation
  */
 export interface SnapshotParams {
   siteUrl: string;
+  userId?: string;
   composerJson?: string;
   composerLock?: string;
   workflowId?: string;
@@ -138,9 +144,11 @@ export interface SnapshotParams {
 
 /**
  * Cleanup parameters for data maintenance
+ * Phase 4: Added userId for multi-tenant user isolation
  */
 export interface CleanupParams {
   siteUrl: string;
+  userId?: string;
   olderThan?: string; // ISO date string
   keepLast?: number;
   dryRun?: boolean;
@@ -148,6 +156,7 @@ export interface CleanupParams {
 
 /**
  * Logs storage interface for API request/response logging
+ * Phase 4: Updated to support user isolation
  */
 export interface LogsStorage {
   /**
@@ -157,13 +166,15 @@ export interface LogsStorage {
 
   /**
    * Get logs for a specific site with optional filtering
+   * Phase 4: userId parameter added for user isolation
    */
-  getLogs(siteUrl: string, query?: QueryParams): Promise<StorageResult<LogEntry[]>>;
+  getLogs(siteUrl: string, userId?: string, query?: QueryParams): Promise<StorageResult<LogEntry[]>>;
 
   /**
    * Get log statistics
+   * Phase 4: userId parameter added for user isolation
    */
-  getLogStats(siteUrl: string): Promise<StorageResult<{
+  getLogStats(siteUrl: string, userId?: string): Promise<StorageResult<{
     total: number;
     errorCount: number;
     lastActivity?: string;
@@ -179,12 +190,14 @@ export interface LogsStorage {
 
   /**
    * Delete all logs for a site
+   * Phase 4: userId parameter added for user isolation
    */
-  clearLogs(siteUrl: string): Promise<StorageResult<boolean>>;
+  clearLogs(siteUrl: string, userId?: string): Promise<StorageResult<boolean>>;
 }
 
 /**
  * History storage interface for workflow execution history
+ * Phase 4: Updated to support user isolation
  */
 export interface HistoryStorage {
   /**
@@ -199,18 +212,21 @@ export interface HistoryStorage {
 
   /**
    * Get history entry by ID
+   * Phase 4: userId parameter added for user isolation
    */
-  getHistoryEntry(siteUrl: string, id: string): Promise<StorageResult<HistoryEntry | null>>;
+  getHistoryEntry(siteUrl: string, id: string, userId?: string): Promise<StorageResult<HistoryEntry | null>>;
 
   /**
    * Get history for a specific site with optional filtering
+   * Phase 4: userId parameter added for user isolation
    */
-  getHistory(siteUrl: string, query?: QueryParams): Promise<StorageResult<HistoryEntry[]>>;
+  getHistory(siteUrl: string, userId?: string, query?: QueryParams): Promise<StorageResult<HistoryEntry[]>>;
 
   /**
    * Get history statistics
+   * Phase 4: userId parameter added for user isolation
    */
-  getHistoryStats(siteUrl: string): Promise<StorageResult<{
+  getHistoryStats(siteUrl: string, userId?: string): Promise<StorageResult<{
     total: number;
     completed: number;
     failed: number;
@@ -220,17 +236,20 @@ export interface HistoryStorage {
 
   /**
    * Delete a history entry
+   * Phase 4: userId parameter added for user isolation
    */
-  deleteHistoryEntry(siteUrl: string, id: string): Promise<StorageResult<boolean>>;
+  deleteHistoryEntry(siteUrl: string, id: string, userId?: string): Promise<StorageResult<boolean>>;
 
   /**
    * Clear all history for a site
+   * Phase 4: userId parameter added for user isolation
    */
-  clearHistory(siteUrl: string): Promise<StorageResult<boolean>>;
+  clearHistory(siteUrl: string, userId?: string): Promise<StorageResult<boolean>>;
 }
 
 /**
  * Snapshots storage interface for file state snapshots
+ * Phase 4: Updated to support user isolation
  */
 export interface SnapshotsStorage {
   /**
@@ -240,13 +259,15 @@ export interface SnapshotsStorage {
 
   /**
    * Get snapshot metadata by ID
+   * Phase 4: userId parameter added for user isolation
    */
-  getSnapshotMetadata(id: string): Promise<StorageResult<SnapshotMetadata | null>>;
+  getSnapshotMetadata(id: string, userId?: string): Promise<StorageResult<SnapshotMetadata | null>>;
 
   /**
    * Get snapshot file content
+   * Phase 4: userId parameter added for user isolation
    */
-  getSnapshotFile(id: string, filename: string): Promise<StorageResult<{
+  getSnapshotFile(id: string, filename: string, userId?: string): Promise<StorageResult<{
     content: string;
     size: number;
     mimeType?: string;
@@ -254,13 +275,15 @@ export interface SnapshotsStorage {
 
   /**
    * Get snapshots for a specific site
+   * Phase 4: userId parameter added for user isolation
    */
-  getSnapshots(siteUrl: string, query?: QueryParams): Promise<StorageResult<SnapshotMetadata[]>>;
+  getSnapshots(siteUrl: string, userId?: string, query?: QueryParams): Promise<StorageResult<SnapshotMetadata[]>>;
 
   /**
    * Delete a snapshot
+   * Phase 4: userId parameter added for user isolation
    */
-  deleteSnapshot(id: string): Promise<StorageResult<boolean>>;
+  deleteSnapshot(id: string, userId?: string): Promise<StorageResult<boolean>>;
 
   /**
    * Clean up old snapshots
@@ -272,8 +295,9 @@ export interface SnapshotsStorage {
 
   /**
    * Get snapshot storage statistics
+   * Phase 4: userId parameter added for user isolation
    */
-  getSnapshotStats(siteUrl: string): Promise<StorageResult<{
+  getSnapshotStats(siteUrl: string, userId?: string): Promise<StorageResult<{
     total: number;
     totalSize: number;
     oldestSnapshot?: string;

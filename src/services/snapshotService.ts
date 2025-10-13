@@ -43,10 +43,10 @@ export class SnapshotService {
 
 
 
-    public async createSnapshot(request: CreateSnapshotRequest): Promise<SnapshotMetadata | null> {
+    public async createSnapshot(request: CreateSnapshotRequest, userId?: string): Promise<SnapshotMetadata | null> {
         try {
             const { siteUrl, composerJson, composerLock, workflowId, stepId } = request;
-            
+
             if (!siteUrl) {
                 throw new Error('siteUrl is required');
             }
@@ -69,6 +69,7 @@ export class SnapshotService {
 
             const snapshotParams: SnapshotParams = {
                 siteUrl,
+                userId,
                 composerJson,
                 composerLock,
                 workflowId,

@@ -57,10 +57,20 @@ export class JsonFileStorageUnified extends JsonFileStorage implements UnifiedSt
                 fs.mkdirSync(this.dataDir, { recursive: true });
             }
 
-            // Ensure snapshots subdirectory exists
-            const snapshotsDir = path.join(this.dataDir, 'snapshots');
-            if (!fs.existsSync(snapshotsDir)) {
-                fs.mkdirSync(snapshotsDir, { recursive: true });
+            // Phase 4: Create user directory structure for multi-tenant isolation
+            // Create default_user directory for backward compatibility
+            const defaultUserDir = path.join(this.dataDir, 'users', 'default_user');
+            if (!fs.existsSync(defaultUserDir)) {
+                fs.mkdirSync(defaultUserDir, { recursive: true });
+            }
+
+            // Create subdirectories for logs, history, and snapshots
+            const subdirs = ['logs', 'history', 'snapshots'];
+            for (const subdir of subdirs) {
+                const subdirPath = path.join(defaultUserDir, subdir);
+                if (!fs.existsSync(subdirPath)) {
+                    fs.mkdirSync(subdirPath, { recursive: true });
+                }
             }
 
             return this.createStorageResult(true, true);
@@ -72,6 +82,7 @@ export class JsonFileStorageUnified extends JsonFileStorage implements UnifiedSt
 
 /**
  * JSON file-based logs storage implementation
+ * Phase 4: Updated with user isolation via user directories
  */
 class JsonLogsStorage implements LogsStorage {
     constructor(private readonly dataDir: string) {}
@@ -85,11 +96,23 @@ class JsonLogsStorage implements LogsStorage {
         }
     }
 
+    /**
+     * Get user-specific directory path and ensure it exists
+     */
+    private getUserLogDir(userId: string): string {
+        const userDir = path.join(this.dataDir, 'users', userId, 'logs');
+        if (!fs.existsSync(userDir)) {
+            fs.mkdirSync(userDir, { recursive: true });
+        }
+        return userDir;
+    }
+
     async addLogEntry(params: LogParams): Promise<StorageResult<boolean>> {
         try {
-            const { siteUrl, method, endpoint, statusCode, requestData, responseData, error } = params;
+            const { siteUrl, userId = 'default_user', method, endpoint, statusCode, requestData, responseData, error } = params;
             const hostname = this.extractSiteName(siteUrl);
-            const logFile = path.join(this.dataDir, `${hostname}.log`);
+            const userLogDir = this.getUserLogDir(userId);
+            const logFile = path.join(userLogDir, `${hostname}.log`);
             
             const timestamp = new Date().toISOString();
             
@@ -118,10 +141,11 @@ class JsonLogsStorage implements LogsStorage {
         }
     }
 
-    async getLogs(siteUrl: string): Promise<StorageResult<LogEntry[]>> {
+    async getLogs(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<LogEntry[]>> {
         try {
             const hostname = this.extractSiteName(siteUrl);
-            const logFile = path.join(this.dataDir, `${hostname}.log`);
+            const userLogDir = this.getUserLogDir(userId);
+            const logFile = path.join(userLogDir, `${hostname}.log`);
             
             // Check if log file exists
             if (!fs.existsSync(logFile)) {
@@ -164,9 +188,9 @@ class JsonLogsStorage implements LogsStorage {
         }
     }
 
-    async getLogStats(siteUrl: string): Promise<StorageResult<{ total: number; errorCount: number; lastActivity?: string }>> {
+    async getLogStats(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<{ total: number; errorCount: number; lastActivity?: string }>> {
         try {
-            const result = await this.getLogs(siteUrl);
+            const result = await this.getLogs(siteUrl, userId);
             if (!result.success || !result.data) {
                 return { success: false, data: { total: 0, errorCount: 0 }, error: result.error };
             }
@@ -194,9 +218,10 @@ class JsonLogsStorage implements LogsStorage {
 
     async cleanupLogs(params: CleanupParams): Promise<StorageResult<{ deletedCount: number; message: string }>> {
         try {
-            const { siteUrl, olderThan } = params;
+            const { siteUrl, userId = 'default_user', olderThan } = params;
             const hostname = this.extractSiteName(siteUrl);
-            const logFile = path.join(this.dataDir, `${hostname}.log`);
+            const userLogDir = this.getUserLogDir(userId);
+            const logFile = path.join(userLogDir, `${hostname}.log`);
             
             // Check if log file exists
             if (!fs.existsSync(logFile)) {
@@ -252,10 +277,11 @@ class JsonLogsStorage implements LogsStorage {
         }
     }
 
-    async clearLogs(siteUrl: string): Promise<StorageResult<boolean>> {
+    async clearLogs(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<boolean>> {
         try {
             const hostname = this.extractSiteName(siteUrl);
-            const logFile = path.join(this.dataDir, `${hostname}.log`);
+            const userLogDir = this.getUserLogDir(userId);
+            const logFile = path.join(userLogDir, `${hostname}.log`);
             
             if (fs.existsSync(logFile)) {
                 fs.unlinkSync(logFile);
@@ -274,6 +300,7 @@ class JsonLogsStorage implements LogsStorage {
 
 /**
  * JSON file-based history storage implementation
+ * Phase 4: Updated with user isolation via user directories
  */
 class JsonHistoryStorage implements HistoryStorage {
     constructor(private readonly dataDir: string) {}
@@ -287,14 +314,25 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
+    /**
+     * Get user-specific directory path and ensure it exists
+     */
+    private getUserHistoryDir(userId: string): string {
+        const userDir = path.join(this.dataDir, 'users', userId, 'history');
+        if (!fs.existsSync(userDir)) {
+            fs.mkdirSync(userDir, { recursive: true });
+        }
+        return userDir;
+    }
+
     private generateHistoryId(): string {
         return Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9);
     }
 
     async createHistoryEntry(params: HistoryParams): Promise<StorageResult<HistoryEntry>> {
         try {
-            const { siteUrl, workflowType, status, startTime, steps } = params;
-            
+            const { siteUrl, userId = 'default_user', workflowType, status, startTime, steps } = params;
+
             if (!siteUrl || !workflowType) {
                 return {
                     success: false,
@@ -313,7 +351,7 @@ class JsonHistoryStorage implements HistoryStorage {
             };
 
             // Save to history file
-            const result = await this.saveHistoryEntry(siteUrl, historyEntry);
+            const result = await this.saveHistoryEntry(siteUrl, historyEntry, userId);
             if (!result.success) {
                 return { success: false, error: result.error };
             }
@@ -329,8 +367,8 @@ class JsonHistoryStorage implements HistoryStorage {
 
     async updateHistoryEntry(id: string, params: HistoryParams): Promise<StorageResult<HistoryEntry>> {
         try {
-            const { siteUrl, status, endTime, steps } = params;
-            
+            const { siteUrl, userId = 'default_user', status, endTime, steps } = params;
+
             if (!siteUrl) {
                 return {
                     success: false,
@@ -339,7 +377,7 @@ class JsonHistoryStorage implements HistoryStorage {
             }
 
             // Find existing entry
-            const existingResult = await this.getHistoryEntry(siteUrl, id);
+            const existingResult = await this.getHistoryEntry(siteUrl, id, userId);
             if (!existingResult.success || !existingResult.data) {
                 return {
                     success: false,
@@ -355,7 +393,7 @@ class JsonHistoryStorage implements HistoryStorage {
             if (steps) historyEntry.steps = steps;
 
             // Save updated entry
-            const result = await this.saveHistoryEntry(siteUrl, historyEntry);
+            const result = await this.saveHistoryEntry(siteUrl, historyEntry, userId);
             if (!result.success) {
                 return { success: false, error: result.error };
             }
@@ -369,9 +407,9 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    async getHistoryEntry(siteUrl: string, id: string): Promise<StorageResult<HistoryEntry | null>> {
+    async getHistoryEntry(siteUrl: string, id: string, userId: string = 'default_user'): Promise<StorageResult<HistoryEntry | null>> {
         try {
-            const result = await this.getHistory(siteUrl);
+            const result = await this.getHistory(siteUrl, userId);
             if (!result.success || !result.data) {
                 return { success: false, data: null, error: result.error };
             }
@@ -387,10 +425,11 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    async getHistory(siteUrl: string): Promise<StorageResult<HistoryEntry[]>> {
+    async getHistory(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<HistoryEntry[]>> {
         try {
             const hostname = this.extractSiteName(siteUrl);
-            const historyFile = path.join(this.dataDir, `${hostname}.history.json`);
+            const userHistoryDir = this.getUserHistoryDir(userId);
+            const historyFile = path.join(userHistoryDir, `${hostname}.history.json`);
             
             if (!fs.existsSync(historyFile)) {
                 return { success: true, data: [] };
@@ -412,9 +451,9 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    async getHistoryStats(siteUrl: string): Promise<StorageResult<{ total: number; completed: number; failed: number; running: number; lastActivity?: string }>> {
+    async getHistoryStats(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<{ total: number; completed: number; failed: number; running: number; lastActivity?: string }>> {
         try {
-            const result = await this.getHistory(siteUrl);
+            const result = await this.getHistory(siteUrl, userId);
             if (!result.success || !result.data) {
                 return { success: false, data: { total: 0, completed: 0, failed: 0, running: 0 }, error: result.error };
             }
@@ -438,22 +477,23 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    async deleteHistoryEntry(siteUrl: string, id: string): Promise<StorageResult<boolean>> {
+    async deleteHistoryEntry(siteUrl: string, id: string, userId: string = 'default_user'): Promise<StorageResult<boolean>> {
         try {
-            const result = await this.getHistory(siteUrl);
+            const result = await this.getHistory(siteUrl, userId);
             if (!result.success || !result.data) {
                 return { success: false, data: false, error: result.error };
             }
 
             const history = result.data;
             const filteredHistory = history.filter(entry => entry.id !== id);
-            
+
             if (filteredHistory.length === history.length) {
                 return { success: false, data: false, error: 'Entry not found' };
             }
 
             const hostname = this.extractSiteName(siteUrl);
-            const historyFile = path.join(this.dataDir, `${hostname}.history.json`);
+            const userHistoryDir = this.getUserHistoryDir(userId);
+            const historyFile = path.join(userHistoryDir, `${hostname}.history.json`);
             
             fs.writeFileSync(historyFile, JSON.stringify(filteredHistory, null, 2));
             return { success: true, data: true };
@@ -466,10 +506,11 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    async clearHistory(siteUrl: string): Promise<StorageResult<boolean>> {
+    async clearHistory(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<boolean>> {
         try {
             const hostname = this.extractSiteName(siteUrl);
-            const historyFile = path.join(this.dataDir, `${hostname}.history.json`);
+            const userHistoryDir = this.getUserHistoryDir(userId);
+            const historyFile = path.join(userHistoryDir, `${hostname}.history.json`);
             
             if (fs.existsSync(historyFile)) {
                 fs.unlinkSync(historyFile);
@@ -485,10 +526,11 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    private async saveHistoryEntry(siteUrl: string, historyEntry: HistoryEntry): Promise<StorageResult<boolean>> {
+    private async saveHistoryEntry(siteUrl: string, historyEntry: HistoryEntry, userId: string = 'default_user'): Promise<StorageResult<boolean>> {
         try {
             const hostname = this.extractSiteName(siteUrl);
-            const historyFile = path.join(this.dataDir, `${hostname}.history.json`);
+            const userHistoryDir = this.getUserHistoryDir(userId);
+            const historyFile = path.join(userHistoryDir, `${hostname}.history.json`);
             
             let history: HistoryEntry[] = [];
             
@@ -528,12 +570,13 @@ class JsonHistoryStorage implements HistoryStorage {
 
 /**
  * JSON file-based snapshots storage implementation
+ * Phase 4: Updated with user isolation via user directories
  */
 class JsonSnapshotsStorage implements SnapshotsStorage {
-    private readonly snapshotsDir: string;
+    private readonly baseDataDir: string;
 
-    constructor(private readonly dataDir: string) {
-        this.snapshotsDir = path.join(this.dataDir, 'snapshots');
+    constructor(dataDir: string) {
+        this.baseDataDir = dataDir;
     }
 
     private extractSiteName(url: string): string {
@@ -545,6 +588,17 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
         }
     }
 
+    /**
+     * Get user-specific snapshots directory and ensure it exists
+     */
+    private getUserSnapshotsDir(userId: string): string {
+        const userDir = path.join(this.baseDataDir, 'users', userId, 'snapshots');
+        if (!fs.existsSync(userDir)) {
+            fs.mkdirSync(userDir, { recursive: true });
+        }
+        return userDir;
+    }
+
     private generateSnapshotId(siteUrl: string): string {
         const siteName = this.extractSiteName(siteUrl);
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '-').split('.')[0];
@@ -553,8 +607,8 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
 
     async createSnapshot(params: SnapshotParams): Promise<StorageResult<SnapshotMetadata>> {
         try {
-            const { siteUrl, composerJson, composerLock, workflowId, stepId } = params;
-            
+            const { siteUrl, userId = 'default_user', composerJson, composerLock, workflowId, stepId } = params;
+
             if (!siteUrl) {
                 return { success: false, error: 'siteUrl is required' };
             }
@@ -564,7 +618,8 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
             }
 
             const snapshotId = this.generateSnapshotId(siteUrl);
-            const snapshotDir = path.join(this.snapshotsDir, snapshotId);
+            const userSnapshotsDir = this.getUserSnapshotsDir(userId);
+            const snapshotDir = path.join(userSnapshotsDir, snapshotId);
             
             // Create snapshot directory
             if (!fs.existsSync(snapshotDir)) {
@@ -613,9 +668,10 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
         }
     }
 
-    async getSnapshotMetadata(id: string): Promise<StorageResult<SnapshotMetadata | null>> {
+    async getSnapshotMetadata(id: string, userId: string = 'default_user'): Promise<StorageResult<SnapshotMetadata | null>> {
         try {
-            const metadataPath = path.join(this.snapshotsDir, id, 'metadata.json');
+            const userSnapshotsDir = this.getUserSnapshotsDir(userId);
+            const metadataPath = path.join(userSnapshotsDir, id, 'metadata.json');
             
             if (!fs.existsSync(metadataPath)) {
                 return { success: true, data: null };
@@ -632,7 +688,7 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
         }
     }
 
-    async getSnapshotFile(id: string, filename: string): Promise<StorageResult<{ content: string; size: number; mimeType?: string } | null>> {
+    async getSnapshotFile(id: string, filename: string, userId: string = 'default_user'): Promise<StorageResult<{ content: string; size: number; mimeType?: string } | null>> {
         try {
             // Validate filename - only allow specific files for security
             const allowedFiles = ['composer.json', 'composer.lock', 'metadata.json'];
@@ -644,7 +700,8 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
                 };
             }
 
-            const snapshotDir = path.join(this.snapshotsDir, id);
+            const userSnapshotsDir = this.getUserSnapshotsDir(userId);
+            const snapshotDir = path.join(userSnapshotsDir, id);
             const filePath = path.join(snapshotDir, filename);
             
             // Security check - ensure we're not accessing files outside the snapshot directory
@@ -704,20 +761,21 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
         }
     }
 
-    async getSnapshots(siteUrl: string): Promise<StorageResult<SnapshotMetadata[]>> {
+    async getSnapshots(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<SnapshotMetadata[]>> {
         try {
             const siteName = this.extractSiteName(siteUrl);
             const snapshots: SnapshotMetadata[] = [];
+            const userSnapshotsDir = this.getUserSnapshotsDir(userId);
 
-            if (!fs.existsSync(this.snapshotsDir)) {
+            if (!fs.existsSync(userSnapshotsDir)) {
                 return { success: true, data: [] };
             }
 
-            const entries = fs.readdirSync(this.snapshotsDir, { withFileTypes: true });
-            
+            const entries = fs.readdirSync(userSnapshotsDir, { withFileTypes: true });
+
             for (const entry of entries) {
                 if (entry.isDirectory() && entry.name.startsWith(siteName + '-')) {
-                    const metadataResult = await this.getSnapshotMetadata(entry.name);
+                    const metadataResult = await this.getSnapshotMetadata(entry.name, userId);
                     if (metadataResult.success && metadataResult.data && metadataResult.data.siteUrl === siteUrl) {
                         snapshots.push(metadataResult.data);
                     }
@@ -737,9 +795,10 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
         }
     }
 
-    async deleteSnapshot(id: string): Promise<StorageResult<boolean>> {
+    async deleteSnapshot(id: string, userId: string = 'default_user'): Promise<StorageResult<boolean>> {
         try {
-            const snapshotDir = path.join(this.snapshotsDir, id);
+            const userSnapshotsDir = this.getUserSnapshotsDir(userId);
+            const snapshotDir = path.join(userSnapshotsDir, id);
             
             if (!fs.existsSync(snapshotDir)) {
                 return { success: false, data: false, error: 'Snapshot not found' };
@@ -760,15 +819,15 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
 
     async cleanupSnapshots(params: CleanupParams): Promise<StorageResult<{ deletedCount: number; freedSpace: number }>> {
         try {
-            const { siteUrl, keepLast = 10 } = params;
-            
-            const snapshotsResult = await this.getSnapshots(siteUrl);
+            const { siteUrl, userId = 'default_user', keepLast = 10 } = params;
+
+            const snapshotsResult = await this.getSnapshots(siteUrl, userId);
             if (!snapshotsResult.success || !snapshotsResult.data) {
                 return { success: false, data: { deletedCount: 0, freedSpace: 0 }, error: snapshotsResult.error };
             }
 
             const snapshots = snapshotsResult.data;
-            
+
             if (snapshots.length <= keepLast) {
                 return { success: true, data: { deletedCount: 0, freedSpace: 0 } };
             }
@@ -777,10 +836,11 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
             let deletedCount = 0;
             let freedSpace = 0;
 
+            const userSnapshotsDir = this.getUserSnapshotsDir(userId);
             for (const snapshot of toDelete) {
                 // Calculate space used by snapshot before deleting
                 try {
-                    const snapshotDir = path.join(this.snapshotsDir, snapshot.id);
+                    const snapshotDir = path.join(userSnapshotsDir, snapshot.id);
                     if (fs.existsSync(snapshotDir)) {
                         const files = fs.readdirSync(snapshotDir);
                         for (const file of files) {
@@ -793,7 +853,7 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
                     // Continue with deletion even if size calculation fails
                 }
 
-                const deleteResult = await this.deleteSnapshot(snapshot.id);
+                const deleteResult = await this.deleteSnapshot(snapshot.id, userId);
                 if (deleteResult.success) {
                     deletedCount++;
                 }
@@ -809,9 +869,9 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
         }
     }
 
-    async getSnapshotStats(siteUrl: string): Promise<StorageResult<{ total: number; totalSize: number; oldestSnapshot?: string; newestSnapshot?: string }>> {
+    async getSnapshotStats(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<{ total: number; totalSize: number; oldestSnapshot?: string; newestSnapshot?: string }>> {
         try {
-            const snapshotsResult = await this.getSnapshots(siteUrl);
+            const snapshotsResult = await this.getSnapshots(siteUrl, userId);
             if (!snapshotsResult.success || !snapshotsResult.data) {
                 return { success: false, data: { total: 0, totalSize: 0 }, error: snapshotsResult.error };
             }

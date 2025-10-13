@@ -29,13 +29,14 @@ export class LoggingService {
     }
 
     public async logApiCall(
-        siteUrl: string, 
-        method: string, 
-        endpoint: string, 
-        statusCode: number, 
-        requestData: any = null, 
-        responseData: any = null, 
-        error: string | null = null
+        siteUrl: string,
+        method: string,
+        endpoint: string,
+        statusCode: number,
+        requestData: any = null,
+        responseData: any = null,
+        error: string | null = null,
+        userId?: string
     ): Promise<void> {
         try {
             // Check if storage supports logging
@@ -49,12 +50,13 @@ export class LoggingService {
                 console.warn('Storage logs interface not available');
                 return;
             }
-            
+
             // Determine if response should be logged for this endpoint
             const excludeResponse = this.shouldExcludeResponseLogging(method, endpoint);
-            
+
             const logParams: LogParams = {
                 siteUrl,
+                userId,
                 method,
                 endpoint,
                 statusCode,
@@ -62,7 +64,7 @@ export class LoggingService {
                 responseData: excludeResponse ? '[Response logging excluded]' : (responseData || null),
                 error: error || undefined
             };
-            
+
             const result = await this.storage.logs.addLogEntry(logParams);
             
             if (!result.success) {
@@ -73,14 +75,14 @@ export class LoggingService {
         }
     }
 
-    public async readLogs(siteUrl: string): Promise<LogsResponse> {
+    public async readLogs(siteUrl: string, userId?: string): Promise<LogsResponse> {
         try {
             // Check if storage supports logging
             const capabilities = this.storage.getCapabilities();
             if (!capabilities.supportsLogs) {
                 const hostname = this.extractSiteName(siteUrl);
-                return { 
-                    logs: [], 
+                return {
+                    logs: [],
                     total: 0,
                     siteUrl,
                     hostname,
@@ -91,8 +93,8 @@ export class LoggingService {
             if (!this.storage.logs) {
                 throw new Error('Storage logs interface not available');
             }
-            
-            const result = await this.storage.logs.getLogs(siteUrl);
+
+            const result = await this.storage.logs.getLogs(siteUrl, userId);
             
             if (!result.success) {
                 throw new Error(`Failed to read logs: ${result.error}`);
@@ -112,15 +114,15 @@ export class LoggingService {
         }
     }
 
-    public async cleanupLogs(siteUrl: string): Promise<{ success: boolean; deletedCount: number; message: string }> {
+    public async cleanupLogs(siteUrl: string, userId?: string): Promise<{ success: boolean; deletedCount: number; message: string }> {
         try {
             // Check if storage supports logging
             const capabilities = this.storage.getCapabilities();
             if (!capabilities.supportsLogs) {
-                return { 
-                    success: true, 
-                    deletedCount: 0, 
-                    message: 'Log storage not supported by current storage backend' 
+                return {
+                    success: true,
+                    deletedCount: 0,
+                    message: 'Log storage not supported by current storage backend'
                 };
             }
 
@@ -131,16 +133,17 @@ export class LoggingService {
                     message: 'Storage logs interface not available'
                 };
             }
-            
+
             // Clean up logs older than one week
             const oneWeekAgo = new Date();
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            
+
             const cleanupParams: CleanupParams = {
                 siteUrl,
+                userId,
                 olderThan: oneWeekAgo.toISOString()
             };
-            
+
             const result = await this.storage.logs.cleanupLogs(cleanupParams);
             
             if (!result.success) {
