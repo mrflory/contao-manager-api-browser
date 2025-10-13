@@ -124,18 +124,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Track ongoing refresh promise to prevent multiple concurrent refresh attempts
     const refreshPromiseRef = useRef<Promise<void> | null>(null);
 
+    // Use refs to track current state values for interceptor (avoids stale closures)
+    const stateRef = useRef(state);
+    useEffect(() => {
+        stateRef.current = state;
+    }, [state]);
+
     // Set up axios interceptor for adding auth token
     useEffect(() => {
         const httpClient = HttpClient.getInstance();
 
         const requestInterceptor = httpClient.axios.interceptors.request.use(
             (config: any) => {
-                const token = state.accessToken || getStoredToken();
+                // Always read the current token from storage to avoid stale closures
+                const token = getStoredToken() || stateRef.current.accessToken;
                 if (token) {
                     config.headers.Authorization = `Bearer ${token}`;
                 }
-                if (state.csrfToken) {
-                    config.headers['X-CSRF-Token'] = state.csrfToken;
+                // Use ref for CSRF token to get current value
+                if (stateRef.current.csrfToken) {
+                    config.headers['X-CSRF-Token'] = stateRef.current.csrfToken;
                 }
                 return config;
             },
@@ -191,7 +199,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             httpClient.axios.interceptors.request.eject(requestInterceptor);
             httpClient.axios.interceptors.response.eject(responseInterceptor);
         };
-    }, [state.accessToken, state.csrfToken]);
+    }, []); // Only set up interceptors once on mount
 
     // Manage token readiness state
     useEffect(() => {
