@@ -466,107 +466,127 @@ proxyEndpoints.forEach(endpoint => {
 });
 
 // Local logs endpoints (our own logging system)
-app.get('/api/logs/:siteUrl', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
-    try {
-        const siteUrl = decodeURIComponent(req.params.siteUrl);
-        const result = await loggingService.readLogs(siteUrl);
-        res.json(result);
-    } catch (error) {
-        console.error('[LOGS] Error:', error);
-        res.status(500).json({ error: `Failed to read log file: ${error instanceof Error ? error.message : 'Unknown error'}` });
-    }
-}));
+app.get('/api/logs/:siteUrl',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        try {
+            const siteUrl = decodeURIComponent(req.params.siteUrl);
+            const result = await loggingService.readLogs(siteUrl);
+            res.json(result);
+        } catch (error) {
+            console.error('[LOGS] Error:', error);
+            res.status(500).json({ error: `Failed to read log file: ${error instanceof Error ? error.message : 'Unknown error'}` });
+        }
+    })
+);
 
-app.delete('/api/logs/:siteUrl/cleanup', (req: ApiRequest, res: Response) => {
-    try {
-        const siteUrl = decodeURIComponent(req.params.siteUrl);
-        const result = loggingService.cleanupLogs(siteUrl);
-        res.json(result);
-    } catch (error) {
-        console.error('[LOG-CLEANUP] Error:', error);
-        res.status(500).json({ 
-            success: false,
-            error: `Failed to cleanup log file: ${error instanceof Error ? error.message : 'Unknown error'}`
-        });
-    }
-});
+app.delete('/api/logs/:siteUrl/cleanup',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        try {
+            const siteUrl = decodeURIComponent(req.params.siteUrl);
+            const result = loggingService.cleanupLogs(siteUrl);
+            res.json(result);
+        } catch (error) {
+            console.error('[LOG-CLEANUP] Error:', error);
+            res.status(500).json({
+                success: false,
+                error: `Failed to cleanup log file: ${error instanceof Error ? error.message : 'Unknown error'}`
+            });
+        }
+    })
+);
 
 // History API endpoints
-app.post('/api/history/create', async (req: ApiRequest, res: Response) => {
-    try {
-        const historyEntry = await historyService.createHistoryEntry(req.body);
-        
-        if (historyEntry) {
-            res.json({ success: true, historyEntry });
-        } else {
+app.post('/api/history/create',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        try {
+            const historyEntry = await historyService.createHistoryEntry(req.body);
+
+            if (historyEntry) {
+                res.json({ success: true, historyEntry });
+            } else {
+                res.status(500).json({ error: 'Failed to create history entry' });
+            }
+        } catch (error) {
+            console.error('Create history error:', error);
             res.status(500).json({ error: 'Failed to create history entry' });
         }
-    } catch (error) {
-        console.error('Create history error:', error);
-        res.status(500).json({ error: 'Failed to create history entry' });
-    }
-});
+    })
+);
 
-app.put('/api/history/:id', async (req: ApiRequest, res: Response) => {
-    console.log('[HISTORY UPDATE] Request received:', {
-        id: req.params.id,
-        body: req.body,
-        contentType: req.headers['content-type'],
-        bodyType: typeof req.body
-    });
-    
-    try {
-        const { id } = req.params;
-        const historyEntry = await historyService.updateHistoryEntry(id, req.body);
-        
-        console.log('[HISTORY UPDATE] Service result:', historyEntry ? 'Success' : 'Not found');
-        
-        if (historyEntry) {
-            res.json({ success: true, historyEntry });
-        } else {
-            console.log('[HISTORY UPDATE] History entry not found for ID:', id);
-            res.status(404).json({ error: 'History entry not found' });
+app.put('/api/history/:id',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        console.log('[HISTORY UPDATE] Request received:', {
+            id: req.params.id,
+            body: req.body,
+            contentType: req.headers['content-type'],
+            bodyType: typeof req.body
+        });
+
+        try {
+            const { id } = req.params;
+            const historyEntry = await historyService.updateHistoryEntry(id, req.body);
+
+            console.log('[HISTORY UPDATE] Service result:', historyEntry ? 'Success' : 'Not found');
+
+            if (historyEntry) {
+                res.json({ success: true, historyEntry });
+            } else {
+                console.log('[HISTORY UPDATE] History entry not found for ID:', id);
+                res.status(404).json({ error: 'History entry not found' });
+            }
+        } catch (error) {
+            console.error('[HISTORY UPDATE] Error caught:', error);
+            console.error('[HISTORY UPDATE] Error stack:', error instanceof Error ? error.stack : 'No stack');
+            res.status(500).json({ error: 'Failed to update history entry' });
         }
-    } catch (error) {
-        console.error('[HISTORY UPDATE] Error caught:', error);
-        console.error('[HISTORY UPDATE] Error stack:', error instanceof Error ? error.stack : 'No stack');
-        res.status(500).json({ error: 'Failed to update history entry' });
-    }
-});
+    })
+);
 
-app.get('/api/history/:siteUrl', async (req: ApiRequest, res: Response) => {
-    try {
-        const { siteUrl } = req.params;
-        const decodedSiteUrl = decodeURIComponent(siteUrl);
-        
-        const result = await historyService.getHistoryForSite(decodedSiteUrl);
-        res.json(result);
-    } catch (error) {
-        console.error('Get history error:', error);
-        res.status(500).json({ error: 'Failed to get history' });
-    }
-});
+app.get('/api/history/:siteUrl',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        try {
+            const { siteUrl } = req.params;
+            const decodedSiteUrl = decodeURIComponent(siteUrl);
 
-app.delete('/api/history/:siteUrl/:id', async (req: ApiRequest, res: Response) => {
-    try {
-        const { siteUrl, id } = req.params;
-        const decodedSiteUrl = decodeURIComponent(siteUrl);
-        
-        const result = await historyService.deleteHistoryEntry(decodedSiteUrl, id);
-        
-        if (result) {
-            res.json({ success: true, message: 'History entry deleted successfully' });
-        } else {
-            res.status(404).json({ error: 'History entry not found' });
+            const result = await historyService.getHistoryForSite(decodedSiteUrl);
+            res.json(result);
+        } catch (error) {
+            console.error('Get history error:', error);
+            res.status(500).json({ error: 'Failed to get history' });
         }
-    } catch (error) {
-        console.error('Delete history error:', error);
-        res.status(500).json({ error: 'Failed to delete history entry' });
-    }
-});
+    })
+);
 
-// Snapshot API endpoints  
-app.post('/api/snapshots/create', ErrorHandler.asyncWrapper(async (req: ApiRequest, res: Response) => {
+app.delete('/api/history/:siteUrl/:id',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        try {
+            const { siteUrl, id } = req.params;
+            const decodedSiteUrl = decodeURIComponent(siteUrl);
+
+            const result = await historyService.deleteHistoryEntry(decodedSiteUrl, id);
+
+            if (result) {
+                res.json({ success: true, message: 'History entry deleted successfully' });
+            } else {
+                res.status(404).json({ error: 'History entry not found' });
+            }
+        } catch (error) {
+            console.error('Delete history error:', error);
+            res.status(500).json({ error: 'Failed to delete history entry' });
+        }
+    })
+);
+
+// Snapshot API endpoints
+app.post('/api/snapshots/create',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const { siteUrl, workflowId, stepId } = req.body;
         
@@ -668,20 +688,25 @@ app.post('/api/snapshots/create', ErrorHandler.asyncWrapper(async (req: ApiReque
     }
 }));
 
-app.get('/api/snapshots/list/:siteUrl', async (req: ApiRequest, res: Response) => {
+app.get('/api/snapshots/list/:siteUrl',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const { siteUrl } = req.params;
         const decodedSiteUrl = decodeURIComponent(siteUrl);
         
-        const result = await snapshotService.listSnapshotsForSite(decodedSiteUrl);
-        return res.json(result);
-    } catch (error) {
-        console.error('List snapshots error:', error);
-        return res.status(500).json({ error: 'Failed to list snapshots' });
-    }
-});
+            const result = await snapshotService.listSnapshotsForSite(decodedSiteUrl);
+            return res.json(result);
+        } catch (error) {
+            console.error('List snapshots error:', error);
+            return res.status(500).json({ error: 'Failed to list snapshots' });
+        }
+    })
+);
 
-app.get('/api/snapshots/:snapshotId/:filename', async (req: ApiRequest, res: Response) => {
+app.get('/api/snapshots/:snapshotId/:filename',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const { snapshotId, filename } = req.params;
         
@@ -696,18 +721,21 @@ app.get('/api/snapshots/:snapshotId/:filename', async (req: ApiRequest, res: Res
             return res.status(404).json({ error: 'Snapshot file not found' });
         }
         
-        // Set appropriate headers for file download
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="${snapshotId}-${filename}"`);
-        return res.send(fileBuffer);
-        
-    } catch (error) {
-        console.error('Get snapshot error:', error);
-        return res.status(500).json({ error: 'Failed to get snapshot' });
-    }
-});
+            // Set appropriate headers for file download
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Content-Disposition', `attachment; filename="${snapshotId}-${filename}"`);
+            return res.send(fileBuffer);
 
-app.get('/api/snapshots/:snapshotId/:filename/content', async (req: ApiRequest, res: Response) => {
+        } catch (error) {
+            console.error('Get snapshot error:', error);
+            return res.status(500).json({ error: 'Failed to get snapshot' });
+        }
+    })
+);
+
+app.get('/api/snapshots/:snapshotId/:filename/content',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const { snapshotId, filename } = req.params;
         
@@ -726,64 +754,71 @@ app.get('/api/snapshots/:snapshotId/:filename/content', async (req: ApiRequest, 
         }
         
         // Set appropriate headers for content display (not download)
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Length', fileData.size.toString());
-        res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour since snapshots are immutable
-        
-        return res.send(fileData.content);
-        
-    } catch (error) {
-        console.error('[SNAPSHOT API] Get snapshot content error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Failed to get snapshot content';
-        
-        // Handle specific error types with appropriate status codes
-        if (errorMessage.includes('Invalid filename')) {
-            return res.status(400).json({ error: errorMessage });
-        }
-        if (errorMessage.includes('not found')) {
-            return res.status(404).json({ error: errorMessage });
-        }
-        if (errorMessage.includes('too large')) {
-            return res.status(413).json({ error: errorMessage });
-        }
-        
-        return res.status(500).json({ error: errorMessage });
-    }
-});
+            res.setHeader('Content-Type', contentType);
+            res.setHeader('Content-Length', fileData.size.toString());
+            res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour since snapshots are immutable
 
-app.delete('/api/snapshots/:snapshotId', async (req: ApiRequest, res: Response) => {
+            return res.send(fileData.content);
+
+        } catch (error) {
+            console.error('[SNAPSHOT API] Get snapshot content error:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Failed to get snapshot content';
+
+            // Handle specific error types with appropriate status codes
+            if (errorMessage.includes('Invalid filename')) {
+                return res.status(400).json({ error: errorMessage });
+            }
+            if (errorMessage.includes('not found')) {
+                return res.status(404).json({ error: errorMessage });
+            }
+            if (errorMessage.includes('too large')) {
+                return res.status(413).json({ error: errorMessage });
+            }
+
+            return res.status(500).json({ error: errorMessage });
+        }
+    })
+);
+
+app.delete('/api/snapshots/:snapshotId',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const { snapshotId } = req.params;
         
-        const success = await snapshotService.deleteSnapshot(snapshotId);
-        
-        if (success) {
-            return res.json({ success: true });
-        } else {
-            return res.status(404).json({ error: 'Snapshot not found' });
-        }
-    } catch (error) {
-        console.error('Delete snapshot error:', error);
-        return res.status(500).json({ error: 'Failed to delete snapshot' });
-    }
-});
+            const success = await snapshotService.deleteSnapshot(snapshotId);
 
-app.post('/api/snapshots/cleanup/:siteUrl', async (req: ApiRequest, res: Response) => {
+            if (success) {
+                return res.json({ success: true });
+            } else {
+                return res.status(404).json({ error: 'Snapshot not found' });
+            }
+        } catch (error) {
+            console.error('Delete snapshot error:', error);
+            return res.status(500).json({ error: 'Failed to delete snapshot' });
+        }
+    })
+);
+
+app.post('/api/snapshots/cleanup/:siteUrl',
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
-        const { siteUrl } = req.params;
-        const decodedSiteUrl = decodeURIComponent(siteUrl);
-        const { keepLast = 10 } = req.body;
-        
-        const result = await snapshotService.cleanupOldSnapshots(decodedSiteUrl, keepLast);
-        return res.json({ success: true, ...result });
-    } catch (error) {
-        console.error('Cleanup snapshots error:', error);
-        return res.status(500).json({ 
-            success: false,
-            error: `Failed to cleanup snapshots: ${error instanceof Error ? error.message : 'Unknown error'}`
-        });
-    }
-});
+            const { siteUrl } = req.params;
+            const decodedSiteUrl = decodeURIComponent(siteUrl);
+            const { keepLast = 10 } = req.body;
+
+            const result = await snapshotService.cleanupOldSnapshots(decodedSiteUrl, keepLast);
+            return res.json({ success: true, ...result });
+        } catch (error) {
+            console.error('Cleanup snapshots error:', error);
+            return res.status(500).json({
+                success: false,
+                error: `Failed to cleanup snapshots: ${error instanceof Error ? error.message : 'Unknown error'}`
+            });
+        }
+    })
+);
 
 // Serve React app for all non-API routes
 app.get('/', (_req, res) => {
