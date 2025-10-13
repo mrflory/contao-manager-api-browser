@@ -281,15 +281,15 @@ export class ProxyService {
         return result;
     }
 
-    public async updateVersionInfo(): Promise<VersionInfoResult> {
-        const activeSite = await this.configService.getActiveSiteAsync();
-        
+    public async updateVersionInfo(userId?: string): Promise<VersionInfoResult> {
+        const activeSite = await this.configService.getActiveSiteAsync(userId);
+
         if (!activeSite) {
             throw new Error('No active site configured');
         }
 
         console.log('Updating version info for:', activeSite.url);
-        
+
         const versionInfo: VersionInfoResult = {
             contaoManagerVersion: null,
             phpVersion: null,
@@ -301,7 +301,7 @@ export class ProxyService {
         try {
             console.log('Getting Contao Manager version');
             const selfUpdateResponse = await this.proxyToContaoManager('/api/server/self-update', 'GET');
-            
+
             if (selfUpdateResponse.status === 200 && selfUpdateResponse.data.current_version) {
                 versionInfo.contaoManagerVersion = selfUpdateResponse.data.current_version;
                 console.log('Got Contao Manager version:', versionInfo.contaoManagerVersion);
@@ -314,7 +314,7 @@ export class ProxyService {
         try {
             console.log('Getting PHP version');
             const phpWebResponse = await this.proxyToContaoManager('/api/server/php-web', 'GET');
-            
+
             if (phpWebResponse.status === 200 && phpWebResponse.data.version) {
                 versionInfo.phpVersion = phpWebResponse.data.version;
                 console.log('Got PHP version:', versionInfo.phpVersion);
@@ -327,7 +327,7 @@ export class ProxyService {
         try {
             console.log('Getting Contao version');
             const contaoResponse = await this.proxyToContaoManager('/api/server/contao', 'GET');
-            
+
             if (contaoResponse.status === 200 && contaoResponse.data.version) {
                 versionInfo.contaoVersion = contaoResponse.data.version;
                 console.log('Got Contao version:', versionInfo.contaoVersion);
@@ -337,7 +337,7 @@ export class ProxyService {
         }
 
         // Update the site configuration with version info
-        const success = await this.configService.updateSiteVersionInfoAsync(activeSite.url, versionInfo);
+        const success = await this.configService.updateSiteVersionInfoAsync(activeSite.url, versionInfo, userId);
         if (success) {
             console.log('Version info updated successfully:', versionInfo);
         } else {

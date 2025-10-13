@@ -351,7 +351,7 @@ app.post('/api/update-version-info',
         // Set the active site context for the proxy service (temporary compatibility)
         (req as any).activeSite = activeSite;
 
-        const result = await proxyService.updateVersionInfo();
+        const result = await proxyService.updateVersionInfo(userId);
         return res.json({
             success: true,
             versionInfo: result
