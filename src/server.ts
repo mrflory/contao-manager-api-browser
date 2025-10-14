@@ -392,7 +392,6 @@ const proxyEndpoints = [
     
     // Packages endpoints
     '/api/packages/root',
-    '/api/packages/local/:packageName?',
     '/api/packages/cloud',
     
     // Logs endpoints from Contao Manager
@@ -464,6 +463,34 @@ proxyEndpoints.forEach(endpoint => {
         );
     });
 });
+
+// Special handler for /api/packages/local with dynamic paths
+// This must come after the static proxyEndpoints to handle both /api/packages/local/ and /api/packages/local/:name
+app.get(/^\/api\/packages\/local(\/.*)?$/,
+    userAuthMiddleware.requireAuth,
+    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+        const userId = req.userId!;
+
+        // Get the active site for this user
+        const activeSite = await configService.getActiveSiteAsync(userId);
+        if (!activeSite) {
+            return res.status(400).json({ error: 'No active site configured for user' });
+        }
+
+        // Set the active site context for the proxy service (temporary compatibility)
+        (req as any).activeSite = activeSite;
+
+        const response = await proxyService.proxyToContaoManager(
+            req.path,
+            'GET',
+            req.body,
+            req.headers.cookie
+        );
+
+        const result = proxyService.handleApiResponse(req.path, response);
+        return res.status(result.status).json(result.data);
+    })
+);
 
 // Local logs endpoints (our own logging system)
 app.get('/api/logs/:siteUrl',
