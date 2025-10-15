@@ -11,7 +11,11 @@ import { ExpertApiService } from '../../services/apiCallService';
 import { formatSortedPackages } from '../../utils/formatters';
 import { LoadingState } from '../display/LoadingState';
 
-export const PackagesTab: React.FC = () => {
+interface PackagesTabProps {
+  siteUrl: string;
+}
+
+export const PackagesTab: React.FC<PackagesTabProps> = ({ siteUrl }) => {
   const [installedPackagesData, setInstalledPackagesData] = useState<Record<string, unknown> | null>(null);
   const [allPackagesData, setAllPackagesData] = useState<Record<string, unknown> | null>(null);
 
@@ -19,8 +23,8 @@ export const PackagesTab: React.FC = () => {
   const loadInstalledPackages = useApiCall(
     async () => {
       const [allPackages, rootPackage] = await Promise.all([
-        ExpertApiService.getInstalledPackages(),
-        ExpertApiService.getRootPackageDetails()
+        ExpertApiService.getInstalledPackages(siteUrl),
+        ExpertApiService.getRootPackageDetails(siteUrl)
       ]);
       return { allPackages, rootPackage };
     },
@@ -35,7 +39,7 @@ export const PackagesTab: React.FC = () => {
   );
 
   const loadAllPackages = useApiCall(
-    () => ExpertApiService.getInstalledPackages(),
+    () => ExpertApiService.getInstalledPackages(siteUrl),
     {
       onSuccess: (data) => {
         setAllPackagesData(data as Record<string, unknown>);

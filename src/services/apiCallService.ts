@@ -178,6 +178,7 @@ export class SiteApiService {
 
 /**
  * Expert API functions service
+ * All methods now require siteUrl parameter
  */
 export class ExpertApiService {
   /**
@@ -193,157 +194,159 @@ export class ExpertApiService {
   /**
    * Get PHP web server configuration
    */
-  static getPhpWebConfig = api.getPhpWebConfig;
+  static getPhpWebConfig = (siteUrl: string) => api.getPhpWebConfig(siteUrl);
 
   /**
    * Get Contao configuration
    */
-  static getContaoConfig = api.getContaoConfig;
+  static getContaoConfig = (siteUrl: string) => api.getContaoConfig(siteUrl);
 
   /**
    * Get users list
    */
-  static getUsersList = api.getUsersList;
+  static getUsersList = (siteUrl: string) => api.getUsersList(siteUrl);
 
   /**
    * Get tokens list for a user
    */
-  static getTokensList = api.getTokensList;
+  static getTokensList = (siteUrl: string, username: string) => api.getTokensList(siteUrl, username);
 
   /**
    * Delete a user token
    */
-  static deleteToken = api.deleteToken;
+  static deleteToken = (siteUrl: string, username: string, tokenId: string) => api.deleteToken(siteUrl, username, tokenId);
 
   /**
    * Generate a one-time token for a user
    */
-  static generateUserToken = api.generateUserToken;
+  static generateUserToken = (siteUrl: string, username: string, clientId?: string, scope?: string, grantType?: string) =>
+    api.generateUserToken(siteUrl, username, clientId, scope, grantType);
 
   /**
    * Get database backups
    */
-  static getDatabaseBackups = api.getDatabaseBackups;
+  static getDatabaseBackups = (siteUrl: string) => api.getDatabaseBackups(siteUrl);
 
   /**
    * Get installed packages
    */
-  static getInstalledPackages = api.getInstalledPackages;
+  static getInstalledPackages = (siteUrl: string) => api.getInstalledPackages(siteUrl);
 
   /**
    * Get root package details
    */
-  static getRootPackageDetails = api.getRootPackageDetails;
+  static getRootPackageDetails = (siteUrl: string) => api.getRootPackageDetails(siteUrl);
 
   /**
    * Get specific local package details
    */
-  static getLocalPackageDetails = api.getLocalPackageDetails;
+  static getLocalPackageDetails = (siteUrl: string, name: string) => api.getLocalPackageDetails(siteUrl, name);
 
   /**
    * Get file contents (composer.json or composer.lock)
    */
-  static getFiles = api.getFiles;
+  static getFiles = (siteUrl: string, file: 'composer.json' | 'composer.lock') => api.getFiles(siteUrl, file);
 
   /**
    * Get session status
    */
-  static getSessionStatus = api.getSessionStatus;
+  static getSessionStatus = (siteUrl: string) => api.getSessionStatus(siteUrl);
 
   /**
    * Create session (login)
    */
-  static createSession = api.createSession;
+  static createSession = (siteUrl: string, credentials: any) => api.createSession(siteUrl, credentials);
 
   /**
    * Delete session (logout)
    */
-  static deleteSession = api.deleteSession;
+  static deleteSession = (siteUrl: string) => api.deleteSession(siteUrl);
 
   /**
    * Get server configuration
    */
-  static getServerConfig = api.getServerConfig;
+  static getServerConfig = (siteUrl: string) => api.getServerConfig(siteUrl);
 
   /**
    * Get PHP information
    */
-  static getPhpInfo = api.getPhpInfo;
+  static getPhpInfo = (siteUrl: string) => api.getPhpInfo(siteUrl);
 
   /**
    * Get Composer configuration
    */
-  static getComposerConfig = api.getComposerConfig;
+  static getComposerConfig = (siteUrl: string) => api.getComposerConfig(siteUrl);
 
   /**
    * Get database status
    */
-  static getDatabaseStatus = api.getDatabaseStatus;
+  static getDatabaseStatus = (siteUrl: string) => api.getDatabaseStatus(siteUrl);
 
   /**
    * Get Composer Cloud data
    */
-  static getComposerCloudData = api.getComposerCloudData;
+  static getComposerCloudData = (siteUrl: string) => api.getComposerCloudData(siteUrl);
 
   /**
    * Get log files list
    */
-  static getLogFiles = api.getLogFiles;
+  static getLogFiles = (siteUrl: string) => api.getLogFiles(siteUrl);
 }
 
 /**
  * Migration and task API service
+ * All methods now require siteUrl parameter
  */
 export class TaskApiService {
   /**
    * Get database migration status
    */
-  static getDatabaseMigrationStatus = api.getDatabaseMigrationStatus;
+  static getDatabaseMigrationStatus = (siteUrl: string) => api.getDatabaseMigrationStatus(siteUrl);
 
   /**
    * Start database migration
    */
-  static startDatabaseMigration = api.startDatabaseMigration;
+  static startDatabaseMigration = (siteUrl: string, payload: any) => api.startDatabaseMigration(siteUrl, payload);
 
   /**
    * Delete database migration task
    */
-  static deleteDatabaseMigrationTask = api.deleteDatabaseMigrationTask;
+  static deleteDatabaseMigrationTask = (siteUrl: string) => api.deleteDatabaseMigrationTask(siteUrl);
 
   /**
    * Get task data
    */
-  static getTaskData = api.getTaskData;
+  static getTaskData = (siteUrl: string) => api.getTaskData(siteUrl);
 
   /**
    * Set task data
    */
-  static setTaskData = api.setTaskData;
+  static setTaskData = (siteUrl: string, taskData: any) => api.setTaskData(siteUrl, taskData);
 
   /**
    * Delete task data
    */
-  static deleteTaskData = api.deleteTaskData;
+  static deleteTaskData = (siteUrl: string) => api.deleteTaskData(siteUrl);
 
   /**
    * Patch task status (for aborting tasks)
    */
-  static patchTaskStatus = api.patchTaskStatus;
+  static patchTaskStatus = (siteUrl: string, status: 'active' | 'aborting') => api.patchTaskStatus(siteUrl, status);
 
   /**
    * Get maintenance mode status
    */
-  static getMaintenanceModeStatus = api.getMaintenanceModeStatus;
+  static getMaintenanceModeStatus = (siteUrl: string) => api.getMaintenanceModeStatus(siteUrl);
 
   /**
    * Enable maintenance mode
    */
-  static enableMaintenanceMode = api.enableMaintenanceMode;
+  static enableMaintenanceMode = (siteUrl: string) => api.enableMaintenanceMode(siteUrl);
 
   /**
    * Disable maintenance mode
    */
-  static disableMaintenanceMode = api.disableMaintenanceMode;
+  static disableMaintenanceMode = (siteUrl: string) => api.disableMaintenanceMode(siteUrl);
 
   /**
    * Get maintenance mode status for specific site

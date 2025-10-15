@@ -24,12 +24,13 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
   async execute(context?: WorkflowContext): Promise<TimelineResult> {
     this.context = context;
     this.setActive();
-    
+
     try {
       // Start the composer dry-run task
-      await api.setTaskData({ 
-        name: 'composer/update', 
-        config: { dry_run: true } 
+      const siteUrl = this.getSiteUrl();
+      await api.setTaskData(siteUrl, {
+        name: 'composer/update',
+        config: { dry_run: true }
       });
       
       // Start polling for task completion
@@ -68,18 +69,19 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
         }
         
         try {
-          const taskData = await api.getTaskData();
-          
+          const siteUrl = this.getSiteUrl();
+          const taskData = await api.getTaskData(siteUrl);
+
           // Check if cancelled again after API call
           if (this.isCancelled) {
             safeResolve(this.setCancelled());
             return;
           }
-          
+
           if (!taskData || Object.keys(taskData).length === 0) {
             // Task completed - clean up and resolve
             try {
-              await api.deleteTaskData();
+              await api.deleteTaskData(siteUrl);
             } catch (cleanupError) {
               console.warn('Failed to clean up task data:', cleanupError);
             }
@@ -100,7 +102,7 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
           // Check task status
           if (taskData.status === 'complete') {
             try {
-              await api.deleteTaskData();
+              await api.deleteTaskData(siteUrl);
             } catch (cleanupError) {
               console.warn('Failed to clean up task data:', cleanupError);
             }
@@ -232,10 +234,11 @@ export class ComposerDryRunTimelineItem extends BaseTimelineItem {
     
     // Try to abort the active task if one exists
     try {
-      const taskData = await api.getTaskData();
+      const siteUrl = this.getSiteUrl();
+      const taskData = await api.getTaskData(siteUrl);
       if (taskData && taskData.status === 'active') {
         console.log('Aborting active composer dry-run task');
-        await api.patchTaskStatus('aborting');
+        await api.patchTaskStatus(siteUrl, 'aborting');
         
         // Wait a short time for the task to acknowledge the abort
         await new Promise(resolve => setTimeout(resolve, 1000));

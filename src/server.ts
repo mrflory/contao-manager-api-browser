@@ -398,10 +398,18 @@ const proxyEndpoints = [
     '/api/logs'
 ];
 
-// Add site-specific maintenance mode endpoint that bypasses active site issues
-app.get('/api/site/:siteUrl/maintenance-mode',
-    userAuthMiddleware.requireAuth,
-    ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+// ============================================================================
+// Site-Specific Proxy Endpoints (No Active Site Dependency)
+// ============================================================================
+// These endpoints take siteUrl as a parameter to avoid race conditions.
+// They use proxyToSpecificSite() which explicitly targets a site.
+
+/**
+ * Helper function to create site-specific proxy endpoints
+ * Reduces code duplication for all site-specific endpoints
+ */
+const createSiteProxyHandler = (contaoPath: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET') => {
+    return ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
             const userId = req.userId!;
             const siteUrl = decodeURIComponent(req.params.siteUrl);
@@ -414,21 +422,179 @@ app.get('/api/site/:siteUrl/maintenance-mode',
                 return res.status(404).json({ error: 'Site not found' });
             }
 
-            // Use proxyService directly with site information, bypassing active site
+            // Use proxyService directly with site information
             const response = await proxyService.proxyToSpecificSite(
                 site,
-                '/api/contao/maintenance-mode',
-                'GET',
-                null,
+                contaoPath,
+                method,
+                method !== 'GET' ? req.body : null,
                 req.headers.cookie
             );
 
-            const result = proxyService.handleApiResponse('/contao/maintenance-mode', response);
+            const result = proxyService.handleApiResponse(contaoPath, response);
             return res.status(result.status).json(result.data);
         } catch (error) {
-            console.error('Maintenance mode error:', error);
-            return res.status(500).json({ error: 'Failed to get maintenance mode status' });
+            console.error(`Site proxy error (${contaoPath}):`, error);
+            return res.status(500).json({ error: `Failed to proxy request to ${contaoPath}` });
         }
+    });
+};
+
+// Maintenance mode endpoints
+app.get('/api/site/:siteUrl/maintenance-mode', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/maintenance-mode', 'GET'));
+app.put('/api/site/:siteUrl/maintenance-mode', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/maintenance-mode', 'PUT'));
+app.delete('/api/site/:siteUrl/maintenance-mode', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/maintenance-mode', 'DELETE'));
+
+// Packages endpoints
+app.get('/api/site/:siteUrl/packages/root', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/packages/root'));
+app.get('/api/site/:siteUrl/packages/cloud', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/packages/cloud'));
+
+// Packages local with dynamic paths (regex to handle /packages/local/ and /packages/local/:packageName)
+app.get(/^\/api\/site\/([^\/]+)\/packages\/local(\/.*)?$/, userAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId!;
+        const siteUrl = decodeURIComponent(req.params[0]);
+        const packagePath = req.params[1] || '/';
+
+        const config = await configService.getConfigAsync(userId);
+        const site = config.sites?.[siteUrl];
+
+        if (!site) {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+
+        const contaoPath = `/api/packages/local${packagePath}`;
+        const response = await proxyService.proxyToSpecificSite(site, contaoPath, 'GET', null, req.headers.cookie);
+        const result = proxyService.handleApiResponse(contaoPath, response);
+        return res.status(result.status).json(result.data);
+    } catch (error) {
+        console.error('Packages local error:', error);
+        return res.status(500).json({ error: 'Failed to get packages' });
+    }
+}));
+
+// Server configuration endpoints
+app.get('/api/site/:siteUrl/server/config', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/config'));
+app.get('/api/site/:siteUrl/server/php-web', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/php-web'));
+app.get('/api/site/:siteUrl/server/contao', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/contao'));
+app.get('/api/site/:siteUrl/server/phpinfo', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/phpinfo'));
+app.get('/api/site/:siteUrl/server/composer', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/composer'));
+app.get('/api/site/:siteUrl/server/database', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/database'));
+app.get('/api/site/:siteUrl/server/self-update', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/self-update'));
+
+// Session endpoints
+app.get('/api/site/:siteUrl/session', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/session', 'GET'));
+app.post('/api/site/:siteUrl/session', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/session', 'POST'));
+app.delete('/api/site/:siteUrl/session', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/session', 'DELETE'));
+
+// Users endpoints
+app.get('/api/site/:siteUrl/users', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/users'));
+
+// Users with username parameter
+app.get('/api/site/:siteUrl/users/:username/tokens', userAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId!;
+        const siteUrl = decodeURIComponent(req.params.siteUrl);
+        const username = req.params.username;
+
+        const config = await configService.getConfigAsync(userId);
+        const site = config.sites?.[siteUrl];
+
+        if (!site) {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+
+        const contaoPath = `/api/users/${username}/tokens`;
+        const response = await proxyService.proxyToSpecificSite(site, contaoPath, 'GET', null, req.headers.cookie);
+        const result = proxyService.handleApiResponse(contaoPath, response);
+        return res.status(result.status).json(result.data);
+    } catch (error) {
+        console.error('Users tokens error:', error);
+        return res.status(500).json({ error: 'Failed to get user tokens' });
+    }
+}));
+
+app.post('/api/site/:siteUrl/users/:username/tokens', userAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId!;
+        const siteUrl = decodeURIComponent(req.params.siteUrl);
+        const username = req.params.username;
+
+        const config = await configService.getConfigAsync(userId);
+        const site = config.sites?.[siteUrl];
+
+        if (!site) {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+
+        const contaoPath = `/api/users/${username}/tokens`;
+        const response = await proxyService.proxyToSpecificSite(site, contaoPath, 'POST', req.body, req.headers.cookie);
+        const result = proxyService.handleApiResponse(contaoPath, response);
+        return res.status(result.status).json(result.data);
+    } catch (error) {
+        console.error('Generate user token error:', error);
+        return res.status(500).json({ error: 'Failed to generate user token' });
+    }
+}));
+
+app.delete('/api/site/:siteUrl/users/:username/tokens/:tokenId', userAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId!;
+        const siteUrl = decodeURIComponent(req.params.siteUrl);
+        const username = req.params.username;
+        const tokenId = req.params.tokenId;
+
+        const config = await configService.getConfigAsync(userId);
+        const site = config.sites?.[siteUrl];
+
+        if (!site) {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+
+        const contaoPath = `/api/users/${username}/tokens/${tokenId}`;
+        const response = await proxyService.proxyToSpecificSite(site, contaoPath, 'DELETE', null, req.headers.cookie);
+        const result = proxyService.handleApiResponse(contaoPath, response);
+        return res.status(result.status).json(result.data);
+    } catch (error) {
+        console.error('Delete user token error:', error);
+        return res.status(500).json({ error: 'Failed to delete user token' });
+    }
+}));
+
+// Contao endpoints
+app.get('/api/site/:siteUrl/contao/database-migration', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/database-migration', 'GET'));
+app.put('/api/site/:siteUrl/contao/database-migration', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/database-migration', 'PUT'));
+app.delete('/api/site/:siteUrl/contao/database-migration', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/database-migration', 'DELETE'));
+app.get('/api/site/:siteUrl/contao/backup', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/backup'));
+
+// Task endpoints
+app.get('/api/site/:siteUrl/task', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'GET'));
+app.put('/api/site/:siteUrl/task', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'PUT'));
+app.delete('/api/site/:siteUrl/task', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'DELETE'));
+app.patch('/api/site/:siteUrl/task', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'PATCH'));
+
+// Files endpoints
+app.get('/api/site/:siteUrl/files/:file', userAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId!;
+        const siteUrl = decodeURIComponent(req.params.siteUrl);
+        const file = req.params.file;
+
+        const config = await configService.getConfigAsync(userId);
+        const site = config.sites?.[siteUrl];
+
+        if (!site) {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+
+        const contaoPath = `/api/files/${file}`;
+        const response = await proxyService.proxyToSpecificSite(site, contaoPath, 'GET', null, req.headers.cookie);
+        const result = proxyService.handleApiResponse(contaoPath, response);
+        return res.status(result.status).json(result.data);
+    } catch (error) {
+        console.error('Files error:', error);
+        return res.status(500).json({ error: 'Failed to get file' });
+    }
 }));
 
 // Create proxy routes for all HTTP methods

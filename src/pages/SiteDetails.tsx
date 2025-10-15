@@ -93,15 +93,7 @@ const SiteDetails: React.FC = () => {
   const decodedSiteUrl = decodeUrlParam(siteUrl || '');
   const site = config?.sites?.[decodedSiteUrl];
 
-  // Set active site when viewing site details
-  useEffect(() => {
-    if (site && isAuthenticated && !isAuthLoading) {
-      // Set this site as active for API calls
-      SiteApiService.setActiveSite(site.url).catch(error => {
-        console.error('Failed to set active site:', error);
-      });
-    }
-  }, [site?.url, isAuthenticated, isAuthLoading]);
+  // Note: No longer need to set active site - all endpoints now use explicit siteUrl parameter
 
   // Load maintenance mode status when site is available and user is authenticated
   useEffect(() => {
@@ -309,7 +301,7 @@ const SiteDetails: React.FC = () => {
 
             {/* Tab 2: Packages */}
             <Tabs.Content value="packages">
-              <PackagesTab />
+              <PackagesTab siteUrl={site.url} />
             </Tabs.Content>
 
             {/* Tab 3: Update */}

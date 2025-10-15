@@ -34,7 +34,8 @@ export class UpdateManagerTimelineItem extends BaseTimelineItem {
       }
       
       // Start the manager self-update task
-      await api.setTaskData({ name: 'manager/self-update' });
+      const siteUrl = this.getSiteUrl();
+      await api.setTaskData(siteUrl, { name: 'manager/self-update' });
       
       // Emit progress update after starting task
       if (this.context?.engine) {
@@ -56,14 +57,15 @@ export class UpdateManagerTimelineItem extends BaseTimelineItem {
     return new Promise((resolve) => {
       const pollTask = async () => {
         try {
-          const taskData = await api.getTaskData();
-          
+          const siteUrl = this.getSiteUrl();
+          const taskData = await api.getTaskData(siteUrl);
+
           if (!taskData || Object.keys(taskData).length === 0) {
             // Task completed - clean up and resolve
             this.stopPolling();
-            
+
             try {
-              await api.deleteTaskData();
+              await api.deleteTaskData(siteUrl);
             } catch (cleanupError) {
               // Log but don't fail for cleanup errors
               console.warn('Failed to clean up task data:', cleanupError);
@@ -85,9 +87,9 @@ export class UpdateManagerTimelineItem extends BaseTimelineItem {
           // Check task status
           if (taskData.status === 'complete') {
             this.stopPolling();
-            
+
             try {
-              await api.deleteTaskData();
+              await api.deleteTaskData(siteUrl);
             } catch (cleanupError) {
               console.warn('Failed to clean up task data:', cleanupError);
             }

@@ -58,7 +58,7 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
   const deleteToken = useApiCall(
     async (params?: { username: string; tokenId: string }) => {
       if (!params) throw new Error('Username and token ID are required');
-      return ExpertApiService.deleteToken(params.username, params.tokenId);
+      return ExpertApiService.deleteToken(site.url, params.username, params.tokenId);
     }
   );
 
@@ -82,7 +82,7 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
       if (response.success && response.tokenInfo?.username) {
         // Try to get the actual token list to find the current token ID
         try {
-          const tokensResponse = await ExpertApiService.getTokensList(response.tokenInfo.username);
+          const tokensResponse = await ExpertApiService.getTokensList(site.url, response.tokenInfo.username);
           if (tokensResponse && Array.isArray(tokensResponse) && tokensResponse.length > 0) {
             // Use the first token as the current one (this is a simplification)
             // In a real app, you'd need to identify which token is currently being used

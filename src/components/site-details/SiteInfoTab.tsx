@@ -44,28 +44,36 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
   const toast = useToastNotifications();
 
   // Always create the hook, but conditionally use it
-  const localMaintenanceMode = useApiCall<MaintenanceMode>(TaskApiService.getMaintenanceModeStatus, {
-    showErrorToast: false, // We'll handle errors in the UI
-    errorMessage: 'Failed to get maintenance mode status'
-  });
-  
+  const localMaintenanceMode = useApiCall<MaintenanceMode>(
+    () => TaskApiService.getMaintenanceModeStatus(site.url),
+    {
+      showErrorToast: false, // We'll handle errors in the UI
+      errorMessage: 'Failed to get maintenance mode status'
+    }
+  );
+
   // Use passed maintenance mode state or local one as fallback
   const getMaintenanceMode = maintenanceMode || localMaintenanceMode;
 
-  const enableMaintenance = useApiCall<MaintenanceMode>(TaskApiService.enableMaintenanceMode, {
-    showSuccessToast: true,
-    successMessage: 'Maintenance mode enabled successfully',
-    showErrorToast: true,
-    errorMessage: 'Failed to enable maintenance mode',
-    onSuccess: () => {
-      // Only refresh status if current status call is not in error state
-      if (!getMaintenanceMode.state.error) {
-        getMaintenanceMode.execute();
+  const enableMaintenance = useApiCall<MaintenanceMode>(
+    () => TaskApiService.enableMaintenanceMode(site.url),
+    {
+      showSuccessToast: true,
+      successMessage: 'Maintenance mode enabled successfully',
+      showErrorToast: true,
+      errorMessage: 'Failed to enable maintenance mode',
+      onSuccess: () => {
+        // Only refresh status if current status call is not in error state
+        if (!getMaintenanceMode.state.error) {
+          getMaintenanceMode.execute();
+        }
       }
     }
-  });
+  );
 
-  const disableMaintenance = useApiCall<MaintenanceMode>(TaskApiService.disableMaintenanceMode, {
+  const disableMaintenance = useApiCall<MaintenanceMode>(
+    () => TaskApiService.disableMaintenanceMode(site.url),
+    {
     showSuccessToast: true,
     successMessage: 'Maintenance mode disabled successfully',
     showErrorToast: true,
@@ -90,9 +98,10 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
 
   const generateOneTimeToken = useApiCall(
     () => ExpertApiService.generateUserToken(
-      site.user?.username || 'admin', 
-      'contao-manager-api', 
-      'admin', 
+      site.url,
+      site.user?.username || 'admin',
+      'contao-manager-api',
+      'admin',
       'one-time'
     ),
     {

@@ -38,7 +38,8 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
       }
       
       // Start database migration check (dry-run)
-      await api.startDatabaseMigration({});
+      const siteUrl = this.getSiteUrl();
+      await api.startDatabaseMigration(siteUrl, {});
       
       // Emit progress update after starting migration check
       if (this.context?.engine) {
@@ -67,7 +68,8 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
         }
         
         try {
-          const migrationStatus = await api.getDatabaseMigrationStatus();
+          const siteUrl = this.getSiteUrl();
+          const migrationStatus = await api.getDatabaseMigrationStatus(siteUrl);
           
           // Check if cancelled again after API call
           if (this.isCancelled) {
@@ -90,7 +92,7 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
             
             // Clean up migration task
             try {
-              await api.deleteDatabaseMigrationTask();
+              await api.deleteDatabaseMigrationTask(siteUrl);
             } catch (cleanupError) {
               console.warn('Failed to clean up migration task:', cleanupError);
             }
@@ -121,9 +123,9 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
             
           } else if (migrationStatus.status === 'complete') {
             this.stopPolling();
-            
+
             try {
-              await api.deleteDatabaseMigrationTask();
+              await api.deleteDatabaseMigrationTask(siteUrl);
             } catch (cleanupError) {
               console.warn('Failed to clean up migration task:', cleanupError);
             }
@@ -290,10 +292,11 @@ export class CheckMigrationsTimelineItem extends BaseTimelineItem {
     
     // Try to clean up the active migration check task if one exists
     try {
-      const migrationStatus = await api.getDatabaseMigrationStatus();
+      const siteUrl = this.getSiteUrl();
+      const migrationStatus = await api.getDatabaseMigrationStatus(siteUrl);
       if (migrationStatus && migrationStatus.status === 'active') {
         console.log('Deleting active database migration check task');
-        await api.deleteDatabaseMigrationTask();
+        await api.deleteDatabaseMigrationTask(siteUrl);
       }
     } catch (error) {
       // Ignore errors when checking/cleaning up migration check during cancellation

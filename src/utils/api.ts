@@ -80,88 +80,92 @@ export const api = {
     return makeApiCall('/token-info');
   },
 
+  // ============================================================================
+  // Site-Specific API Endpoints (No Active Site Dependency)
+  // ============================================================================
+
   // Server Configuration endpoints
-  async getServerConfig(): Promise<any> {
-    return makeApiCall('/server/config');
+  async getServerConfig(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/server/config`);
   },
 
-  async getSessionStatus(): Promise<any> {
-    return makeApiCall('/session');
+  async getSessionStatus(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/session`);
   },
 
-  async createSession(credentials: { username?: string; password?: string; totp?: string; token?: string }): Promise<any> {
-    return makeApiCall('/session', {
+  async createSession(siteUrl: string, credentials: { username?: string; password?: string; totp?: string; token?: string }): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials)
     });
   },
 
-  async deleteSession(): Promise<any> {
-    return makeApiCall('/session', {
+  async deleteSession(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/session`, {
       method: 'DELETE'
     });
   },
 
-  async getPhpInfo(): Promise<any> {
-    return makeApiCall('/server/phpinfo');
+  async getPhpInfo(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/server/phpinfo`);
   },
 
-  async getComposerConfig(): Promise<any> {
-    return makeApiCall('/server/composer');
+  async getComposerConfig(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/server/composer`);
   },
 
-  async getDatabaseStatus(): Promise<any> {
-    return makeApiCall('/server/database');
+  async getDatabaseStatus(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/server/database`);
   },
 
-  async getComposerCloudData(): Promise<any> {
-    return makeApiCall('/packages/cloud');
+  async getComposerCloudData(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/packages/cloud`);
   },
 
-  async getLogFiles(): Promise<any> {
-    return makeApiCall('/logs');
+  async getLogFiles(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/logs`);
   },
 
-  async getPhpWebConfig(): Promise<any> {
-    return makeApiCall('/server/php-web');
+  async getPhpWebConfig(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/server/php-web`);
   },
 
-  async getContaoConfig(): Promise<any> {
-    return makeApiCall('/server/contao');
+  async getContaoConfig(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/server/contao`);
   },
 
   // Users endpoints
-  async getUsersList(): Promise<any> {
-    return makeApiCall('/users');
+  async getUsersList(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/users`);
   },
 
-  async getTokensList(username: string): Promise<any> {
-    return makeApiCall(`/users/${username}/tokens`);
+  async getTokensList(siteUrl: string, username: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/users/${username}/tokens`);
   },
 
-  async getTokenDetails(username: string, tokenId: string): Promise<any> {
-    return makeApiCall(`/users/${username}/tokens/${tokenId}`);
+  async getTokenDetails(siteUrl: string, username: string, tokenId: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/users/${username}/tokens/${tokenId}`);
   },
 
-  async deleteToken(username: string, tokenId: string): Promise<any> {
-    return makeApiCall(`/users/${username}/tokens/${tokenId}`, {
+  async deleteToken(siteUrl: string, username: string, tokenId: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/users/${username}/tokens/${tokenId}`, {
       method: 'DELETE'
     });
   },
 
-  async generateUserToken(username: string, clientId: string = 'contao-manager-api', scope: string = 'admin', grantType?: string): Promise<any> {
+  async generateUserToken(siteUrl: string, username: string, clientId: string = 'contao-manager-api', scope: string = 'admin', grantType?: string): Promise<any> {
     const payload: any = {
       client_id: clientId,
       scope: scope
     };
-    
+
     // Only add grant_type if specified
     if (grantType) {
       payload.grant_type = grantType;
     }
 
-    return makeApiCall(`/users/${username}/tokens`, {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/users/${username}/tokens`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -169,40 +173,40 @@ export const api = {
   },
 
   // Contao API endpoints
-  async getDatabaseMigrationStatus(): Promise<any> {
-    return makeApiCall('/contao/database-migration');
+  async getDatabaseMigrationStatus(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/contao/database-migration`);
   },
 
-  async startDatabaseMigration(payload: any): Promise<any> {
-    return makeApiCall('/contao/database-migration', {
+  async startDatabaseMigration(siteUrl: string, payload: any): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/contao/database-migration`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
   },
 
-  async deleteDatabaseMigrationTask(): Promise<any> {
-    return makeApiCall('/contao/database-migration', {
+  async deleteDatabaseMigrationTask(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/contao/database-migration`, {
       method: 'DELETE'
     });
   },
 
-  async getDatabaseBackups(): Promise<any> {
-    return makeApiCall('/contao/backup');
+  async getDatabaseBackups(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/contao/backup`);
   },
 
-  async getMaintenanceModeStatus(): Promise<any> {
-    return makeApiCall('/contao/maintenance-mode');
+  async getMaintenanceModeStatus(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/maintenance-mode`);
   },
 
-  async enableMaintenanceMode(): Promise<any> {
-    return makeApiCall('/contao/maintenance-mode', {
+  async enableMaintenanceMode(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/maintenance-mode`, {
       method: 'PUT'
     });
   },
 
-  async disableMaintenanceMode(): Promise<any> {
-    return makeApiCall('/contao/maintenance-mode', {
+  async disableMaintenanceMode(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/maintenance-mode`, {
       method: 'DELETE'
     });
   },
@@ -212,35 +216,35 @@ export const api = {
   },
 
   // Tasks endpoints
-  async getTaskData(): Promise<any> {
-    return makeApiCall('/task');
+  async getTaskData(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/task`);
   },
 
-  async setTaskData(taskData: any): Promise<any> {
-    return makeApiCall('/task', {
+  async setTaskData(siteUrl: string, taskData: any): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/task`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(taskData)
     });
   },
 
-  async deleteTaskData(): Promise<any> {
-    return makeApiCall('/task', {
+  async deleteTaskData(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/task`, {
       method: 'DELETE'
     });
   },
 
   // Packages endpoints
-  async getRootPackageDetails(): Promise<any> {
-    return makeApiCall('/packages/root');
+  async getRootPackageDetails(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/packages/root`);
   },
 
-  async getInstalledPackages(): Promise<any> {
-    return makeApiCall('/packages/local/');
+  async getInstalledPackages(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/packages/local/`);
   },
 
-  async getLocalPackageDetails(name: string): Promise<any> {
-    return makeApiCall(`/packages/local/${encodeURIComponent(name)}`);
+  async getLocalPackageDetails(siteUrl: string, name: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/packages/local/${encodeURIComponent(name)}`);
   },
 
   // Logs endpoint
@@ -255,8 +259,8 @@ export const api = {
   },
 
   // Task status management
-  async patchTaskStatus(status: 'active' | 'aborting'): Promise<any> {
-    return makeApiCall('/task', {
+  async patchTaskStatus(siteUrl: string, status: 'active' | 'aborting'): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/task`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
@@ -270,9 +274,9 @@ export const api = {
   },
 
   // Files endpoint
-  async getFiles(file: 'composer.json' | 'composer.lock'): Promise<string> {
-    console.log(`[CLIENT] Making authenticated file API call to: /files/${encodeURIComponent(file)}`);
-    return makeApiCall(`/files/${encodeURIComponent(file)}`);
+  async getFiles(siteUrl: string, file: 'composer.json' | 'composer.lock'): Promise<string> {
+    console.log(`[CLIENT] Making authenticated file API call to: /site/${encodeURIComponent(siteUrl)}/files/${encodeURIComponent(file)}`);
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/files/${encodeURIComponent(file)}`);
   },
 
   // History endpoints

@@ -269,7 +269,16 @@ export abstract class BaseTimelineItem implements TimelineItem {
   protected hasContextData(key: string): boolean {
     return this.context?.has(key) ?? false;
   }
-  
+
+  // Helper method to get siteUrl from context
+  protected getSiteUrl(): string {
+    const activeSite = this.getContextData('activeSite');
+    if (!activeSite?.url) {
+      throw new Error('No active site URL found in workflow context');
+    }
+    return activeSite.url;
+  }
+
   // Utility method to calculate execution time
   getExecutionTime(): number | undefined {
     if (this.startTime && this.endTime) {

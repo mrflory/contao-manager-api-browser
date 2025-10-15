@@ -55,6 +55,13 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
   const { modalState, openModal, closeModal } = useModalState();
   const { isLoading, setLoading } = useLoadingStates();
   const toast = useToastNotifications();
+
+  // Extract siteUrl for API calls
+  const siteUrl = site?.url || '';
+
+  if (!siteUrl) {
+    return <Box p={4}>No site selected</Box>;
+  }
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [taskStatusModalOpen, setTaskStatusModalOpen] = useState(false);
@@ -125,9 +132,9 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
 
   const handleFileSelectionSubmit = async (file: 'composer.json' | 'composer.lock') => {
     setLoading('get-file-content', true);
-    
+
     try {
-      const result = await ExpertApiService.getFiles(file);
+      const result = await ExpertApiService.getFiles(siteUrl, file);
       // For file content, we'll parse it as JSON if it's a JSON file
       let data;
       try {
@@ -158,8 +165,8 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
   const apiEndpoints = useMemo(() => [
     // Session APIs
     { category: 'Session', name: 'Create Session (Login)', description: 'Create a new session with credentials or token', technical: 'POST /api/session', handler: () => setSessionModalOpen(true) },
-    { category: 'Session', name: 'Get Session Status', description: 'Returns information about the current session', technical: 'GET /api/session', handler: () => handleApiCallWithModal('session-status', ExpertApiService.getSessionStatus, 'Session Status') },
-    { category: 'Session', name: 'Delete Session (Logout)', description: 'Delete the current session', technical: 'DELETE /api/session', handler: () => handleApiCallWithModal('delete-session', ExpertApiService.deleteSession, 'Delete Session (Logout)') },
+    { category: 'Session', name: 'Get Session Status', description: 'Returns information about the current session', technical: 'GET /api/session', handler: () => handleApiCallWithModal('session-status', () => ExpertApiService.getSessionStatus(siteUrl), 'Session Status') },
+    { category: 'Session', name: 'Delete Session (Logout)', description: 'Delete the current session', technical: 'DELETE /api/session', handler: () => handleApiCallWithModal('delete-session', () => ExpertApiService.deleteSession(siteUrl), 'Delete Session (Logout)') },
     
     // Files APIs
     { category: 'Files', name: 'Get File Content', description: 'Gets the content of composer.json or composer.lock', technical: 'GET /api/files/{file}', handler: () => setFileSelectionModalOpen(true) },
@@ -167,24 +174,24 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
     
     // Server Configuration APIs
     { category: 'Server Configuration', name: 'Manager Self-Update', description: 'Gets update status of the Contao Manager', technical: 'GET /api/server/self-update', handler: () => handleApiCallWithModal('update-status', ExpertApiService.getUpdateStatus, 'Update Status', formatUpdateStatus) },
-    { category: 'Server Configuration', name: 'Server Config', description: 'Gets server configuration', technical: 'GET /api/server/config', handler: () => handleApiCallWithModal('server-config', ExpertApiService.getServerConfig, 'Server Configuration') },
+    { category: 'Server Configuration', name: 'Server Config', description: 'Gets server configuration', technical: 'GET /api/server/config', handler: () => handleApiCallWithModal('server-config', () => ExpertApiService.getServerConfig(siteUrl), 'Server Configuration') },
     { category: 'Server Configuration', name: 'Set Server Config', description: 'Sets server configuration', technical: 'PUT /api/server/config', handler: null },
-    { category: 'Server Configuration', name: 'PHP Web Config', description: 'Gets PHP web server configuration', technical: 'GET /api/server/php-web', handler: () => handleApiCallWithModal('php-web-config', ExpertApiService.getPhpWebConfig, 'PHP Web Server Configuration') },
+    { category: 'Server Configuration', name: 'PHP Web Config', description: 'Gets PHP web server configuration', technical: 'GET /api/server/php-web', handler: () => handleApiCallWithModal('php-web-config', () => ExpertApiService.getPhpWebConfig(siteUrl), 'PHP Web Server Configuration') },
     { category: 'Server Configuration', name: 'PHP CLI Config', description: 'Gets PHP command line configuration', technical: 'GET /api/server/php-cli', handler: null },
-    { category: 'Server Configuration', name: 'PHP Info', description: 'Gets PHP Information', technical: 'GET /api/server/phpinfo', handler: () => handleApiCallWithModal('php-info', ExpertApiService.getPhpInfo, 'PHP Information', formatPhpInfo) },
+    { category: 'Server Configuration', name: 'PHP Info', description: 'Gets PHP Information', technical: 'GET /api/server/phpinfo', handler: () => handleApiCallWithModal('php-info', () => ExpertApiService.getPhpInfo(siteUrl), 'PHP Information', formatPhpInfo) },
     { category: 'Server Configuration', name: 'Opcode Cache Info', description: 'Gets PHP opcode cache Information', technical: 'GET /api/server/opcode', handler: null },
     { category: 'Server Configuration', name: 'Reset Opcode Cache', description: 'Resets the opcode cache', technical: 'DELETE /api/server/opcode', handler: null },
-    { category: 'Server Configuration', name: 'Composer Config', description: 'Gets Composer configuration', technical: 'GET /api/server/composer', handler: () => handleApiCallWithModal('composer-config', ExpertApiService.getComposerConfig, 'Composer Configuration') },
-    { category: 'Server Configuration', name: 'Contao Config', description: 'Gets Contao configuration', technical: 'GET /api/server/contao', handler: () => handleApiCallWithModal('contao-config', ExpertApiService.getContaoConfig, 'Contao Configuration') },
+    { category: 'Server Configuration', name: 'Composer Config', description: 'Gets Composer configuration', technical: 'GET /api/server/composer', handler: () => handleApiCallWithModal('composer-config', () => ExpertApiService.getComposerConfig(siteUrl), 'Composer Configuration') },
+    { category: 'Server Configuration', name: 'Contao Config', description: 'Gets Contao configuration', technical: 'GET /api/server/contao', handler: () => handleApiCallWithModal('contao-config', () => ExpertApiService.getContaoConfig(siteUrl), 'Contao Configuration') },
     { category: 'Server Configuration', name: 'Create Contao Structure', description: 'Create the Contao directory structure', technical: 'POST /api/server/contao', handler: null },
-    { category: 'Server Configuration', name: 'Database Status', description: 'Gets the current database status', technical: 'GET /api/server/database', handler: () => handleApiCallWithModal('database-status', ExpertApiService.getDatabaseStatus, 'Database Status') },
+    { category: 'Server Configuration', name: 'Database Status', description: 'Gets the current database status', technical: 'GET /api/server/database', handler: () => handleApiCallWithModal('database-status', () => ExpertApiService.getDatabaseStatus(siteUrl), 'Database Status') },
     { category: 'Server Configuration', name: 'Configure Database', description: 'Configures the database URL', technical: 'POST /api/server/database', handler: null },
     { category: 'Server Configuration', name: 'Admin User Status', description: 'Gets if there is an admin user', technical: 'GET /api/server/admin-user', handler: null },
     { category: 'Server Configuration', name: 'Create Admin User', description: 'Create an admin user', technical: 'POST /api/server/admin-user', handler: null },
     
     // Users APIs
     { category: 'Users', name: 'Create Invitation', description: 'Create invitation token for a new user', technical: 'POST /api/invitations', handler: null },
-    { category: 'Users', name: 'User List', description: 'Get list of all users', technical: 'GET /api/users', handler: () => handleApiCallWithModal('users-list', ExpertApiService.getUsersList, 'User List') },
+    { category: 'Users', name: 'User List', description: 'Get list of all users', technical: 'GET /api/users', handler: () => handleApiCallWithModal('users-list', () => ExpertApiService.getUsersList(siteUrl), 'User List') },
     { category: 'Users', name: 'Create User', description: 'Create a new user', technical: 'POST /api/users', handler: null },
     { category: 'Users', name: 'Get User', description: 'Get specific user data', technical: 'GET /api/users/{username}', handler: null },
     { category: 'Users', name: 'Replace User', description: 'Replace user data', technical: 'PUT /api/users/{username}', handler: null },
@@ -198,7 +205,7 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
       try {
         const tokenInfo = await ExpertApiService.getTokenInfo();
         if (tokenInfo.success && tokenInfo.tokenInfo.username) {
-          await handleApiCallWithModal('token-list-inner', () => ExpertApiService.getTokensList(tokenInfo.tokenInfo.username || ''), 'Token List');
+          await handleApiCallWithModal('token-list-inner', () => ExpertApiService.getTokensList(siteUrl, tokenInfo.tokenInfo.username || ''), 'Token List');
         } else {
           console.error('Could not get username from token info');
         }
@@ -228,36 +235,36 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
     { category: 'Contao API', name: 'Get Access Key', description: 'Gets the hashed access key', technical: 'GET /api/contao/access-key', handler: null },
     { category: 'Contao API', name: 'Set Access Key', description: 'Sets the hashed access key', technical: 'PUT /api/contao/access-key', handler: null },
     { category: 'Contao API', name: 'Remove Access Key', description: 'Removes the access key', technical: 'DELETE /api/contao/access-key', handler: null },
-    { category: 'Contao API', name: 'Database Migration Status', description: 'Gets the current migration task status', technical: 'GET /api/contao/database-migration', handler: () => handleApiCallWithModal('migration-status', TaskApiService.getDatabaseMigrationStatus, 'Migration Task Status') },
+    { category: 'Contao API', name: 'Database Migration Status', description: 'Gets the current migration task status', technical: 'GET /api/contao/database-migration', handler: () => handleApiCallWithModal('migration-status', () => TaskApiService.getDatabaseMigrationStatus(siteUrl), 'Migration Task Status') },
     { category: 'Contao API', name: 'Start Migration Task', description: 'Starts a database migration task', technical: 'PUT /api/contao/database-migration', handler: () => setMigrationModalOpen(true) },
-    { category: 'Contao API', name: 'Delete Migration Task', description: 'Delete the current migration task', technical: 'DELETE /api/contao/database-migration', handler: () => handleApiCallWithModal('delete-migration', TaskApiService.deleteDatabaseMigrationTask, 'Delete Migration Task') },
-    { category: 'Contao API', name: 'Database Backups', description: 'Gets a list of database backups', technical: 'GET /api/contao/backup', handler: () => handleApiCallWithModal('db-backups', ExpertApiService.getDatabaseBackups, 'Database Backups', formatDatabaseBackups) },
+    { category: 'Contao API', name: 'Delete Migration Task', description: 'Delete the current migration task', technical: 'DELETE /api/contao/database-migration', handler: () => handleApiCallWithModal('delete-migration', () => TaskApiService.deleteDatabaseMigrationTask(siteUrl), 'Delete Migration Task') },
+    { category: 'Contao API', name: 'Database Backups', description: 'Gets a list of database backups', technical: 'GET /api/contao/backup', handler: () => handleApiCallWithModal('db-backups', () => ExpertApiService.getDatabaseBackups(siteUrl), 'Database Backups', formatDatabaseBackups) },
     { category: 'Contao API', name: 'Install Tool Lock Status', description: 'Get install tool lock status', technical: 'GET /api/contao/install-tool/lock', handler: null },
     { category: 'Contao API', name: 'Lock Install Tool', description: 'Lock the install tool', technical: 'PUT /api/contao/install-tool/lock', handler: null },
     { category: 'Contao API', name: 'Unlock Install Tool', description: 'Unlock the install tool', technical: 'DELETE /api/contao/install-tool/lock', handler: null },
     { category: 'Contao API', name: 'JWT Cookie Content', description: 'Get JWT cookie content', technical: 'GET /api/contao/jwt-cookie', handler: null },
     { category: 'Contao API', name: 'Set JWT Cookie', description: 'Set JWT cookie', technical: 'PUT /api/contao/jwt-cookie', handler: null },
     { category: 'Contao API', name: 'Delete JWT Cookie', description: 'Delete JWT Cookie', technical: 'DELETE /api/contao/jwt-cookie', handler: null },
-    { category: 'Contao API', name: 'Maintenance Mode Status', description: 'Get maintenance mode status', technical: 'GET /api/contao/maintenance-mode', handler: () => handleApiCallWithModal('maintenance-mode', TaskApiService.getMaintenanceModeStatus, 'Maintenance Mode Status') },
-    { category: 'Contao API', name: 'Enable Maintenance Mode', description: 'Enable the maintenance mode', technical: 'PUT /api/contao/maintenance-mode', handler: () => handleApiCallWithModal('enable-maintenance', TaskApiService.enableMaintenanceMode, 'Enable Maintenance Mode') },
-    { category: 'Contao API', name: 'Disable Maintenance Mode', description: 'Disable the maintenance mode', technical: 'DELETE /api/contao/maintenance-mode', handler: () => handleApiCallWithModal('disable-maintenance', TaskApiService.disableMaintenanceMode, 'Disable Maintenance Mode') },
-    
+    { category: 'Contao API', name: 'Maintenance Mode Status', description: 'Get maintenance mode status', technical: 'GET /api/contao/maintenance-mode', handler: () => handleApiCallWithModal('maintenance-mode', () => TaskApiService.getMaintenanceModeStatus(siteUrl), 'Maintenance Mode Status') },
+    { category: 'Contao API', name: 'Enable Maintenance Mode', description: 'Enable the maintenance mode', technical: 'PUT /api/contao/maintenance-mode', handler: () => handleApiCallWithModal('enable-maintenance', () => TaskApiService.enableMaintenanceMode(siteUrl), 'Enable Maintenance Mode') },
+    { category: 'Contao API', name: 'Disable Maintenance Mode', description: 'Disable the maintenance mode', technical: 'DELETE /api/contao/maintenance-mode', handler: () => handleApiCallWithModal('disable-maintenance', () => TaskApiService.disableMaintenanceMode(siteUrl), 'Disable Maintenance Mode') },
+
     // Tasks APIs
-    { category: 'Tasks', name: 'Get Task Data', description: 'Gets task data', technical: 'GET /api/task', handler: () => handleApiCallWithModal('get-task-data', TaskApiService.getTaskData, 'Task Data') },
+    { category: 'Tasks', name: 'Get Task Data', description: 'Gets task data', technical: 'GET /api/task', handler: () => handleApiCallWithModal('get-task-data', () => TaskApiService.getTaskData(siteUrl), 'Task Data') },
     { category: 'Tasks', name: 'Set Task Data', description: 'Sets task data', technical: 'PUT /api/task', handler: () => setTaskModalOpen(true) },
     { category: 'Tasks', name: 'Patch Task Status', description: 'Starts or stops the active task', technical: 'PATCH /api/task', handler: () => setTaskStatusModalOpen(true) },
-    { category: 'Tasks', name: 'Delete Task Data', description: 'Deletes task data', technical: 'DELETE /api/task', handler: () => handleApiCallWithModal('delete-task', TaskApiService.deleteTaskData, 'Delete Task Data') },
-    
+    { category: 'Tasks', name: 'Delete Task Data', description: 'Deletes task data', technical: 'DELETE /api/task', handler: () => handleApiCallWithModal('delete-task', () => TaskApiService.deleteTaskData(siteUrl), 'Delete Task Data') },
+
     // Packages APIs
-    { category: 'Packages', name: 'Root Package Details', description: 'Gets details of the root Composer package', technical: 'GET /api/packages/root', handler: () => handleApiCallWithModal('root-package', ExpertApiService.getRootPackageDetails, 'Root Package Details') },
-    { category: 'Packages', name: 'Installed Packages', description: 'Gets list of installed Composer packages', technical: 'GET /api/packages/local/', handler: () => handleApiCallWithModal('installed-packages', ExpertApiService.getInstalledPackages, 'Installed Packages', formatSortedPackages) },
+    { category: 'Packages', name: 'Root Package Details', description: 'Gets details of the root Composer package', technical: 'GET /api/packages/root', handler: () => handleApiCallWithModal('root-package', () => ExpertApiService.getRootPackageDetails(siteUrl), 'Root Package Details') },
+    { category: 'Packages', name: 'Installed Packages', description: 'Gets list of installed Composer packages', technical: 'GET /api/packages/local/', handler: () => handleApiCallWithModal('installed-packages', () => ExpertApiService.getInstalledPackages(siteUrl), 'Installed Packages', formatSortedPackages) },
     { category: 'Packages', name: 'Package Details', description: 'Gets details of an installed Composer package', technical: 'GET /api/packages/local/{name}', handler: null },
-    { category: 'Packages', name: 'Composer Cloud Data', description: 'Gets data for a Composer Cloud job', technical: 'GET /api/packages/cloud', handler: () => handleApiCallWithModal('cloud-data', ExpertApiService.getComposerCloudData, 'Composer Cloud Data') },
+    { category: 'Packages', name: 'Composer Cloud Data', description: 'Gets data for a Composer Cloud job', technical: 'GET /api/packages/cloud', handler: () => handleApiCallWithModal('cloud-data', () => ExpertApiService.getComposerCloudData(siteUrl), 'Composer Cloud Data') },
     { category: 'Packages', name: 'Install from Cloud', description: 'Writes composer.lock and runs composer install', technical: 'PUT /api/packages/cloud', handler: null },
     { category: 'Packages', name: 'Validate Constraint', description: 'Validates a Composer version constraint', technical: 'POST /api/constraint', handler: null },
-    
+
     // Logs APIs
-    { category: 'Logs', name: 'List Log Files', description: 'Gets a list of files in the /var/logs directory', technical: 'GET /api/logs', handler: () => handleApiCallWithModal('log-files', ExpertApiService.getLogFiles, 'Log Files', formatLogFiles) },
+    { category: 'Logs', name: 'List Log Files', description: 'Gets a list of files in the /var/logs directory', technical: 'GET /api/logs', handler: () => handleApiCallWithModal('log-files', () => ExpertApiService.getLogFiles(siteUrl), 'Log Files', formatLogFiles) },
     { category: 'Logs', name: 'Get Log Content', description: 'Get the content of a log file', technical: 'GET /api/logs/{file}', handler: null },
     { category: 'Logs', name: 'Delete Log File', description: 'Deletes a log file', technical: 'DELETE /api/logs/{file}', handler: null }
   ], []);
@@ -276,7 +283,7 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
   }, [apiEndpoints, selectedCategory, searchTerm]);
 
   const handleTaskSelected = async (taskData: any) => {
-    await handleApiCallWithModal('set-task', () => TaskApiService.setTaskData(taskData), 'Set Task Data');
+    await handleApiCallWithModal('set-task', () => TaskApiService.setTaskData(siteUrl, taskData), 'Set Task Data');
   };
 
   const handleMigrationSubmit = async (formData: { hash: string; type: string; withDeletes: boolean }) => {
@@ -284,13 +291,13 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
     if (formData.hash) payload.hash = formData.hash;
     if (formData.type) payload.type = formData.type;
     if (formData.withDeletes) payload.withDeletes = formData.withDeletes;
-    
-    await handleApiCallWithModal('start-migration', () => TaskApiService.startDatabaseMigration(payload), 'Start Database Migration');
+
+    await handleApiCallWithModal('start-migration', () => TaskApiService.startDatabaseMigration(siteUrl, payload), 'Start Database Migration');
   };
 
   const handleTaskStatusSubmit = async (status: 'active' | 'aborting') => {
     try {
-      await handleApiCallWithModal('patch-task-status', () => TaskApiService.patchTaskStatus(status), `Patch Task Status: ${status}`);
+      await handleApiCallWithModal('patch-task-status', () => TaskApiService.patchTaskStatus(siteUrl, status), `Patch Task Status: ${status}`);
     } catch (error) {
       // Additional error handling if needed, but handleApiCallWithModal already shows toast
       console.error('Task status update failed:', error);
@@ -298,18 +305,19 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
   };
 
   const handleSessionCredentialsSubmit = async (credentials: SessionCredentials) => {
-    await handleApiCallWithModal('create-session', () => ExpertApiService.createSession(credentials), 'Create Session (Login)');
+    await handleApiCallWithModal('create-session', () => ExpertApiService.createSession(siteUrl, credentials), 'Create Session (Login)');
   };
 
   const handleTokenCreationSubmit = async (formData: TokenCreationForm) => {
     await handleApiCallWithModal(
-      'create-token', 
+      'create-token',
       () => ExpertApiService.generateUserToken(
-        formData.username, 
-        formData.clientId, 
-        formData.scope, 
+        siteUrl,
+        formData.username,
+        formData.clientId,
+        formData.scope,
         formData.grantType || undefined
-      ), 
+      ),
       'Create Token'
     );
   };

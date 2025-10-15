@@ -30,7 +30,8 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
       }
       
       // Check for regular tasks first
-      const taskData = await api.getTaskData();
+      const siteUrl = this.getSiteUrl();
+      const taskData = await api.getTaskData(siteUrl);
       if (taskData && Object.keys(taskData).length > 0) {
         // Emit progress update about found tasks
         if (this.context?.engine) {
@@ -38,15 +39,15 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
         }
         return this.handlePendingTasks(taskData);
       }
-      
+
       // Emit progress update for migration check
       if (this.context?.engine) {
         this.context.engine.emitProgress(this, { status: 'active', message: 'Checking for pending migrations...' });
       }
-      
+
       // Also check for database migration tasks
       try {
-        const migrationStatus = await api.getDatabaseMigrationStatus();
+        const migrationStatus = await api.getDatabaseMigrationStatus(siteUrl);
         if (migrationStatus && Object.keys(migrationStatus).length > 0 && migrationStatus.status) {
           if (migrationStatus.status === 'active' || migrationStatus.status === 'pending') {
             // Emit progress update about found migrations
@@ -103,29 +104,31 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
             // If task is active, abort it first
             if (taskData.status === 'active') {
               console.log('Aborting active task before deletion');
-              
+
+              const siteUrl = this.getSiteUrl();
+
               // Emit progress update for aborting
               if (this.context?.engine) {
                 this.context.engine.emitProgress(this, { status: 'active', message: 'Aborting active task...' });
               }
-              
-              await api.patchTaskStatus('aborting');
-              
+
+              await api.patchTaskStatus(siteUrl, 'aborting');
+
               // Wait for task to be aborted (polling until status changes to 'stopped')
               let attempts = 0;
               const maxAttempts = 10;
               while (attempts < maxAttempts) {
                 await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
-                
+
                 // Emit progress update during polling
                 if (this.context?.engine) {
-                  this.context.engine.emitProgress(this, { 
-                    status: 'active', 
+                  this.context.engine.emitProgress(this, {
+                    status: 'active',
                     message: `Waiting for task to abort... (${attempts + 1}/${maxAttempts})`
                   });
                 }
-                
-                const currentTask = await api.getTaskData();
+
+                const currentTask = await api.getTaskData(siteUrl);
                 if (!currentTask || currentTask.status === 'stopped' || currentTask.status === 'error') {
                   break;
                 }
@@ -139,7 +142,8 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
             }
             
             // Now delete the task
-            await api.deleteTaskData();
+            const siteUrl = this.getSiteUrl();
+            await api.deleteTaskData(siteUrl);
             
             // Emit completion progress update
             if (this.context?.engine) {
@@ -178,7 +182,8 @@ export class CheckTasksTimelineItem extends BaseTimelineItem {
               this.context.engine.emitProgress(this, { status: 'active', message: 'Clearing pending migration task...' });
             }
             
-            await api.deleteDatabaseMigrationTask();
+            const siteUrl = this.getSiteUrl();
+            await api.deleteDatabaseMigrationTask(siteUrl);
             
             // Emit completion progress update
             if (this.context?.engine) {
