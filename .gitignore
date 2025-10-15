@@ -19,6 +19,7 @@ data/config.json
 data/*.log
 data/*.history.json
 data/snapshots/*
+data/users/*
 
 # Logs
 logs/
