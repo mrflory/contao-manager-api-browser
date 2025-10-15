@@ -21,13 +21,14 @@ export class ProxyService {
 
     // Generic proxy helper for Contao Manager API
     public async proxyToContaoManager(
-        endpoint: string, 
-        method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', 
-        data: any = null, 
-        cookieHeader?: string
+        endpoint: string,
+        method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
+        data: any = null,
+        cookieHeader?: string,
+        userId?: string
     ): Promise<AxiosResponse> {
-        const activeSite = await this.configService.getActiveSiteAsync();
-        
+        const activeSite = await this.configService.getActiveSiteAsync(userId);
+
         if (!activeSite) {
             throw new Error('No active site configured');
         }
@@ -300,7 +301,7 @@ export class ProxyService {
         // Get Contao Manager version from self-update endpoint
         try {
             console.log('Getting Contao Manager version');
-            const selfUpdateResponse = await this.proxyToContaoManager('/api/server/self-update', 'GET');
+            const selfUpdateResponse = await this.proxyToContaoManager('/api/server/self-update', 'GET', null, undefined, userId);
 
             if (selfUpdateResponse.status === 200 && selfUpdateResponse.data.current_version) {
                 versionInfo.contaoManagerVersion = selfUpdateResponse.data.current_version;
@@ -313,7 +314,7 @@ export class ProxyService {
         // Get PHP version from php-web endpoint
         try {
             console.log('Getting PHP version');
-            const phpWebResponse = await this.proxyToContaoManager('/api/server/php-web', 'GET');
+            const phpWebResponse = await this.proxyToContaoManager('/api/server/php-web', 'GET', null, undefined, userId);
 
             if (phpWebResponse.status === 200 && phpWebResponse.data.version) {
                 versionInfo.phpVersion = phpWebResponse.data.version;
@@ -326,7 +327,7 @@ export class ProxyService {
         // Get Contao version from contao endpoint
         try {
             console.log('Getting Contao version');
-            const contaoResponse = await this.proxyToContaoManager('/api/server/contao', 'GET');
+            const contaoResponse = await this.proxyToContaoManager('/api/server/contao', 'GET', null, undefined, userId);
 
             if (contaoResponse.status === 200 && contaoResponse.data.version) {
                 versionInfo.contaoVersion = contaoResponse.data.version;
@@ -372,9 +373,9 @@ export class ProxyService {
         }
     }
 
-    public async getAuthenticatedAxiosConfig(url: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', data: any = null, cookieHeader?: string): Promise<any> {
-        const activeSite = await this.configService.getActiveSiteAsync();
-        
+    public async getAuthenticatedAxiosConfig(url: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', data: any = null, cookieHeader?: string, userId?: string): Promise<any> {
+        const activeSite = await this.configService.getActiveSiteAsync(userId);
+
         if (!activeSite) {
             throw new Error('No active site configured');
         }
