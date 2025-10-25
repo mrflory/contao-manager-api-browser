@@ -327,24 +327,23 @@ export class UserAuthService {
         }
 
         if (!this.emailTransporter) {
-            throw new Error('Email service not configured');
+            // If email is not configured, we can't send the reset link
+            // But we silently fail to prevent email enumeration
+            console.warn('Email service not configured - password reset request ignored');
+            return;
         }
 
         // Generate reset token
         const resetToken = crypto.randomBytes(32).toString('hex');
-        // const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-        // Store reset token in database (you might want to create a separate table for this)
-        // For now, we'll use a simple approach
-        // const hashedToken = await this.hashPassword(resetToken);
-
-        // Update user with reset token (extend User model as needed)
-        // This is a simplified approach - in production, use a separate table
+        // Update user with reset token
         await this.prisma.user.update({
             where: { id: user.id },
             data: {
-                // passwordResetToken: hashedToken,
-                // passwordResetExpires: resetTokenExpires
+                passwordResetToken: hashedToken,
+                passwordResetExpires: resetTokenExpires
             }
         });
 
@@ -355,19 +354,78 @@ export class UserAuthService {
     /**
      * Reset password using reset token
      */
-    public async resetPassword(_resetData: PasswordResetData): Promise<void> {
-        // This is a placeholder implementation
-        // In production, you'd verify the reset token and update the password
-        throw new Error('Password reset functionality requires additional database schema');
+    public async resetPassword(resetData: PasswordResetData): Promise<void> {
+        const { email, token, newPassword } = resetData;
+
+        // Validate password strength
+        if (newPassword.length < 8) {
+            throw new Error('Password must be at least 8 characters long');
+        }
+
+        // Hash the provided token to compare with stored hash
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+        // Find user with matching email and valid reset token
+        const user = await this.prisma.user.findFirst({
+            where: {
+                email,
+                passwordResetToken: hashedToken,
+                passwordResetExpires: {
+                    gt: new Date() // Token must not be expired
+                }
+            }
+        });
+
+        if (!user) {
+            throw new Error('Invalid or expired password reset token');
+        }
+
+        // Hash the new password
+        const passwordHash = await this.hashPassword(newPassword);
+
+        // Update user's password and clear reset token
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: {
+                passwordHash,
+                passwordResetToken: null,
+                passwordResetExpires: null
+            }
+        });
+
+        // Invalidate all existing sessions for security
+        await this.prisma.session.deleteMany({
+            where: { userId: user.id }
+        });
     }
 
     /**
      * Verify email address
      */
-    public async verifyEmail(_token: string): Promise<void> {
-        // This is a placeholder implementation
-        // In production, you'd verify the token and mark email as verified
-        throw new Error('Email verification functionality requires additional database schema');
+    public async verifyEmail(token: string): Promise<void> {
+        // Hash the provided token to compare with stored hash
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+        // Find user with matching verification token
+        const user = await this.prisma.user.findFirst({
+            where: {
+                emailVerificationToken: hashedToken,
+                emailVerified: null // Only verify if not already verified
+            }
+        });
+
+        if (!user) {
+            throw new Error('Invalid or expired email verification token');
+        }
+
+        // Update user's email verification status and clear token
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: {
+                emailVerified: new Date(),
+                emailVerificationToken: null
+            }
+        });
     }
 
     /**
@@ -398,9 +456,19 @@ export class UserAuthService {
             return;
         }
 
-        // Generate verification token (simplified)
+        // Generate verification token
         const verificationToken = crypto.randomBytes(32).toString('hex');
-        const verificationUrl = `${process.env.APP_URL}/verify-email?token=${verificationToken}&userId=${userId}`;
+        const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+
+        // Store hashed token in database
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                emailVerificationToken: hashedToken
+            }
+        });
+
+        const verificationUrl = `${process.env.APP_URL}/api/auth/verify-email?token=${verificationToken}`;
 
         const mailOptions = {
             from: process.env.EMAIL_FROM || 'noreply@contao-manager.com',

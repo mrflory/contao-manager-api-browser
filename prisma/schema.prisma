@@ -15,13 +15,16 @@ datasource db {
 // Core user model for multi-tenant architecture
 // Foundation for Phase 2 authentication system
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  passwordHash  String
-  emailVerified DateTime?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                     String   @id @default(cuid())
+  email                  String   @unique
+  passwordHash           String
+  emailVerified          DateTime?
+  isActive               Boolean  @default(true)
+  passwordResetToken     String?  @db.VarChar(255)
+  passwordResetExpires   DateTime?
+  emailVerificationToken String?  @db.VarChar(255)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   // Relationships
   sites         Site[]
@@ -29,6 +32,8 @@ model User {
   sessions      Session[]
   usageLogs     UsageLog[]
 
+  @@index([passwordResetToken])
+  @@index([emailVerificationToken])
   @@map("users")
 }
 

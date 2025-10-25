@@ -156,10 +156,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             async (error: any) => {
                 const originalRequest = error.config;
 
-                // Skip retry for refresh endpoint and already retried requests
+                // Skip retry for auth endpoints (login, register, refresh) and already retried requests
+                const isAuthEndpoint = originalRequest.url?.includes('/api/auth/login') ||
+                    originalRequest.url?.includes('/api/auth/register') ||
+                    originalRequest.url?.includes('/api/auth/refresh');
+
                 if (error.response?.status === 401 &&
                     !originalRequest._retry &&
-                    !originalRequest.url?.includes('/api/auth/refresh')) {
+                    !isAuthEndpoint) {
                     originalRequest._retry = true;
 
                     try {

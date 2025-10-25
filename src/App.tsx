@@ -15,6 +15,8 @@ import SubscriptionPage from './pages/Subscription';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 
 const App: React.FC = () => {
   return (
@@ -38,6 +40,22 @@ const App: React.FC = () => {
                 element={
                   <PublicRoute>
                     <RegisterPage />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/forgot-password"
+                element={
+                  <PublicRoute>
+                    <ForgotPasswordPage />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/reset-password"
+                element={
+                  <PublicRoute>
+                    <ResetPasswordPage />
                   </PublicRoute>
                 }
               />
