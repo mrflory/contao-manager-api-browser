@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
 import { PrismaClient } from '@prisma/client';
+import { EmailService } from './emailService';
 
 export interface UserRegistrationData {
     email: string;
@@ -46,7 +46,7 @@ export class UserAuthService {
     private prisma: PrismaClient;
     private jwtSecret: string;
     private jwtRefreshSecret: string;
-    private emailTransporter: nodemailer.Transporter | null = null;
+    private emailService: EmailService;
     private readonly SALT_ROUNDS = 12;
     private readonly ACCESS_TOKEN_EXPIRES = '1h';  // Extended from 15m to 1h for better UX
     private readonly REFRESH_TOKEN_EXPIRES = '7d';
@@ -64,48 +64,12 @@ export class UserAuthService {
             console.warn('WARNING: JWT secrets not provided in environment variables. Using generated secrets.');
         }
 
-        // Initialize email transporter if email configuration is provided
-        this.initializeEmailTransporter();
+        // Initialize email service with automatic provider selection (Resend > SMTP)
+        this.emailService = new EmailService();
     }
 
     private generateSecret(): string {
         return crypto.randomBytes(64).toString('hex');
-    }
-
-    private initializeEmailTransporter(): void {
-        const port = parseInt(process.env.EMAIL_PORT || '587');
-        const isSecure = process.env.EMAIL_SECURE === 'true';
-
-        const emailConfig = {
-            host: process.env.EMAIL_HOST,
-            port: port,
-            secure: isSecure, // true for SSL (port 465), false for STARTTLS (port 587)
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            },
-            // Connection and timeout settings to prevent hanging
-            connectionTimeout: 10000, // 10 seconds
-            greetingTimeout: 10000,
-            socketTimeout: 20000, // 20 seconds
-            // TLS configuration for SSL and STARTTLS
-            tls: {
-                // Reject unauthorized certificates in production for security
-                rejectUnauthorized: process.env.NODE_ENV === 'production',
-                // Minimum TLS version for security
-                minVersion: 'TLSv1.2' as const
-            },
-            // Enable debug output in development
-            debug: process.env.NODE_ENV === 'development',
-            logger: process.env.NODE_ENV === 'development'
-        };
-
-        if (emailConfig.host && emailConfig.auth?.user) {
-            this.emailTransporter = nodemailer.createTransport(emailConfig);
-            console.log(`Email transporter initialized (${emailConfig.host}:${port}, secure=${isSecure})`);
-        } else {
-            console.warn('Email configuration not provided. Email verification will be disabled.');
-        }
     }
 
     /**
@@ -197,14 +161,14 @@ export class UserAuthService {
             data: {
                 email,
                 passwordHash,
-                emailVerified: !this.emailTransporter ? new Date() : null, // Auto-verify if email is disabled
+                emailVerified: !this.emailService.isConfigured() ? new Date() : null, // Auto-verify if email is disabled
                 isActive: true
             }
         });
 
         // Send verification email if email service is available
         let requiresVerification = false;
-        if (this.emailTransporter && newUser.emailVerified === null) {
+        if (this.emailService.isConfigured() && newUser.emailVerified === null) {
             await this.sendVerificationEmail(newUser.email, newUser.id);
             requiresVerification = true;
         }
@@ -251,7 +215,7 @@ export class UserAuthService {
         }
 
         // Check if email is verified (if verification is enabled)
-        if (this.emailTransporter && user.emailVerified === null) {
+        if (this.emailService.isConfigured() && user.emailVerified === null) {
             throw new Error('Email address not verified. Please check your email for verification link.');
         }
 
@@ -343,10 +307,10 @@ export class UserAuthService {
             return;
         }
 
-        if (!this.emailTransporter) {
+        if (!this.emailService.isConfigured()) {
             // If email is not configured, we can't send the reset link
             // But we silently fail to prevent email enumeration
-            console.warn('Email service not configured - password reset request ignored');
+            console.warn('[Email] Email service not configured - password reset request ignored');
             return;
         }
 
@@ -469,7 +433,7 @@ export class UserAuthService {
      * Send verification email
      */
     private async sendVerificationEmail(email: string, userId: string): Promise<void> {
-        if (!this.emailTransporter) {
+        if (!this.emailService.isConfigured()) {
             return;
         }
 
@@ -487,8 +451,7 @@ export class UserAuthService {
 
         const verificationUrl = `${process.env.APP_URL}/api/auth/verify-email?token=${verificationToken}`;
 
-        const mailOptions = {
-            from: process.env.EMAIL_FROM || 'noreply@contao-manager.com',
+        await this.emailService.sendEmail({
             to: email,
             subject: 'Verify your email address',
             html: `
@@ -497,23 +460,20 @@ export class UserAuthService {
                 <a href="${verificationUrl}">Verify Email</a>
                 <p>If you didn't create this account, please ignore this email.</p>
             `
-        };
-
-        await this.emailTransporter.sendMail(mailOptions);
+        });
     }
 
     /**
      * Send password reset email
      */
     private async sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
-        if (!this.emailTransporter) {
+        if (!this.emailService.isConfigured()) {
             return;
         }
 
         const resetUrl = `${process.env.APP_URL}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
-        const mailOptions = {
-            from: process.env.EMAIL_FROM || 'noreply@contao-manager.com',
+        await this.emailService.sendEmail({
             to: email,
             subject: 'Reset your password',
             html: `
@@ -523,9 +483,7 @@ export class UserAuthService {
                 <p>This link will expire in 1 hour.</p>
                 <p>If you didn't request this, please ignore this email.</p>
             `
-        };
-
-        await this.emailTransporter.sendMail(mailOptions);
+        });
     }
 
     /**
