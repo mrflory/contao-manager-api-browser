@@ -73,19 +73,36 @@ export class UserAuthService {
     }
 
     private initializeEmailTransporter(): void {
+        const port = parseInt(process.env.EMAIL_PORT || '587');
+        const isSecure = process.env.EMAIL_SECURE === 'true';
+
         const emailConfig = {
             host: process.env.EMAIL_HOST,
-            port: parseInt(process.env.EMAIL_PORT || '587'),
-            secure: process.env.EMAIL_SECURE === 'true',
+            port: port,
+            secure: isSecure, // true for SSL (port 465), false for STARTTLS (port 587)
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
-            }
+            },
+            // Connection and timeout settings to prevent hanging
+            connectionTimeout: 10000, // 10 seconds
+            greetingTimeout: 10000,
+            socketTimeout: 20000, // 20 seconds
+            // TLS configuration for SSL and STARTTLS
+            tls: {
+                // Reject unauthorized certificates in production for security
+                rejectUnauthorized: process.env.NODE_ENV === 'production',
+                // Minimum TLS version for security
+                minVersion: 'TLSv1.2' as const
+            },
+            // Enable debug output in development
+            debug: process.env.NODE_ENV === 'development',
+            logger: process.env.NODE_ENV === 'development'
         };
 
-        if (emailConfig.host && emailConfig.auth.user) {
+        if (emailConfig.host && emailConfig.auth?.user) {
             this.emailTransporter = nodemailer.createTransport(emailConfig);
-            console.log('Email transporter initialized');
+            console.log(`Email transporter initialized (${emailConfig.host}:${port}, secure=${isSecure})`);
         } else {
             console.warn('Email configuration not provided. Email verification will be disabled.');
         }
