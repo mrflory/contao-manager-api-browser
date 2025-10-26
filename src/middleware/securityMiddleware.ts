@@ -78,6 +78,7 @@ export const authRateLimit = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    // Trust proxy is configured in server.ts, so this will use X-Forwarded-For correctly
     skip: (_req) => {
         // Skip rate limiting in development
         return process.env.NODE_ENV === 'development';

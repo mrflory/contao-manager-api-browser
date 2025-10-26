@@ -40,6 +40,14 @@ import type { ApiRequest } from './types';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy - Required for rate limiting and proper IP detection behind proxies
+// Railway, Nginx, and other reverse proxies add X-Forwarded-For headers
+if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1); // Trust first proxy
+} else {
+    app.set('trust proxy', true); // Trust all proxies in development
+}
+
 // Initialize Prisma client for Phase 2 user authentication
 const prisma = new PrismaClient();
 
