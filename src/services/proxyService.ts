@@ -241,8 +241,8 @@ export class ProxyService {
         // Try composer endpoint
         try {
             console.log('Getting composer status');
-            const updateResponse = await this.proxyToContaoManager('/api/server/composer', 'GET');
-            
+            const updateResponse = await this.proxyToContaoManager('/api/server/composer', 'GET', null, undefined, userId);
+
             console.log('Composer response status:', updateResponse.status);
             console.log('Composer response data:', updateResponse.data);
 
@@ -261,7 +261,7 @@ export class ProxyService {
         // Try self-update endpoint
         try {
             console.log('Getting self-update status');
-            const statusResponse = await this.proxyToContaoManager('/api/server/self-update', 'GET');
+            const statusResponse = await this.proxyToContaoManager('/api/server/self-update', 'GET', null, undefined, userId);
             
             console.log('Self-update response status:', statusResponse.status);
             console.log('Self-update response data:', statusResponse.data);
