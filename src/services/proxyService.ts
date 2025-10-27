@@ -223,9 +223,9 @@ export class ProxyService {
         return response;
     }
 
-    public async updateStatus(): Promise<UpdateStatusResult> {
-        const activeSite = await this.configService.getActiveSiteAsync();
-        
+    public async updateStatus(userId?: string): Promise<UpdateStatusResult> {
+        const activeSite = await this.configService.getActiveSiteAsync(userId);
+
         if (!activeSite) {
             throw new Error('No active site configured');
         }

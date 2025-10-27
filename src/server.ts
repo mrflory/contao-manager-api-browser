@@ -340,7 +340,7 @@ app.post('/api/update-status',
         // Set the active site context for the proxy service (temporary compatibility)
         (req as any).activeSite = activeSite;
 
-        const result = await proxyService.updateStatus();
+        const result = await proxyService.updateStatus(userId);
         return res.json(result);
     })
 );
