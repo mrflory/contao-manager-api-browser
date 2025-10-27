@@ -82,7 +82,7 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
   const renderStepsList = (steps: HistoryStep[]) => {
     if (steps.length === 0) {
       return (
-        <Box p={4} textAlign="center" color="gray.600">
+        <Box p={4} textAlign="center" color="gray.600" _dark={{ color: 'gray.400' }}>
           No steps recorded for this workflow.
         </Box>
       );
@@ -99,13 +99,22 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
               borderRadius="md"
               borderColor={step.status === 'failed' ? 'red.200' : 'gray.200'}
               bg={step.status === 'failed' ? 'red.50' : 'gray.50'}
+              _dark={{
+                bg: step.status === 'failed' ? 'red.900' : 'gray.800',
+                borderColor: step.status === 'failed' ? 'red.700' : 'gray.600',
+              }}
             >
               <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
                 <Box flex="1" mr={3}>
-                  <Text fontWeight="medium" fontSize="sm">
+                  <Text
+                    fontWeight="medium"
+                    fontSize="sm"
+                    color="gray.900"
+                    _dark={{ color: 'gray.100' }}
+                  >
                     {index + 1}. {step.name}
                   </Text>
-                  <Text fontSize="sm" color="gray.600" mt={1} lineHeight="1.4">
+                  <Text fontSize="sm" color="gray.600" mt={1} lineHeight="1.4" _dark={{ color: 'gray.400' }}>
                     {step.data?.summary || step.summary || 'No summary available'}
                   </Text>
                 </Box>
@@ -136,8 +145,8 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
               
               {/* Snapshot Downloads */}
               {step.data?.snapshot && onDownloadSnapshot && (
-                <Box mt={3} p={2} bg="gray.100" borderRadius="sm">
-                  <Text fontSize="xs" fontWeight="medium" color="gray.600" mb={2}>
+                <Box mt={3} p={2} bg="gray.100" borderRadius="sm" _dark={{ bg: 'gray.700' }}>
+                  <Text fontSize="xs" fontWeight="medium" color="gray.600" mb={2} _dark={{ color: 'gray.300' }}>
                     Available Snapshots:
                   </Text>
                   <HStack gap={3}>
@@ -163,7 +172,7 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
                 </Box>
               )}
               
-              <Box display="flex" justifyContent="space-between" mt={2} fontSize="xs" color="gray.500">
+              <Box display="flex" justifyContent="space-between" mt={2} fontSize="xs" color="gray.500" _dark={{ color: 'gray.400' }}>
                 <Text>Started: {step.startTime ? formatDateTime(step.startTime) : 'Not started'}</Text>
                 {step.endTime && step.startTime && (
                   <Text>
