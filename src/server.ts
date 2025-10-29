@@ -24,6 +24,7 @@ import {
     securityHeaders,
     corsOptions,
     generalRateLimit,
+    taskPollingRateLimit,
     authErrorHandler
 } from './middleware/securityMiddleware';
 
@@ -575,8 +576,9 @@ app.put('/api/site/:siteUrl/contao/database-migration', userAuthMiddleware.requi
 app.delete('/api/site/:siteUrl/contao/database-migration', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/database-migration', 'DELETE'));
 app.get('/api/site/:siteUrl/contao/backup', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/backup'));
 
-// Task endpoints
-app.get('/api/site/:siteUrl/task', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'GET'));
+// Task endpoints - Use taskPollingRateLimit for workflow polling operations
+// GET is used for frequent polling during workflow execution
+app.get('/api/site/:siteUrl/task', taskPollingRateLimit, userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'GET'));
 app.put('/api/site/:siteUrl/task', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'PUT'));
 app.delete('/api/site/:siteUrl/task', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'DELETE'));
 app.patch('/api/site/:siteUrl/task', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'PATCH'));

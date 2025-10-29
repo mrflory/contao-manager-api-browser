@@ -116,6 +116,29 @@ export const strictRateLimit = rateLimit({
 });
 
 /**
+ * Task polling rate limit - More permissive for workflow operations
+ * Designed to support long-running workflows with frequent polling
+ *
+ * Note: This rate limit is applied BEFORE authentication middleware, so it uses
+ * IP-based rate limiting. This is intentional to prevent abuse while still
+ * allowing legitimate workflow polling operations.
+ */
+export const taskPollingRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 2000, // 2000 requests per window per IP (supports extended workflows with aggressive polling)
+    message: {
+        success: false,
+        error: 'Too many task requests. Please try again later.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (_req) => {
+        // Skip rate limiting in development
+        return process.env.NODE_ENV === 'development';
+    }
+});
+
+/**
  * CSRF Protection Middleware
  */
 export class CSRFProtection {
