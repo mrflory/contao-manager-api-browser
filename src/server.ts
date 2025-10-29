@@ -791,26 +791,28 @@ app.post('/api/snapshots/create',
     userAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
+        const userId = req.userId!;
         const { siteUrl, workflowId, stepId } = req.body;
-        
+
         console.log('[SNAPSHOT API] Request data:', {
+            userId,
             siteUrl,
             workflowId,
             stepId
         });
-        
+
         if (!siteUrl) {
             return res.status(400).json({ error: 'siteUrl is required' });
         }
-        
+
         // Fetch composer files from the server itself
         console.log('[SNAPSHOT API] Fetching composer files from:', siteUrl);
         let composerJson: string | null = null;
         let composerLock: string | null = null;
-        
+
         try {
             // Use the existing proxy service to fetch files
-            const composerJsonResponse = await proxyService.proxyToContaoManager('/api/files/composer.json', 'GET');
+            const composerJsonResponse = await proxyService.proxyToContaoManager('/api/files/composer.json', 'GET', undefined, userId, siteUrl);
             console.log('[SNAPSHOT API] composer.json response:', {
                 status: composerJsonResponse.status,
                 dataType: typeof composerJsonResponse.data,
@@ -836,7 +838,7 @@ app.post('/api/snapshots/create',
         }
         
         try {
-            const composerLockResponse = await proxyService.proxyToContaoManager('/api/files/composer.lock', 'GET');
+            const composerLockResponse = await proxyService.proxyToContaoManager('/api/files/composer.lock', 'GET', undefined, userId, siteUrl);
             console.log('[SNAPSHOT API] composer.lock response:', {
                 status: composerLockResponse.status,
                 dataType: typeof composerLockResponse.data,
