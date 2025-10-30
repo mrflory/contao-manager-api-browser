@@ -980,14 +980,15 @@ app.get('/api/snapshots/:snapshotId/:filename',
     userAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
+        const userId = req.userId!;
         const { snapshotId, filename } = req.params;
-        
+
         // Validate filename
         if (filename !== 'composer.json' && filename !== 'composer.lock') {
             return res.status(400).json({ error: 'Invalid filename. Must be composer.json or composer.lock' });
         }
-        
-        const fileBuffer = await snapshotService.getSnapshot(snapshotId, filename as 'composer.json' | 'composer.lock');
+
+        const fileBuffer = await snapshotService.getSnapshot(snapshotId, filename as 'composer.json' | 'composer.lock', userId);
         
         if (!fileBuffer) {
             return res.status(404).json({ error: 'Snapshot file not found' });
@@ -1009,11 +1010,12 @@ app.get('/api/snapshots/:snapshotId/:filename/content',
     userAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
+        const userId = req.userId!;
         const { snapshotId, filename } = req.params;
-        
-        console.log(`[SNAPSHOT API] Getting file content for snapshot ${snapshotId}, file ${filename}`);
-        
-        const fileData = await snapshotService.getSnapshotFileContent(snapshotId, filename);
+
+        console.log(`[SNAPSHOT API] Getting file content for snapshot ${snapshotId}, file ${filename}, userId ${userId}`);
+
+        const fileData = await snapshotService.getSnapshotFileContent(snapshotId, filename, userId);
         
         if (!fileData) {
             return res.status(404).json({ error: 'Snapshot file not found' });
@@ -1056,9 +1058,10 @@ app.delete('/api/snapshots/:snapshotId',
     userAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
+        const userId = req.userId!;
         const { snapshotId } = req.params;
-        
-            const success = await snapshotService.deleteSnapshot(snapshotId);
+
+        const success = await snapshotService.deleteSnapshot(snapshotId, userId);
 
             if (success) {
                 return res.json({ success: true });

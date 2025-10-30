@@ -96,7 +96,7 @@ export class SnapshotService {
         }
     }
 
-    public async getSnapshot(snapshotId: string, filename: 'composer.json' | 'composer.lock'): Promise<Buffer | null> {
+    public async getSnapshot(snapshotId: string, filename: 'composer.json' | 'composer.lock', userId?: string): Promise<Buffer | null> {
         try {
             // Check if storage supports snapshots
             const capabilities = this.storage.getCapabilities();
@@ -109,7 +109,7 @@ export class SnapshotService {
                 return null;
             }
 
-            const result = await this.storage.snapshots.getSnapshotFile(snapshotId, filename);
+            const result = await this.storage.snapshots.getSnapshotFile(snapshotId, filename, userId);
             
             if (!result.success || !result.data) {
                 console.error(`[SNAPSHOT] Failed to get snapshot file ${filename} for ${snapshotId}:`, result.error);
@@ -123,7 +123,7 @@ export class SnapshotService {
         }
     }
 
-    public async getSnapshotFileContent(snapshotId: string, filename: string): Promise<{ content: string; size: number } | null> {
+    public async getSnapshotFileContent(snapshotId: string, filename: string, userId?: string): Promise<{ content: string; size: number } | null> {
         try {
             // Validate filename - only allow specific files for security
             const allowedFiles = ['composer.json', 'composer.lock', 'metadata.json'];
@@ -142,7 +142,7 @@ export class SnapshotService {
                 return null;
             }
 
-            const result = await this.storage.snapshots.getSnapshotFile(snapshotId, filename);
+            const result = await this.storage.snapshots.getSnapshotFile(snapshotId, filename, userId);
             
             if (!result.success || !result.data) {
                 console.error(`[SNAPSHOT] Failed to get snapshot file content ${filename} for ${snapshotId}:`, result.error);
@@ -159,7 +159,7 @@ export class SnapshotService {
         }
     }
 
-    public async getSnapshotMetadata(snapshotId: string): Promise<SnapshotMetadata | null> {
+    public async getSnapshotMetadata(snapshotId: string, userId?: string): Promise<SnapshotMetadata | null> {
         try {
             // Check if storage supports snapshots
             const capabilities = this.storage.getCapabilities();
@@ -172,7 +172,7 @@ export class SnapshotService {
                 return null;
             }
 
-            const result = await this.storage.snapshots.getSnapshotMetadata(snapshotId);
+            const result = await this.storage.snapshots.getSnapshotMetadata(snapshotId, userId);
             
             if (!result.success) {
                 console.error(`[SNAPSHOT] Failed to get metadata for ${snapshotId}:`, result.error);
@@ -244,7 +244,7 @@ export class SnapshotService {
         }
     }
 
-    public async deleteSnapshot(snapshotId: string): Promise<boolean> {
+    public async deleteSnapshot(snapshotId: string, userId?: string): Promise<boolean> {
         try {
             // Check if storage supports snapshots
             const capabilities = this.storage.getCapabilities();
@@ -258,7 +258,7 @@ export class SnapshotService {
                 return false;
             }
 
-            const result = await this.storage.snapshots.deleteSnapshot(snapshotId);
+            const result = await this.storage.snapshots.deleteSnapshot(snapshotId, userId);
             
             if (!result.success) {
                 console.error(`[SNAPSHOT] Failed to delete snapshot ${snapshotId}:`, result.error);
