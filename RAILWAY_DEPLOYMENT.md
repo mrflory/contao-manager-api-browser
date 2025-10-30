@@ -197,7 +197,7 @@ Monitor deployment logs in the **"Deployments"** tab.
 1. ✅ Added database connection timeout handling (5 seconds)
 2. ✅ Health check returns "degraded" (200 OK) instead of failing completely
 3. ✅ Increased Railway health check timeout: 30s → 60s
-4. ✅ Added `--skip-seed` flag to migration command
+4. ✅ Increased restart policy retries: 3 → 5
 5. ✅ Improved Prisma connection pooling configuration
 6. ✅ Added database connection test on startup
 
