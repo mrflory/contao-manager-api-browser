@@ -6,6 +6,8 @@ import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute, PublicRoute } from './components/auth/ProtectedRoute';
 import Header from './components/Header';
+import { DatabaseDegradedMode } from './components/display/DatabaseDegradedMode';
+import { useDatabaseHealth } from './hooks/useDatabaseHealth';
 
 // Import pages
 import SitesOverview from './pages/SitesOverview';
@@ -19,6 +21,20 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 
 const App: React.FC = () => {
+  const { isHealthy, checkHealth, isChecking } = useDatabaseHealth(30000);
+
+  // Show degraded mode overlay when database is unhealthy
+  if (!isHealthy) {
+    return (
+      <Provider>
+        <DatabaseDegradedMode
+          onRetry={checkHealth}
+          isRetrying={isChecking}
+        />
+      </Provider>
+    );
+  }
+
   return (
     <Provider>
       <AuthProvider>

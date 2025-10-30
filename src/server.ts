@@ -20,6 +20,7 @@ import { UnifiedStorage, StorageType } from './storage/interfaces';
 import { ErrorHandler, ResponseLogger } from './middleware';
 import { UserAuthMiddleware } from './middleware/userAuthMiddleware';
 import { SubscriptionMiddleware } from './middleware/subscriptionMiddleware';
+import { requireDatabaseHealth } from './middleware/databaseHealthMiddleware';
 import {
     securityHeaders,
     corsOptions,
@@ -33,6 +34,9 @@ import { createAuthRoutes } from './routes/authRoutes';
 
 // Database
 import { PrismaClient } from './generated/prisma';
+
+// Utils
+import { dbHealthMonitor } from './utils/databaseHealthMonitor';
 
 // Types
 import type { Request, Response } from 'express';
@@ -111,6 +115,9 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 
         await Promise.race([dbCheckPromise, timeoutPromise]);
 
+        // Mark database as healthy
+        dbHealthMonitor.markHealthy();
+
         res.status(200).json({
             status: 'healthy',
             timestamp: new Date().toISOString(),
@@ -128,6 +135,9 @@ app.get('/api/health', async (_req: Request, res: Response) => {
             (error.message.includes('timeout') || error.message.includes('connection'));
 
         if (isDatabaseError) {
+            // Mark database as unhealthy
+            dbHealthMonitor.markUnhealthy();
+
             res.status(200).json({
                 status: 'degraded',
                 timestamp: new Date().toISOString(),
@@ -145,12 +155,24 @@ app.get('/api/health', async (_req: Request, res: Response) => {
     }
 });
 
+// Database status endpoint for frontend
+app.get('/api/database/status', (_req: Request, res: Response) => {
+    const healthStatus = dbHealthMonitor.getHealthStatus();
+    res.json({
+        isHealthy: healthStatus.isHealthy,
+        status: healthStatus.isHealthy ? 'connected' : 'disconnected',
+        lastCheckTime: healthStatus.lastCheckTime,
+        consecutiveFailures: healthStatus.consecutiveFailures
+    });
+});
+
 // Phase 2: User Authentication Routes
-app.use('/api/auth', createAuthRoutes(prisma));
+app.use('/api/auth', requireDatabaseHealth, createAuthRoutes(prisma));
 
 // Configuration endpoints
 // Phase 3: Updated to use JWT authentication and user context
 app.get('/api/config',
+    requireDatabaseHealth,
     userAuthMiddleware.requireAuth,
     async (req: Request, res: Response) => {
         try {
