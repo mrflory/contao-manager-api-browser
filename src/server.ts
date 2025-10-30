@@ -888,15 +888,28 @@ app.post('/api/snapshots/create',
             if (composerJsonResponse.status === 200 && composerJsonResponse.data) {
                 const isEmptyObject = typeof composerJsonResponse.data === 'object' && Object.keys(composerJsonResponse.data).length === 0;
                 if (!isEmptyObject) {
-                    composerJson = typeof composerJsonResponse.data === 'string' 
-                        ? composerJsonResponse.data 
-                        : JSON.stringify(composerJsonResponse.data, null, 2);
+                    if (typeof composerJsonResponse.data === 'string') {
+                        composerJson = composerJsonResponse.data;
+                    } else if (typeof composerJsonResponse.data === 'object') {
+                        // Ensure we can actually stringify it
+                        try {
+                            composerJson = JSON.stringify(composerJsonResponse.data, null, 2);
+                            // Validate the result is valid JSON
+                            JSON.parse(composerJson);
+                        } catch (stringifyError) {
+                            console.error('[SNAPSHOT API] Failed to stringify composer.json:', stringifyError);
+                            console.error('[SNAPSHOT API] Data type:', typeof composerJsonResponse.data);
+                            console.error('[SNAPSHOT API] Data constructor:', composerJsonResponse.data?.constructor?.name);
+                            composerJson = null;
+                        }
+                    }
                 }
                 console.log('[SNAPSHOT API] Processing composer.json:', {
                     hasContent: !!composerJson,
                     contentLength: composerJson?.length || 0,
                     isEmptyObject,
-                    skippedDueToEmptyObject: isEmptyObject
+                    skippedDueToEmptyObject: isEmptyObject,
+                    firstChars: composerJson?.substring(0, 50)
                 });
             }
         } catch (error) {
@@ -914,15 +927,28 @@ app.post('/api/snapshots/create',
             if (composerLockResponse.status === 200 && composerLockResponse.data) {
                 const isEmptyObject = typeof composerLockResponse.data === 'object' && Object.keys(composerLockResponse.data).length === 0;
                 if (!isEmptyObject) {
-                    composerLock = typeof composerLockResponse.data === 'string' 
-                        ? composerLockResponse.data 
-                        : JSON.stringify(composerLockResponse.data, null, 2);
+                    if (typeof composerLockResponse.data === 'string') {
+                        composerLock = composerLockResponse.data;
+                    } else if (typeof composerLockResponse.data === 'object') {
+                        // Ensure we can actually stringify it
+                        try {
+                            composerLock = JSON.stringify(composerLockResponse.data, null, 2);
+                            // Validate the result is valid JSON
+                            JSON.parse(composerLock);
+                        } catch (stringifyError) {
+                            console.error('[SNAPSHOT API] Failed to stringify composer.lock:', stringifyError);
+                            console.error('[SNAPSHOT API] Data type:', typeof composerLockResponse.data);
+                            console.error('[SNAPSHOT API] Data constructor:', composerLockResponse.data?.constructor?.name);
+                            composerLock = null;
+                        }
+                    }
                 }
                 console.log('[SNAPSHOT API] Processing composer.lock:', {
                     hasContent: !!composerLock,
                     contentLength: composerLock?.length || 0,
                     isEmptyObject,
-                    skippedDueToEmptyObject: isEmptyObject
+                    skippedDueToEmptyObject: isEmptyObject,
+                    firstChars: composerLock?.substring(0, 50)
                 });
             }
         } catch (error) {
@@ -1026,13 +1052,15 @@ app.get('/api/snapshots/:snapshotId/:filename/content',
         if (filename.endsWith('.json')) {
             contentType = 'application/json';
         }
-        
-        // Set appropriate headers for content display (not download)
-            res.setHeader('Content-Type', contentType);
-            res.setHeader('Content-Length', fileData.size.toString());
-            res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour since snapshots are immutable
 
-            return res.send(fileData.content);
+        // Set appropriate headers for content display (not download)
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', fileData.size.toString());
+        res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour since snapshots are immutable
+
+        // For JSON files, the content is already a JSON string, so we send it directly
+        // without letting Express JSON-encode it again
+        return res.send(fileData.content);
 
         } catch (error) {
             console.error('[SNAPSHOT API] Get snapshot content error:', error);
