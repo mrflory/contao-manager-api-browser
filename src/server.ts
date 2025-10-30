@@ -857,6 +857,14 @@ app.post('/api/snapshots/create',
             return res.status(400).json({ error: 'siteUrl is required' });
         }
 
+        // Get the site configuration
+        const config = await configService.getConfigAsync(userId);
+        const site = config.sites?.[siteUrl];
+
+        if (!site) {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+
         // Fetch composer files from the server itself
         console.log('[SNAPSHOT API] Fetching composer files from:', siteUrl);
         let composerJson: string | null = null;
@@ -864,7 +872,7 @@ app.post('/api/snapshots/create',
 
         try {
             // Use the existing proxy service to fetch files
-            const composerJsonResponse = await proxyService.proxyToContaoManager('/api/files/composer.json', 'GET', undefined, userId, siteUrl);
+            const composerJsonResponse = await proxyService.proxyToSpecificSite(site, '/api/files/composer.json', 'GET', null, req.headers.cookie);
             console.log('[SNAPSHOT API] composer.json response:', {
                 status: composerJsonResponse.status,
                 dataType: typeof composerJsonResponse.data,
@@ -890,7 +898,7 @@ app.post('/api/snapshots/create',
         }
         
         try {
-            const composerLockResponse = await proxyService.proxyToContaoManager('/api/files/composer.lock', 'GET', undefined, userId, siteUrl);
+            const composerLockResponse = await proxyService.proxyToSpecificSite(site, '/api/files/composer.lock', 'GET', null, req.headers.cookie);
             console.log('[SNAPSHOT API] composer.lock response:', {
                 status: composerLockResponse.status,
                 dataType: typeof composerLockResponse.data,

@@ -2,11 +2,25 @@
 
 This guide helps you understand Railway's behavior and distinguish between normal restarts and actual problems.
 
+## ⚠️ IMPORTANT: Railway's "Crashed" Label is Misleading!
+
+Railway's UI shows the old container as **"Crashed"** after every deployment, even though this is **completely normal**. Here's what's actually happening:
+
+```
+You: git push origin main
+Railway: Detects new code → Builds new container
+Railway: Sends SIGTERM to old container (graceful shutdown)
+Railway UI: Labels old container as "Crashed" ❌ (This is misleading!)
+Reality: Old container shut down gracefully ✅ (This is normal!)
+```
+
+**Bottom line**: If you see "Crashed" after pushing code, and the new deployment is running fine, **ignore it - this is normal Railway behavior!**
+
 ## Understanding SIGTERM on Railway
 
 ### What is SIGTERM?
 
-`SIGTERM` (Signal Terminate) is a **graceful shutdown signal** sent by Railway to your application. It's **NOT always an error** - it's often normal behavior.
+`SIGTERM` (Signal Terminate) is a **graceful shutdown signal** sent by Railway to your application. It's **NOT an error** - it's how Railway politely asks your app to shut down.
 
 ### Normal SIGTERM Scenarios (Not Errors) ✅
 
@@ -86,14 +100,35 @@ Memory usage: 150MB
 npm error signal SIGTERM  ← Forced shutdown due to error
 ```
 
-### Step 2: Check Uptime
+### Step 2: Check Deployment Timeline
+
+Look at Railway's deployment timeline:
+
+**Normal Deployment Pattern:**
+```
+12:00:00 - You pushed to GitHub
+12:00:05 - Railway starts building new container
+12:01:30 - New container ready, Railway sends SIGTERM to old container
+12:01:31 - Old container shows "Crashed" ← IGNORE THIS! It's normal!
+12:01:32 - New container running successfully
+```
+
+**Problem Pattern:**
+```
+12:00:00 - Container starts
+12:00:30 - Container shows "Crashed" ← No new deployment!
+12:00:35 - Container restarts automatically
+12:01:00 - Container shows "Crashed" again ← Restart loop!
+```
+
+### Step 3: Check Uptime
 
 The improved logging now shows uptime on shutdown:
 
 - **High uptime (hours/days)**: Likely normal Railway maintenance
 - **Low uptime (seconds/minutes)**: Likely startup or health check failure
 
-### Step 3: Check Memory Usage
+### Step 4: Check Memory Usage
 
 The shutdown logs now show memory usage:
 
@@ -101,7 +136,7 @@ The shutdown logs now show memory usage:
 - **High**: >500MB indicates potential memory leak
 - **OOM**: Railway may kill container if exceeding limits
 
-### Step 4: Check Health Endpoint
+### Step 5: Check Health Endpoint
 
 Manually test the health endpoint:
 
@@ -355,6 +390,32 @@ If you're experiencing frequent problematic restarts:
 4. **Review this guide**: Identify which scenario matches
 5. **Check external services**: Neon.tech, Railway status
 6. **Ask for help**: Include logs and pattern analysis
+
+---
+
+## TL;DR - Quick Answer
+
+### "I pushed code and Railway shows 'Crashed' - is this bad?"
+
+**NO!** This is completely normal. Railway labels the old container as "Crashed" every time you deploy new code. As long as:
+- ✅ New deployment is running
+- ✅ App is accessible
+- ✅ No restart loop happening
+
+**→ You can ignore the "Crashed" label!**
+
+### "How do I know if there's a real problem?"
+
+Look for these warning signs:
+- ❌ Multiple crashes **without deployments**
+- ❌ Restart loop (crashes every few minutes)
+- ❌ App not accessible after restart
+- ❌ Error logs before SIGTERM
+- ❌ Health endpoint returning 503
+
+### "What's the takeaway?"
+
+Railway's UI is misleading - **"Crashed" during deployment = normal shutdown**. Only worry if you see crashes when you didn't deploy anything.
 
 ---
 
