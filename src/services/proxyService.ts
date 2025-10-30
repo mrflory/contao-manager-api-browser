@@ -19,6 +19,29 @@ export class ProxyService {
         this.authService = authService;
     }
 
+    /**
+     * Determine appropriate timeout based on endpoint type
+     * Long-running operations like task creation need extended timeouts
+     */
+    private getTimeoutForEndpoint(endpoint: string, method: string): number {
+        // Task endpoints - these can take several minutes for Composer operations
+        if (endpoint.includes('/api/task')) {
+            if (method === 'PUT') {
+                // Creating/starting a task - can take 5+ minutes for Composer updates
+                return 600000; // 10 minutes
+            }
+            if (method === 'GET') {
+                // Polling task status - should be faster but allow some buffer
+                return 30000; // 30 seconds
+            }
+            // PATCH/DELETE operations
+            return 30000; // 30 seconds
+        }
+
+        // Default timeout for other endpoints
+        return 10000; // 10 seconds
+    }
+
     // Generic proxy helper for Contao Manager API
     public async proxyToContaoManager(
         endpoint: string,
@@ -32,7 +55,7 @@ export class ProxyService {
         if (!activeSite) {
             throw new Error('No active site configured');
         }
-        
+
         // Check scope permissions for cookie authentication
         if (activeSite.authMethod === 'cookie' && activeSite.scope) {
             console.log(`[SCOPE-CHECK] Site: ${activeSite.url}, Auth: ${activeSite.authMethod}, Scope: ${activeSite.scope}, Endpoint: ${method} ${endpoint}`);
@@ -43,10 +66,13 @@ export class ProxyService {
             console.log(`[SCOPE-CHECK] Permission granted for scope '${activeSite.scope}' on ${method} ${endpoint}`);
         }
 
+        const timeout = this.getTimeoutForEndpoint(endpoint, method);
+        console.log(`[TIMEOUT] Using ${timeout}ms timeout for ${method} ${endpoint}`);
+
         const config: ProxyConfig = {
             method,
             url: `${activeSite.url}${endpoint}`,
-            timeout: 10000,
+            timeout,
             validateStatus: status => status < 500
         };
 
@@ -137,9 +163,9 @@ export class ProxyService {
     // Site-specific proxy method that bypasses active site requirement
     public async proxyToSpecificSite(
         site: any,
-        endpoint: string, 
-        method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', 
-        data: any = null, 
+        endpoint: string,
+        method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
+        data: any = null,
         cookieHeader?: string
     ): Promise<AxiosResponse> {
         // Check scope permissions for cookie authentication
@@ -151,12 +177,15 @@ export class ProxyService {
             }
             console.log(`[SCOPE-CHECK] Permission granted for scope '${site.scope}' on ${method} ${endpoint}`);
         }
-        
+
+        const timeout = this.getTimeoutForEndpoint(endpoint, method);
+        console.log(`[TIMEOUT] Using ${timeout}ms timeout for ${method} ${endpoint}`);
+
         const config: any = {
             url: `${site.url}${endpoint}`,
             method,
             data,
-            timeout: 10000, // 10 second timeout
+            timeout,
             maxRedirects: 5
         };
 

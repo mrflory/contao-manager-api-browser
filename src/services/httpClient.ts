@@ -11,7 +11,7 @@ export class HttpClient {
   constructor() {
     this.axios = axios.create({
       baseURL: '/',
-      timeout: 10000,
+      timeout: 600000, // 10 minutes - increased for long-running operations like Composer updates
       withCredentials: true,
     });
   }
