@@ -4,7 +4,7 @@
     "buildCommand": "npm install && npx prisma generate && npm run build:all"
   },
   "deploy": {
-    "startCommand": "npx prisma migrate deploy --skip-seed && npm start",
+    "startCommand": "npx prisma migrate deploy && npm start",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 60,
     "restartPolicyType": "ON_FAILURE",
