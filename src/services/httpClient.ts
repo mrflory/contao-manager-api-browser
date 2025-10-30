@@ -53,11 +53,20 @@ export class HttpClient {
       };
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || error.message || 'Request failed';
+      const statusCode = error.response?.status || 0;
+
+      // Redirect to error page for rate limit errors (429)
+      if (statusCode === 429) {
+        // Use setTimeout to avoid navigation during render
+        setTimeout(() => {
+          window.location.href = '/error/429';
+        }, 100);
+      }
 
       return {
         success: false,
         error: errorMessage,
-        statusCode: error.response?.status || 0,
+        statusCode,
       };
     }
   }

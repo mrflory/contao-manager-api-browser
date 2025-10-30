@@ -6,6 +6,7 @@ import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './contexts/AuthContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { ProtectedRoute, PublicRoute } from './components/auth/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import Header from './components/Header';
 import { DatabaseDegradedMode } from './components/display/DatabaseDegradedMode';
 import { useDatabaseHealth } from './hooks/useDatabaseHealth';
@@ -20,6 +21,7 @@ import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import ErrorPage from './pages/ErrorPage';
 
 const App: React.FC = () => {
   const { isHealthy, checkHealth, isChecking } = useDatabaseHealth(30000);
@@ -38,12 +40,13 @@ const App: React.FC = () => {
 
   return (
     <Provider>
-      <AuthProvider>
-        <SubscriptionProvider>
-          <Router>
-            <Header />
-            <Box pt={8}>
-              <Routes>
+      <ErrorBoundary>
+        <AuthProvider>
+          <SubscriptionProvider>
+            <Router>
+              <Header />
+              <Box pt={8}>
+                <Routes>
               {/* Public routes - redirect to dashboard if authenticated */}
               <Route
                 path="/login"
@@ -136,6 +139,13 @@ const App: React.FC = () => {
                 }
               />
 
+              {/* Error pages */}
+              <Route path="/error/429" element={<ErrorPage statusCode={429} />} />
+              <Route path="/error/404" element={<ErrorPage statusCode={404} />} />
+              <Route path="/error/403" element={<ErrorPage statusCode={403} />} />
+              <Route path="/error/401" element={<ErrorPage statusCode={401} />} />
+              <Route path="/error/:code" element={<ErrorPage statusCode={500} />} />
+
               {/* Catch-all route - redirect to dashboard */}
               <Route
                 path="*"
@@ -145,12 +155,13 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
-              </Routes>
-            </Box>
-          </Router>
-          <Toaster />
-        </SubscriptionProvider>
-      </AuthProvider>
+                </Routes>
+              </Box>
+            </Router>
+            <Toaster />
+          </SubscriptionProvider>
+        </AuthProvider>
+      </ErrorBoundary>
     </Provider>
   );
 };
