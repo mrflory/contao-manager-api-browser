@@ -22,7 +22,7 @@ export const securityHeaders = helmet({
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
-            scriptSrc: ["'self'"],
+            scriptSrc: ["'self'", "'wasm-unsafe-eval'"], // Required for Chakra UI CodeBlock (Shiki syntax highlighting)
             imgSrc: ["'self'", "data:", "https:"],
             connectSrc: ["'self'"]
         }
@@ -68,8 +68,10 @@ export const corsOptions = {
             return callback(null, true);
         }
 
-        // Log the rejected origin for debugging
-        console.error(`[CORS] Origin not allowed: ${origin}. Allowed origins: ${allowedOrigins.join(', ')}`);
+        // Log the rejected origin for debugging (skip Chrome extensions to reduce noise)
+        if (!origin.startsWith('chrome-extension://') && !origin.startsWith('moz-extension://')) {
+            console.error(`[CORS] Origin not allowed: ${origin}. Allowed origins: ${allowedOrigins.join(', ')}`);
+        }
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
