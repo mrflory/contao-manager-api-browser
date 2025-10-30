@@ -166,6 +166,11 @@ export class DatabaseStorage extends BaseStorage {
           siteConfig.versionInfo = site.versionInfo as any;
         }
 
+        // Add user info if available (Contao Manager username)
+        if (site.userInfo) {
+          siteConfig.user = site.userInfo as any;
+        }
+
         sitesRecord[site.url] = siteConfig;
 
         // Set first site as active site if none set yet
@@ -248,7 +253,8 @@ export class DatabaseStorage extends BaseStorage {
               authMethod: siteConfig.authMethod,
               scope: siteConfig.scope || 'read',
               lastUsed: new Date(siteConfig.lastUsed),
-              versionInfo: siteConfig.versionInfo ? JSON.parse(JSON.stringify(siteConfig.versionInfo)) : undefined
+              versionInfo: siteConfig.versionInfo ? JSON.parse(JSON.stringify(siteConfig.versionInfo)) : undefined,
+              userInfo: siteConfig.user ? JSON.parse(JSON.stringify(siteConfig.user)) : undefined
             },
             create: {
               userId: currentUserId,
@@ -258,7 +264,8 @@ export class DatabaseStorage extends BaseStorage {
               authMethod: siteConfig.authMethod,
               scope: siteConfig.scope || 'read',
               lastUsed: new Date(siteConfig.lastUsed),
-              versionInfo: siteConfig.versionInfo ? JSON.parse(JSON.stringify(siteConfig.versionInfo)) : undefined
+              versionInfo: siteConfig.versionInfo ? JSON.parse(JSON.stringify(siteConfig.versionInfo)) : undefined,
+              userInfo: siteConfig.user ? JSON.parse(JSON.stringify(siteConfig.user)) : undefined
             }
           });
         }

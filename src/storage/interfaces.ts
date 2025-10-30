@@ -424,6 +424,7 @@ export abstract class BaseStorage implements SiteConfigStorage {
         if (authMethod === 'token') {
           if (token) config.sites[url].token = token;
           if (scope) config.sites[url].scope = scope;
+          if (user) config.sites[url].user = user; // Update user info for token auth
         } else {
           config.sites[url].user = user;
           config.sites[url].scope = scope || 'admin'; // Set scope for cookie auth
@@ -453,6 +454,7 @@ export abstract class BaseStorage implements SiteConfigStorage {
         if (authMethod === 'token') {
           if (token) siteConfig.token = token;
           if (scope) siteConfig.scope = scope; // For token auth, scope might come from OAuth flow
+          if (user) siteConfig.user = user; // Store user info for token auth (username from session)
         } else {
           siteConfig.user = user;
           siteConfig.scope = scope || 'admin'; // Default to admin for cookie auth

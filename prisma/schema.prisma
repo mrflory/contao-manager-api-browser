@@ -56,6 +56,9 @@ model Site {
   // JSON field for flexible version info storage
   versionInfo    Json?
 
+  // JSON field for Contao Manager user info (username, etc.)
+  userInfo       Json?
+
   // Relationships
   user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   usageLogs      UsageLog[]
