@@ -101,8 +101,13 @@ export class AuthService {
             throw new Error('Invalid token');
         }
 
+        // Extract user information from session response
+        const user = testResponse.data?.username ? {
+            username: testResponse.data.username
+        } : undefined;
+
         // Save to server-side storage using async method with user context
-        const success = await this.configService.addSiteAsync(managerUrl, token, undefined, 'token', undefined, undefined, userId);
+        const success = await this.configService.addSiteAsync(managerUrl, token, undefined, 'token', user, undefined, userId);
         if (success) {
             const activeSite = await this.configService.getActiveSiteAsync(userId);
             return { success: true, activeSite };
