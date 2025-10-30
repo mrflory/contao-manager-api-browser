@@ -109,7 +109,16 @@ class JsonLogsStorage implements LogsStorage {
 
     async addLogEntry(params: LogParams): Promise<StorageResult<boolean>> {
         try {
-            const { siteUrl, userId = 'default_user', method, endpoint, statusCode, requestData, responseData, error } = params;
+            const { siteUrl, userId, method, endpoint, statusCode, requestData, responseData, error } = params;
+
+            if (!userId) {
+                return {
+                    success: false,
+                    data: false,
+                    error: 'userId is required for log storage operations'
+                };
+            }
+
             const hostname = this.extractSiteName(siteUrl);
             const userLogDir = this.getUserLogDir(userId);
             const logFile = path.join(userLogDir, `${hostname}.log`);
@@ -141,8 +150,16 @@ class JsonLogsStorage implements LogsStorage {
         }
     }
 
-    async getLogs(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<LogEntry[]>> {
+    async getLogs(siteUrl: string, userId?: string): Promise<StorageResult<LogEntry[]>> {
         try {
+            if (!userId) {
+                return {
+                    success: false,
+                    data: [],
+                    error: 'userId is required for log storage operations'
+                };
+            }
+
             const hostname = this.extractSiteName(siteUrl);
             const userLogDir = this.getUserLogDir(userId);
             const logFile = path.join(userLogDir, `${hostname}.log`);
@@ -188,7 +205,14 @@ class JsonLogsStorage implements LogsStorage {
         }
     }
 
-    async getLogStats(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<{ total: number; errorCount: number; lastActivity?: string }>> {
+    async getLogStats(siteUrl: string, userId?: string): Promise<StorageResult<{ total: number; errorCount: number; lastActivity?: string }>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: { total: 0, errorCount: 0 },
+                error: 'userId is required for log storage operations'
+            };
+        }
         try {
             const result = await this.getLogs(siteUrl, userId);
             if (!result.success || !result.data) {
@@ -218,7 +242,15 @@ class JsonLogsStorage implements LogsStorage {
 
     async cleanupLogs(params: CleanupParams): Promise<StorageResult<{ deletedCount: number; message: string }>> {
         try {
-            const { siteUrl, userId = 'default_user', olderThan } = params;
+            const { siteUrl, userId, olderThan } = params;
+
+            if (!userId) {
+                return {
+                    success: false,
+                    data: { deletedCount: 0, message: 'userId is required' },
+                    error: 'userId is required for log storage operations'
+                };
+            }
             const hostname = this.extractSiteName(siteUrl);
             const userLogDir = this.getUserLogDir(userId);
             const logFile = path.join(userLogDir, `${hostname}.log`);
@@ -277,7 +309,14 @@ class JsonLogsStorage implements LogsStorage {
         }
     }
 
-    async clearLogs(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<boolean>> {
+    async clearLogs(siteUrl: string, userId?: string): Promise<StorageResult<boolean>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: false,
+                error: 'userId is required for log storage operations'
+            };
+        }
         try {
             const hostname = this.extractSiteName(siteUrl);
             const userLogDir = this.getUserLogDir(userId);
@@ -331,7 +370,15 @@ class JsonHistoryStorage implements HistoryStorage {
 
     async createHistoryEntry(params: HistoryParams): Promise<StorageResult<HistoryEntry>> {
         try {
-            const { siteUrl, userId = 'default_user', workflowType, status, startTime, steps } = params;
+            const { siteUrl, userId, workflowType, status, startTime, steps } = params;
+
+            if (!userId) {
+                return {
+                    success: false,
+                    data: null as any,
+                    error: 'userId is required for history storage operations'
+                };
+            }
 
             if (!siteUrl || !workflowType) {
                 return {
@@ -367,7 +414,15 @@ class JsonHistoryStorage implements HistoryStorage {
 
     async updateHistoryEntry(id: string, params: HistoryParams): Promise<StorageResult<HistoryEntry>> {
         try {
-            const { siteUrl, userId = 'default_user', status, endTime, steps } = params;
+            const { siteUrl, userId, status, endTime, steps } = params;
+
+            if (!userId) {
+                return {
+                    success: false,
+                    data: null as any,
+                    error: 'userId is required for history storage operations'
+                };
+            }
 
             if (!siteUrl) {
                 return {
@@ -407,7 +462,14 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    async getHistoryEntry(siteUrl: string, id: string, userId: string = 'default_user'): Promise<StorageResult<HistoryEntry | null>> {
+    async getHistoryEntry(siteUrl: string, id: string, userId?: string): Promise<StorageResult<HistoryEntry | null>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: null,
+                error: 'userId is required for history storage operations'
+            };
+        }
         try {
             const result = await this.getHistory(siteUrl, userId);
             if (!result.success || !result.data) {
@@ -425,7 +487,14 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    async getHistory(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<HistoryEntry[]>> {
+    async getHistory(siteUrl: string, userId?: string): Promise<StorageResult<HistoryEntry[]>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: [],
+                error: 'userId is required for history storage operations'
+            };
+        }
         try {
             const hostname = this.extractSiteName(siteUrl);
             const userHistoryDir = this.getUserHistoryDir(userId);
@@ -451,7 +520,14 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    async getHistoryStats(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<{ total: number; completed: number; failed: number; running: number; lastActivity?: string }>> {
+    async getHistoryStats(siteUrl: string, userId?: string): Promise<StorageResult<{ total: number; completed: number; failed: number; running: number; lastActivity?: string }>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: { total: 0, completed: 0, failed: 0, running: 0 },
+                error: 'userId is required for history storage operations'
+            };
+        }
         try {
             const result = await this.getHistory(siteUrl, userId);
             if (!result.success || !result.data) {
@@ -477,7 +553,14 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    async deleteHistoryEntry(siteUrl: string, id: string, userId: string = 'default_user'): Promise<StorageResult<boolean>> {
+    async deleteHistoryEntry(siteUrl: string, id: string, userId?: string): Promise<StorageResult<boolean>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: false,
+                error: 'userId is required for history storage operations'
+            };
+        }
         try {
             const result = await this.getHistory(siteUrl, userId);
             if (!result.success || !result.data) {
@@ -506,7 +589,14 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    async clearHistory(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<boolean>> {
+    async clearHistory(siteUrl: string, userId?: string): Promise<StorageResult<boolean>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: false,
+                error: 'userId is required for history storage operations'
+            };
+        }
         try {
             const hostname = this.extractSiteName(siteUrl);
             const userHistoryDir = this.getUserHistoryDir(userId);
@@ -526,7 +616,14 @@ class JsonHistoryStorage implements HistoryStorage {
         }
     }
 
-    private async saveHistoryEntry(siteUrl: string, historyEntry: HistoryEntry, userId: string = 'default_user'): Promise<StorageResult<boolean>> {
+    private async saveHistoryEntry(siteUrl: string, historyEntry: HistoryEntry, userId?: string): Promise<StorageResult<boolean>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: false,
+                error: 'userId is required for history storage operations'
+            };
+        }
         try {
             const hostname = this.extractSiteName(siteUrl);
             const userHistoryDir = this.getUserHistoryDir(userId);
@@ -607,7 +704,15 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
 
     async createSnapshot(params: SnapshotParams): Promise<StorageResult<SnapshotMetadata>> {
         try {
-            const { siteUrl, userId = 'default_user', composerJson, composerLock, workflowId, stepId } = params;
+            const { siteUrl, userId, composerJson, composerLock, workflowId, stepId } = params;
+
+            if (!userId) {
+                return {
+                    success: false,
+                    data: null as any,
+                    error: 'userId is required for snapshot storage operations'
+                };
+            }
 
             if (!siteUrl) {
                 return { success: false, error: 'siteUrl is required' };
@@ -668,7 +773,14 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
         }
     }
 
-    async getSnapshotMetadata(id: string, userId: string = 'default_user'): Promise<StorageResult<SnapshotMetadata | null>> {
+    async getSnapshotMetadata(id: string, userId?: string): Promise<StorageResult<SnapshotMetadata | null>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: null,
+                error: 'userId is required for snapshot storage operations'
+            };
+        }
         try {
             const userSnapshotsDir = this.getUserSnapshotsDir(userId);
             const metadataPath = path.join(userSnapshotsDir, id, 'metadata.json');
@@ -688,7 +800,14 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
         }
     }
 
-    async getSnapshotFile(id: string, filename: string, userId: string = 'default_user'): Promise<StorageResult<{ content: string; size: number; mimeType?: string } | null>> {
+    async getSnapshotFile(id: string, filename: string, userId?: string): Promise<StorageResult<{ content: string; size: number; mimeType?: string } | null>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: null,
+                error: 'userId is required for snapshot storage operations'
+            };
+        }
         try {
             // Validate filename - only allow specific files for security
             const allowedFiles = ['composer.json', 'composer.lock', 'metadata.json'];
@@ -761,7 +880,14 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
         }
     }
 
-    async getSnapshots(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<SnapshotMetadata[]>> {
+    async getSnapshots(siteUrl: string, userId?: string): Promise<StorageResult<SnapshotMetadata[]>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: [],
+                error: 'userId is required for snapshot storage operations'
+            };
+        }
         try {
             const siteName = this.extractSiteName(siteUrl);
             const snapshots: SnapshotMetadata[] = [];
@@ -795,7 +921,14 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
         }
     }
 
-    async deleteSnapshot(id: string, userId: string = 'default_user'): Promise<StorageResult<boolean>> {
+    async deleteSnapshot(id: string, userId?: string): Promise<StorageResult<boolean>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: false,
+                error: 'userId is required for snapshot storage operations'
+            };
+        }
         try {
             const userSnapshotsDir = this.getUserSnapshotsDir(userId);
             const snapshotDir = path.join(userSnapshotsDir, id);
@@ -819,7 +952,15 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
 
     async cleanupSnapshots(params: CleanupParams): Promise<StorageResult<{ deletedCount: number; freedSpace: number }>> {
         try {
-            const { siteUrl, userId = 'default_user', keepLast = 10 } = params;
+            const { siteUrl, userId, keepLast = 10 } = params;
+
+            if (!userId) {
+                return {
+                    success: false,
+                    data: { deletedCount: 0, freedSpace: 0 },
+                    error: 'userId is required for snapshot storage operations'
+                };
+            }
 
             const snapshotsResult = await this.getSnapshots(siteUrl, userId);
             if (!snapshotsResult.success || !snapshotsResult.data) {
@@ -869,7 +1010,14 @@ class JsonSnapshotsStorage implements SnapshotsStorage {
         }
     }
 
-    async getSnapshotStats(siteUrl: string, userId: string = 'default_user'): Promise<StorageResult<{ total: number; totalSize: number; oldestSnapshot?: string; newestSnapshot?: string }>> {
+    async getSnapshotStats(siteUrl: string, userId?: string): Promise<StorageResult<{ total: number; totalSize: number; oldestSnapshot?: string; newestSnapshot?: string }>> {
+        if (!userId) {
+            return {
+                success: false,
+                data: { total: 0, totalSize: 0 },
+                error: 'userId is required for snapshot storage operations'
+            };
+        }
         try {
             const snapshotsResult = await this.getSnapshots(siteUrl, userId);
             if (!snapshotsResult.success || !snapshotsResult.data) {

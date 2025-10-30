@@ -725,8 +725,9 @@ app.get('/api/logs/:siteUrl',
     userAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
+            const userId = req.userId!;
             const siteUrl = decodeURIComponent(req.params.siteUrl);
-            const result = await loggingService.readLogs(siteUrl);
+            const result = await loggingService.readLogs(siteUrl, userId);
             res.json(result);
         } catch (error) {
             console.error('[LOGS] Error:', error);
@@ -739,8 +740,9 @@ app.delete('/api/logs/:siteUrl/cleanup',
     userAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
+            const userId = req.userId!;
             const siteUrl = decodeURIComponent(req.params.siteUrl);
-            const result = loggingService.cleanupLogs(siteUrl);
+            const result = await loggingService.cleanupLogs(siteUrl, userId);
             res.json(result);
         } catch (error) {
             console.error('[LOG-CLEANUP] Error:', error);
@@ -757,7 +759,8 @@ app.post('/api/history/create',
     userAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
-            const historyEntry = await historyService.createHistoryEntry(req.body);
+            const userId = req.userId!;
+            const historyEntry = await historyService.createHistoryEntry(req.body, userId);
 
             if (historyEntry) {
                 res.json({ success: true, historyEntry });
@@ -782,8 +785,9 @@ app.put('/api/history/:id',
         });
 
         try {
+            const userId = req.userId!;
             const { id } = req.params;
-            const historyEntry = await historyService.updateHistoryEntry(id, req.body);
+            const historyEntry = await historyService.updateHistoryEntry(id, req.body, userId);
 
             console.log('[HISTORY UPDATE] Service result:', historyEntry ? 'Success' : 'Not found');
 
@@ -805,10 +809,11 @@ app.get('/api/history/:siteUrl',
     userAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
+            const userId = req.userId!;
             const { siteUrl } = req.params;
             const decodedSiteUrl = decodeURIComponent(siteUrl);
 
-            const result = await historyService.getHistoryForSite(decodedSiteUrl);
+            const result = await historyService.getHistoryForSite(decodedSiteUrl, userId);
             res.json(result);
         } catch (error) {
             console.error('Get history error:', error);
@@ -821,10 +826,11 @@ app.delete('/api/history/:siteUrl/:id',
     userAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
+            const userId = req.userId!;
             const { siteUrl, id } = req.params;
             const decodedSiteUrl = decodeURIComponent(siteUrl);
 
-            const result = await historyService.deleteHistoryEntry(decodedSiteUrl, id);
+            const result = await historyService.deleteHistoryEntry(decodedSiteUrl, id, userId);
 
             if (result) {
                 res.json({ success: true, message: 'History entry deleted successfully' });
@@ -940,7 +946,7 @@ app.post('/api/snapshots/create',
             composerLock: composerLock || undefined,
             workflowId,
             stepId
-        });
+        }, userId);
         
         if (snapshot) {
             return res.json({ success: true, snapshot });
@@ -957,10 +963,11 @@ app.get('/api/snapshots/list/:siteUrl',
     userAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
+        const userId = req.userId!;
         const { siteUrl } = req.params;
         const decodedSiteUrl = decodeURIComponent(siteUrl);
-        
-            const result = await snapshotService.listSnapshotsForSite(decodedSiteUrl);
+
+            const result = await snapshotService.listSnapshotsForSite(decodedSiteUrl, userId);
             return res.json(result);
         } catch (error) {
             console.error('List snapshots error:', error);
@@ -1069,11 +1076,12 @@ app.post('/api/snapshots/cleanup/:siteUrl',
     userAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
+            const userId = req.userId!;
             const { siteUrl } = req.params;
             const decodedSiteUrl = decodeURIComponent(siteUrl);
             const { keepLast = 10 } = req.body;
 
-            const result = await snapshotService.cleanupOldSnapshots(decodedSiteUrl, keepLast);
+            const result = await snapshotService.cleanupOldSnapshots(decodedSiteUrl, keepLast, userId);
             return res.json({ success: true, ...result });
         } catch (error) {
             console.error('Cleanup snapshots error:', error);

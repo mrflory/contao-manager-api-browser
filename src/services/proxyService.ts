@@ -149,7 +149,8 @@ export class ProxyService {
             response.status,
             data,
             responseDataForLog,
-            requestError ? requestError.message : null
+            requestError ? requestError.message : null,
+            userId
         );
 
         // If there was an error, throw it

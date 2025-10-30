@@ -68,11 +68,11 @@ export class AuthService {
 
         if (testResponse.status === 200) {
             // Log successful token validation
-            this.loggingService.logApiCall(managerUrl, 'GET', '/api/session', testResponse.status, null, testResponse.data);
+            this.loggingService.logApiCall(managerUrl, 'GET', '/api/session', testResponse.status, null, testResponse.data, null, undefined);
             return { success: true, url: managerUrl };
         } else {
             // Log failed token validation
-            this.loggingService.logApiCall(managerUrl, 'GET', '/api/session', testResponse.status, null, testResponse.data);
+            this.loggingService.logApiCall(managerUrl, 'GET', '/api/session', testResponse.status, null, testResponse.data, null, undefined);
             throw new Error('Invalid token');
         }
     }
@@ -95,7 +95,7 @@ export class AuthService {
         });
 
         // Log save-token validation request
-        this.loggingService.logApiCall(managerUrl, 'GET', '/api/session', testResponse.status, null, testResponse.data);
+        this.loggingService.logApiCall(managerUrl, 'GET', '/api/session', testResponse.status, null, testResponse.data, null, userId);
 
         if (testResponse.status !== 200) {
             throw new Error('Invalid token');
@@ -111,7 +111,7 @@ export class AuthService {
         }
     }
 
-    public async cookieAuth(request: CookieAuthRequest): Promise<CookieAuthResponse> {
+    public async cookieAuth(request: CookieAuthRequest, userId?: string): Promise<CookieAuthResponse> {
         const { managerUrl, credentials } = request;
         
         if (!managerUrl || !credentials) {
@@ -155,7 +155,7 @@ export class AuthService {
         console.log(`[COOKIE-AUTH] Response headers:`, response.headers);
 
         // Log the authentication attempt
-        this.loggingService.logApiCall(cleanedUrl, 'POST', '/api/session', response.status, requestBody, response.data);
+        this.loggingService.logApiCall(cleanedUrl, 'POST', '/api/session', response.status, requestBody, response.data, null, userId);
 
         if (response.status === 200 || response.status === 201) {
             return { 
@@ -171,7 +171,7 @@ export class AuthService {
         }
     }
 
-    public async cookieSessionCheck(managerUrl: string, cookieHeader: string): Promise<{ success: boolean; user?: any; error?: string }> {
+    public async cookieSessionCheck(managerUrl: string, cookieHeader: string, userId?: string): Promise<{ success: boolean; user?: any; error?: string }> {
         if (!managerUrl) {
             throw new Error('Manager URL is required');
         }
@@ -191,7 +191,7 @@ export class AuthService {
         console.log(`[COOKIE-SESSION-CHECK] Response status: ${response.status}`);
 
         // Log the session check
-        this.loggingService.logApiCall(cleanedUrl, 'GET', '/api/session', response.status, null, response.data);
+        this.loggingService.logApiCall(cleanedUrl, 'GET', '/api/session', response.status, null, response.data, null, userId);
 
         if (response.status === 200) {
             return { 
@@ -211,7 +211,7 @@ export class AuthService {
         }
     }
 
-    public async cookieLogout(managerUrl: string, cookieHeader: string): Promise<{ success: boolean }> {
+    public async cookieLogout(managerUrl: string, cookieHeader: string, userId?: string): Promise<{ success: boolean }> {
         if (!managerUrl) {
             throw new Error('Manager URL is required');
         }
@@ -231,7 +231,7 @@ export class AuthService {
         console.log(`[COOKIE-LOGOUT] Response status: ${response.status}`);
 
         // Log the logout attempt
-        this.loggingService.logApiCall(cleanedUrl, 'DELETE', '/api/session', response.status, null, response.data);
+        this.loggingService.logApiCall(cleanedUrl, 'DELETE', '/api/session', response.status, null, response.data, null, userId);
 
         return { 
             success: response.status === 204 || response.status === 200 || response.status === 201
@@ -306,7 +306,7 @@ export class AuthService {
         console.log('Session response data:', sessionResponse.data);
 
         // Log session request
-        this.loggingService.logApiCall(activeSite.url, 'GET', '/api/session', sessionResponse.status, null, sessionResponse.data);
+        this.loggingService.logApiCall(activeSite.url, 'GET', '/api/session', sessionResponse.status, null, sessionResponse.data, null, userId);
 
         if (sessionResponse.status === 200) {
             return {

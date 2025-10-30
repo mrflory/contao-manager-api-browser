@@ -186,7 +186,7 @@ export class SnapshotService {
         }
     }
 
-    public async listSnapshotsForSite(siteUrl: string): Promise<SnapshotListResponse> {
+    public async listSnapshotsForSite(siteUrl: string, userId?: string): Promise<SnapshotListResponse> {
         try {
             // Check if storage supports snapshots
             const capabilities = this.storage.getCapabilities();
@@ -210,7 +210,7 @@ export class SnapshotService {
                 };
             }
 
-            const result = await this.storage.snapshots.getSnapshots(siteUrl);
+            const result = await this.storage.snapshots.getSnapshots(siteUrl, userId);
             
             if (!result.success) {
                 console.error(`[SNAPSHOT] Failed to list snapshots for site ${siteUrl}:`, result.error);
@@ -274,7 +274,7 @@ export class SnapshotService {
         }
     }
 
-    public async cleanupOldSnapshots(siteUrl: string, keepLast: number = 10): Promise<{ deletedCount: number; error?: string }> {
+    public async cleanupOldSnapshots(siteUrl: string, keepLast: number = 10, userId?: string): Promise<{ deletedCount: number; error?: string }> {
         try {
             // Check if storage supports snapshots
             const capabilities = this.storage.getCapabilities();
@@ -289,6 +289,7 @@ export class SnapshotService {
 
             const cleanupParams: CleanupParams = {
                 siteUrl,
+                userId,
                 keepLast
             };
 

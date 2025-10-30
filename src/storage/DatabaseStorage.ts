@@ -107,8 +107,12 @@ export class DatabaseStorage extends BaseStorage {
         return this.createStorageResult(false, { sites: {}, activeSite: null }, 'Prisma client not initialized');
       }
 
-      // Use provided userId or fall back to default for backward compatibility
-      const currentUserId = userId || 'default_user';
+      // Require userId for all database operations
+      if (!userId) {
+        return this.createStorageResult(false, { sites: {}, activeSite: null }, 'userId is required for database operations');
+      }
+
+      const currentUserId = userId;
 
       // Load user's sites from database
       const sites = await this.prisma.site.findMany({
@@ -194,8 +198,12 @@ export class DatabaseStorage extends BaseStorage {
         return this.createStorageResult(false, false, 'Prisma client not initialized');
       }
 
-      // Use provided userId or fall back to default for backward compatibility
-      const currentUserId = userId || 'default_user';
+      // Require userId for all database operations
+      if (!userId) {
+        return this.createStorageResult(false, false, 'userId is required for database operations');
+      }
+
+      const currentUserId = userId;
 
       // Use transaction to ensure data consistency
       await this.prisma.$transaction(async (tx) => {
