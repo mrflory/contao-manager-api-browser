@@ -282,12 +282,26 @@ app.delete('/api/sites/:url',
         const url = decodeURIComponent(req.params.url);
         const userId = req.userId!;
 
+        // Remove the site configuration
         const success = await configService.removeSiteAsync(url, userId);
-        if (success) {
-            return res.json({ success: true });
-        } else {
+        if (!success) {
             return res.status(404).json({ error: 'Site not found or not owned by user' });
         }
+
+        // Clean up related data (logs, history, and snapshots)
+        // These operations are non-blocking - we don't fail site deletion if cleanup fails
+        try {
+            await Promise.all([
+                loggingService.clearLogsForSite(url, userId),
+                historyService.clearHistoryForSite(url, userId),
+                snapshotService.deleteAllSnapshotsForSite(url, userId)
+            ]);
+        } catch (cleanupError) {
+            console.error('Error cleaning up related data for deleted site:', cleanupError);
+            // Continue - site is already deleted
+        }
+
+        return res.json({ success: true });
     })
 );
 

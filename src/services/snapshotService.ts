@@ -307,8 +307,25 @@ export class SnapshotService {
 
         } catch (error) {
             console.error(`[SNAPSHOT] Failed to cleanup snapshots for site ${siteUrl}:`, error);
-            return { 
-                deletedCount: 0, 
+            return {
+                deletedCount: 0,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
+        }
+    }
+
+    /**
+     * Delete all snapshots for a site
+     * Used when removing a site to clean up all associated data
+     */
+    public async deleteAllSnapshotsForSite(siteUrl: string, userId?: string): Promise<{ deletedCount: number; error?: string }> {
+        try {
+            // Use cleanup with keepLast=0 to delete all snapshots
+            return await this.cleanupOldSnapshots(siteUrl, 0, userId);
+        } catch (error) {
+            console.error(`[SNAPSHOT] Failed to delete all snapshots for site ${siteUrl}:`, error);
+            return {
+                deletedCount: 0,
                 error: error instanceof Error ? error.message : 'Unknown error'
             };
         }

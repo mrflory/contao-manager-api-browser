@@ -476,7 +476,7 @@ export abstract class BaseStorage implements SiteConfigStorage {
 
   async removeSite(url: string, userId?: string): Promise<StorageResult<boolean>> {
     try {
-      const configResult = await this.loadConfig();
+      const configResult = await this.loadConfig(userId);
       if (!configResult.success || !configResult.data) {
         return this.createStorageResult(false, false, configResult.error || 'Failed to load config');
       }

@@ -186,4 +186,47 @@ export class LoggingService {
     public getResponseLoggingExclusions(): string[] {
         return [...this.responseLoggingExclusions];
     }
+
+    /**
+     * Delete all logs for a site
+     * Used when removing a site to clean up all associated data
+     */
+    public async clearLogsForSite(siteUrl: string, userId?: string): Promise<{ success: boolean; message: string }> {
+        try {
+            // Check if storage supports logging
+            const capabilities = this.storage.getCapabilities();
+            if (!capabilities.supportsLogs) {
+                return {
+                    success: true,
+                    message: 'Log storage not supported by current storage backend'
+                };
+            }
+
+            if (!this.storage.logs) {
+                return {
+                    success: false,
+                    message: 'Storage logs interface not available'
+                };
+            }
+
+            const result = await this.storage.logs.clearLogs(siteUrl, userId);
+
+            if (!result.success) {
+                return {
+                    success: false,
+                    message: `Failed to clear logs: ${result.error}`
+                };
+            }
+
+            return {
+                success: true,
+                message: 'Successfully cleared all logs for site'
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: `Failed to clear logs: ${error instanceof Error ? error.message : 'Unknown error'}`
+            };
+        }
+    }
 }
