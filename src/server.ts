@@ -1245,14 +1245,22 @@ async function initializeServices() {
 
 async function startServer() {
     try {
+        console.log('\n========================================');
+        console.log('🚀 Starting Contao Manager API Server');
+        console.log(`📅 ${new Date().toISOString()}`);
+        console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`💾 Storage: ${process.env.STORAGE_TYPE || 'json_file'}`);
+        console.log(`🗄️  Database: ${process.env.DATABASE_URL ? 'Configured (Neon.tech)' : 'Not configured'}`);
+        console.log('========================================\n');
+
         // Test database connection before initializing services
-        console.log('Testing database connection...');
+        console.log('🔌 Testing database connection...');
         try {
             await prisma.$connect();
-            console.log('Database connection established successfully');
+            console.log('✓ Database connection established successfully');
         } catch (dbError) {
-            console.error('Database connection failed:', dbError);
-            console.log('Continuing with degraded mode (database unavailable)');
+            console.error('✗ Database connection failed:', dbError);
+            console.log('⚠️  Continuing with degraded mode (database unavailable)');
         }
 
         await initializeServices();
@@ -1261,25 +1269,36 @@ async function startServer() {
         app.use(authErrorHandler);
 
         const server = app.listen(PORT, () => {
-            console.log(`TypeScript Server running on http://localhost:${PORT}`);
-            console.log('Phase 2: User Authentication System initialized');
+            console.log('\n========================================');
+            console.log(`✓ Server running on http://localhost:${PORT}`);
+            console.log('✓ Phase 2: User Authentication System initialized');
+            console.log('✓ Health check: /api/health');
+            console.log('✓ Database status: /api/database/status');
+            console.log('========================================\n');
         });
 
         // Graceful shutdown handling
         const gracefulShutdown = async (signal: string) => {
-            console.log(`\n${signal} received. Starting graceful shutdown...`);
+            console.log(`\n========================================`);
+            console.log(`${signal} received - Starting graceful shutdown`);
+            console.log(`Uptime: ${Math.floor(process.uptime())}s`);
+            console.log(`Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+            console.log(`========================================`);
 
+            // Close server first to stop accepting new connections
             server.close(() => {
-                console.log('HTTP server closed.');
+                console.log('✓ HTTP server closed - no longer accepting connections');
             });
 
+            // Disconnect from database
             try {
                 await prisma.$disconnect();
-                console.log('Database connection closed.');
+                console.log('✓ Database connection closed cleanly');
             } catch (error) {
-                console.error('Error during database disconnect:', error);
+                console.error('✗ Error during database disconnect:', error);
             }
 
+            console.log('✓ Graceful shutdown complete');
             process.exit(0);
         };
 
