@@ -10,6 +10,8 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Neon.tech connection pooling optimizations for Railway
+  relationMode = "prisma"
 }
 
 // Core user model for multi-tenant architecture

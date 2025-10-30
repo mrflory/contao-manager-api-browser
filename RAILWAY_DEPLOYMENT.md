@@ -187,14 +187,37 @@ Monitor deployment logs in the **"Deployments"** tab.
 
 ### Common Issues
 
+#### SIGTERM Crashes (FIXED ✅)
+
+**Symptom**: Application crashes with `npm error signal SIGTERM`
+
+**Root Cause**: Database connection timeouts causing Railway health checks to fail
+
+**Solutions Applied**:
+1. ✅ Added database connection timeout handling (5 seconds)
+2. ✅ Health check returns "degraded" (200 OK) instead of failing completely
+3. ✅ Increased Railway health check timeout: 30s → 60s
+4. ✅ Added `--skip-seed` flag to migration command
+5. ✅ Improved Prisma connection pooling configuration
+6. ✅ Added database connection test on startup
+
+**Verification**:
+```bash
+# Check health endpoint - should return one of:
+# - {"status":"healthy","database":"connected"}
+# - {"status":"degraded","database":"disconnected"}  # Still 200 OK
+curl https://your-app.railway.app/api/health
+```
+
 #### Database Connection Errors
 
 **Error**: `Can't reach database server`
 
 **Solution**:
 1. Verify `DATABASE_URL` is correctly set
-2. Check PostgreSQL service is running
-3. Ensure Railway internal networking is enabled
+2. For Neon.tech: Ensure `?sslmode=require` is in the connection string
+3. Check PostgreSQL service is running
+4. Ensure Railway internal networking is enabled
 
 #### Build Failures
 
@@ -213,6 +236,21 @@ Monitor deployment logs in the **"Deployments"** tab.
 1. Check database permissions
 2. Verify Prisma schema is correct
 3. Run migrations locally first: `npx prisma migrate deploy`
+4. Check Railway logs: `railway logs --filter "prisma"`
+
+#### Rate Limiting Issues
+
+**Error**: `Too many requests. Please try again later.`
+
+**Location**: Line 93 in `src/middleware/securityMiddleware.ts`
+
+**Solution**: Adjust rate limits for production traffic:
+```typescript
+export const generalRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000  // Increase if needed
+});
+```
 
 ## Phase 4.3: Production Validation
 

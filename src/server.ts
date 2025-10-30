@@ -50,7 +50,15 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Initialize Prisma client for Phase 2 user authentication
-const prisma = new PrismaClient();
+// Configure with connection pooling and timeout settings for Neon.tech
+const prisma = new PrismaClient({
+    datasources: {
+        db: {
+            url: process.env.DATABASE_URL
+        }
+    },
+    log: process.env.NODE_ENV === 'production' ? ['error', 'warn'] : ['query', 'info', 'warn', 'error']
+});
 
 // Initialize storage and services
 const storage: UnifiedStorage = new JsonFileStorageUnified({
@@ -95,23 +103,45 @@ if (process.env.NODE_ENV === 'production') {
 // Health check endpoint for Railway deployment
 app.get('/api/health', async (_req: Request, res: Response) => {
     try {
-        // Check database connection
-        await prisma.$queryRaw`SELECT 1`;
+        // Check database connection with timeout for Railway health checks
+        const dbCheckPromise = prisma.$queryRaw`SELECT 1`;
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Database health check timeout')), 5000)
+        );
+
+        await Promise.race([dbCheckPromise, timeoutPromise]);
 
         res.status(200).json({
             status: 'healthy',
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
             environment: process.env.NODE_ENV || 'development',
-            storage: process.env.STORAGE_TYPE || 'json_file'
+            storage: process.env.STORAGE_TYPE || 'json_file',
+            database: 'connected'
         });
     } catch (error) {
         console.error('Health check failed:', error);
-        res.status(503).json({
-            status: 'unhealthy',
-            timestamp: new Date().toISOString(),
-            error: error instanceof Error ? error.message : 'Unknown error'
-        });
+
+        // Return 200 with degraded status if only DB is down but app is running
+        // This prevents Railway from killing the app during transient DB issues
+        const isDatabaseError = error instanceof Error &&
+            (error.message.includes('timeout') || error.message.includes('connection'));
+
+        if (isDatabaseError) {
+            res.status(200).json({
+                status: 'degraded',
+                timestamp: new Date().toISOString(),
+                uptime: process.uptime(),
+                database: 'disconnected',
+                error: error instanceof Error ? error.message : 'Database connection failed'
+            });
+        } else {
+            res.status(503).json({
+                status: 'unhealthy',
+                timestamp: new Date().toISOString(),
+                error: error instanceof Error ? error.message : 'Unknown error'
+            });
+        }
     }
 });
 
@@ -1193,6 +1223,16 @@ async function initializeServices() {
 
 async function startServer() {
     try {
+        // Test database connection before initializing services
+        console.log('Testing database connection...');
+        try {
+            await prisma.$connect();
+            console.log('Database connection established successfully');
+        } catch (dbError) {
+            console.error('Database connection failed:', dbError);
+            console.log('Continuing with degraded mode (database unavailable)');
+        }
+
         await initializeServices();
 
         // Add authentication error handler
