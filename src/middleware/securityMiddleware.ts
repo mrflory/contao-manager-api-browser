@@ -40,24 +40,36 @@ export const securityHeaders = helmet({
  */
 export const corsOptions = {
     origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-        // Allow requests with no origin (like mobile apps or curl)
+        // Allow requests with no origin (like mobile apps, curl, or same-origin requests)
         if (!origin) {
             return callback(null, true);
         }
 
-        // Development - allow localhost
+        // Development - allow all localhost and local IPs
         if (process.env.NODE_ENV === 'development') {
-            if (origin.match(/^https?:\/\/localhost(:\d+)?$/)) {
+            if (origin.match(/^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$/)) {
                 return callback(null, true);
             }
+            // Also allow any origin in development for easier testing
+            return callback(null, true);
         }
 
         // Production - check against allowed origins
-        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [];
+
+        // If no allowed origins configured, allow same-origin requests
+        if (allowedOrigins.length === 0 || (allowedOrigins.length === 1 && allowedOrigins[0] === '')) {
+            console.warn('[CORS] No ALLOWED_ORIGINS configured, allowing all origins. Set ALLOWED_ORIGINS in production!');
+            return callback(null, true);
+        }
+
+        // Check if origin is in allowed list
         if (allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
 
+        // Log the rejected origin for debugging
+        console.error(`[CORS] Origin not allowed: ${origin}. Allowed origins: ${allowedOrigins.join(', ')}`);
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,

@@ -116,7 +116,8 @@ const SiteDetails: React.FC = () => {
     loadConfig.execute();
   };
 
-  if (loadConfig.state.loading || !config || (config && !site)) {
+  // Show loading state while fetching config
+  if (loadConfig.state.loading || !config) {
     return (
       <Container maxW="4xl">
         <LoadingState message="Loading site details..." />
@@ -124,6 +125,7 @@ const SiteDetails: React.FC = () => {
     );
   }
 
+  // If config is loaded but site doesn't exist, show 404 error
   if (!site) {
     return (
       <Container maxW="4xl">
@@ -140,7 +142,7 @@ const SiteDetails: React.FC = () => {
                 </Alert.Description>
               </Alert.Content>
             </Alert.Root>
-            <Button 
+            <Button
               colorPalette="blue"
               size="lg"
               onClick={() => navigate('/')}
