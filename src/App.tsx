@@ -4,6 +4,7 @@ import { Box } from '@chakra-ui/react';
 import { Provider } from './components/ui/provider';
 import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './contexts/AuthContext';
+import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { ProtectedRoute, PublicRoute } from './components/auth/ProtectedRoute';
 import Header from './components/Header';
 import { DatabaseDegradedMode } from './components/display/DatabaseDegradedMode';
@@ -38,10 +39,11 @@ const App: React.FC = () => {
   return (
     <Provider>
       <AuthProvider>
-        <Router>
-          <Header />
-          <Box pt={8}>
-            <Routes>
+        <SubscriptionProvider>
+          <Router>
+            <Header />
+            <Box pt={8}>
+              <Routes>
               {/* Public routes - redirect to dashboard if authenticated */}
               <Route
                 path="/login"
@@ -143,10 +145,11 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
-            </Routes>
-          </Box>
-        </Router>
-        <Toaster />
+              </Routes>
+            </Box>
+          </Router>
+          <Toaster />
+        </SubscriptionProvider>
       </AuthProvider>
     </Provider>
   );
