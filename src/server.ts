@@ -1071,24 +1071,20 @@ app.get('/api/snapshots/:snapshotId/:filename/content',
         console.log(`[SNAPSHOT API] Getting file content for snapshot ${snapshotId}, file ${filename}, userId ${userId}`);
 
         const fileData = await snapshotService.getSnapshotFileContent(snapshotId, filename, userId);
-        
+
         if (!fileData) {
             return res.status(404).json({ error: 'Snapshot file not found' });
         }
-        
-        // Determine content type based on filename
-        let contentType = 'text/plain';
-        if (filename.endsWith('.json')) {
-            contentType = 'application/json';
-        }
 
-        // Set appropriate headers for content display (not download)
-        res.setHeader('Content-Type', contentType);
+        console.log(`[SNAPSHOT API] File data type: ${typeof fileData.content}, length: ${fileData.content?.length || 0}, first 100 chars: ${typeof fileData.content === 'string' ? fileData.content.substring(0, 100) : '[not a string]'}`);
+
+        // Always send as plain text to avoid Express JSON encoding issues
+        // The content is already a valid JSON string
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.setHeader('Content-Length', fileData.size.toString());
         res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour since snapshots are immutable
 
-        // For JSON files, the content is already a JSON string, so we send it directly
-        // without letting Express JSON-encode it again
+        // Send the raw content without any encoding
         return res.send(fileData.content);
 
         } catch (error) {
