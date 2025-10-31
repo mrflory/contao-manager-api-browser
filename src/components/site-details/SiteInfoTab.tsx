@@ -111,8 +111,13 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
           // Automatically open the one-time login URL in a new tab
           window.open(tokenData.url, '_blank', 'noopener,noreferrer');
           toast.showApiSuccess('Auto-login URL generated and opened', 'Open Contao Manager');
+        } else if (tokenData?.token) {
+          // Fallback: construct URL using site URL and token
+          const fallbackUrl = `${site.url}/#?token=${tokenData.token}`;
+          window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+          toast.showApiSuccess('Auto-login URL generated and opened (fallback)', 'Open Contao Manager');
         } else {
-          toast.showApiError('Token generated but no URL received', 'Open Contao Manager');
+          toast.showApiError('Token generated but no URL or token received', 'Open Contao Manager');
         }
       },
       showErrorToast: true,
