@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import cookieParser from 'cookie-parser';
+import axios from 'axios';
 
 // Services
 import { ConfigService } from './services/configService';
@@ -891,79 +892,93 @@ app.post('/api/snapshots/create',
         let composerLock: string | null = null;
 
         try {
-            // Use the existing proxy service to fetch files
-            const composerJsonResponse = await proxyService.proxyToSpecificSite(site, '/api/files/composer.json', 'GET', null, req.headers.cookie);
+            // Fetch composer.json as raw text to avoid axios auto-parsing JSON
+            // We need the raw JSON string content, not a parsed object
+            const axiosConfig: any = {
+                method: 'GET',
+                url: `${site.url}/api/files/composer.json`,
+                responseType: 'text',  // Critical: get raw text, not parsed JSON
+                timeout: 10000
+            };
+
+            // Add authentication headers based on site auth method
+            if (site.authMethod === 'token' && site.token) {
+                axiosConfig.headers = {
+                    'Contao-Manager-Auth': site.token
+                };
+            } else if (site.authMethod === 'cookie' && req.headers.cookie) {
+                axiosConfig.headers = {
+                    'Cookie': req.headers.cookie
+                };
+            }
+
+            const composerJsonResponse = await axios(axiosConfig);
             console.log('[SNAPSHOT API] composer.json response:', {
                 status: composerJsonResponse.status,
                 dataType: typeof composerJsonResponse.data,
-                dataLength: composerJsonResponse.data ? (typeof composerJsonResponse.data === 'string' ? composerJsonResponse.data.length : JSON.stringify(composerJsonResponse.data).length) : 0,
-                dataPreview: typeof composerJsonResponse.data === 'string' ? composerJsonResponse.data.substring(0, 100) : JSON.stringify(composerJsonResponse.data).substring(0, 100)
+                dataLength: composerJsonResponse.data?.length || 0,
+                firstChars: typeof composerJsonResponse.data === 'string' ? composerJsonResponse.data.substring(0, 100) : '[not a string]'
             });
+
             if (composerJsonResponse.status === 200 && composerJsonResponse.data) {
-                const isEmptyObject = typeof composerJsonResponse.data === 'object' && Object.keys(composerJsonResponse.data).length === 0;
-                if (!isEmptyObject) {
-                    if (typeof composerJsonResponse.data === 'string') {
+                // With responseType: 'text', data should always be a string
+                if (typeof composerJsonResponse.data === 'string' && composerJsonResponse.data.trim().length > 0) {
+                    // Validate it's valid JSON
+                    try {
+                        JSON.parse(composerJsonResponse.data);
                         composerJson = composerJsonResponse.data;
-                    } else if (typeof composerJsonResponse.data === 'object') {
-                        // Ensure we can actually stringify it
-                        try {
-                            composerJson = JSON.stringify(composerJsonResponse.data, null, 2);
-                            // Validate the result is valid JSON
-                            JSON.parse(composerJson);
-                        } catch (stringifyError) {
-                            console.error('[SNAPSHOT API] Failed to stringify composer.json:', stringifyError);
-                            console.error('[SNAPSHOT API] Data type:', typeof composerJsonResponse.data);
-                            console.error('[SNAPSHOT API] Data constructor:', composerJsonResponse.data?.constructor?.name);
-                            composerJson = null;
-                        }
+                        console.log('[SNAPSHOT API] Successfully validated composer.json');
+                    } catch (parseError) {
+                        console.error('[SNAPSHOT API] Invalid JSON in composer.json:', parseError);
+                        composerJson = null;
                     }
                 }
-                console.log('[SNAPSHOT API] Processing composer.json:', {
-                    hasContent: !!composerJson,
-                    contentLength: composerJson?.length || 0,
-                    isEmptyObject,
-                    skippedDueToEmptyObject: isEmptyObject,
-                    firstChars: composerJson?.substring(0, 50)
-                });
             }
         } catch (error) {
             console.warn('[SNAPSHOT API] Could not fetch composer.json:', error);
         }
         
         try {
-            const composerLockResponse = await proxyService.proxyToSpecificSite(site, '/api/files/composer.lock', 'GET', null, req.headers.cookie);
+            // Fetch composer.lock as raw text to avoid axios auto-parsing JSON
+            const axiosConfig: any = {
+                method: 'GET',
+                url: `${site.url}/api/files/composer.lock`,
+                responseType: 'text',  // Critical: get raw text, not parsed JSON
+                timeout: 10000
+            };
+
+            // Add authentication headers based on site auth method
+            if (site.authMethod === 'token' && site.token) {
+                axiosConfig.headers = {
+                    'Contao-Manager-Auth': site.token
+                };
+            } else if (site.authMethod === 'cookie' && req.headers.cookie) {
+                axiosConfig.headers = {
+                    'Cookie': req.headers.cookie
+                };
+            }
+
+            const composerLockResponse = await axios(axiosConfig);
             console.log('[SNAPSHOT API] composer.lock response:', {
                 status: composerLockResponse.status,
                 dataType: typeof composerLockResponse.data,
-                dataLength: composerLockResponse.data ? (typeof composerLockResponse.data === 'string' ? composerLockResponse.data.length : JSON.stringify(composerLockResponse.data).length) : 0,
-                dataPreview: typeof composerLockResponse.data === 'string' ? composerLockResponse.data.substring(0, 100) : JSON.stringify(composerLockResponse.data).substring(0, 100)
+                dataLength: composerLockResponse.data?.length || 0,
+                firstChars: typeof composerLockResponse.data === 'string' ? composerLockResponse.data.substring(0, 100) : '[not a string]'
             });
+
             if (composerLockResponse.status === 200 && composerLockResponse.data) {
-                const isEmptyObject = typeof composerLockResponse.data === 'object' && Object.keys(composerLockResponse.data).length === 0;
-                if (!isEmptyObject) {
-                    if (typeof composerLockResponse.data === 'string') {
+                // With responseType: 'text', data should always be a string
+                if (typeof composerLockResponse.data === 'string' && composerLockResponse.data.trim().length > 0) {
+                    // Validate it's valid JSON
+                    try {
+                        JSON.parse(composerLockResponse.data);
                         composerLock = composerLockResponse.data;
-                    } else if (typeof composerLockResponse.data === 'object') {
-                        // Ensure we can actually stringify it
-                        try {
-                            composerLock = JSON.stringify(composerLockResponse.data, null, 2);
-                            // Validate the result is valid JSON
-                            JSON.parse(composerLock);
-                        } catch (stringifyError) {
-                            console.error('[SNAPSHOT API] Failed to stringify composer.lock:', stringifyError);
-                            console.error('[SNAPSHOT API] Data type:', typeof composerLockResponse.data);
-                            console.error('[SNAPSHOT API] Data constructor:', composerLockResponse.data?.constructor?.name);
-                            composerLock = null;
-                        }
+                        console.log('[SNAPSHOT API] Successfully validated composer.lock');
+                    } catch (parseError) {
+                        console.error('[SNAPSHOT API] Invalid JSON in composer.lock:', parseError);
+                        composerLock = null;
                     }
                 }
-                console.log('[SNAPSHOT API] Processing composer.lock:', {
-                    hasContent: !!composerLock,
-                    contentLength: composerLock?.length || 0,
-                    isEmptyObject,
-                    skippedDueToEmptyObject: isEmptyObject,
-                    firstChars: composerLock?.substring(0, 50)
-                });
             }
         } catch (error) {
             console.warn('[SNAPSHOT API] Could not fetch composer.lock:', error);
