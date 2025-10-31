@@ -991,10 +991,14 @@ app.post('/api/snapshots/create',
         console.log('[SNAPSHOT API] Fetched files:', {
             hasComposerJson: !!composerJson,
             composerJsonLength: composerJson?.length || 0,
+            composerJsonType: typeof composerJson,
+            composerJsonFirst50: typeof composerJson === 'string' ? composerJson.substring(0, 50) : `NOT A STRING: ${composerJson}`,
             hasComposerLock: !!composerLock,
-            composerLockLength: composerLock?.length || 0
+            composerLockLength: composerLock?.length || 0,
+            composerLockType: typeof composerLock,
+            composerLockFirst50: typeof composerLock === 'string' ? composerLock.substring(0, 50) : `NOT A STRING: ${composerLock}`
         });
-        
+
         const snapshot = await snapshotService.createSnapshot({
             siteUrl,
             composerJson: composerJson || undefined,
