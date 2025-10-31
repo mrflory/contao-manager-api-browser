@@ -398,7 +398,9 @@ export const api = {
   },
 
   async getSnapshotFileContent(snapshotId: string, filename: 'composer.json' | 'composer.lock'): Promise<string> {
-    return makeApiCall(`/snapshots/${encodeURIComponent(snapshotId)}/${filename}/content`);
+    const response = await makeApiCall(`/snapshots/${encodeURIComponent(snapshotId)}/${filename}/content`);
+    // The API now returns an object with { content, size, filename }
+    return response.content || response;
   },
 
   async listSnapshots(siteUrl: string): Promise<any> {
