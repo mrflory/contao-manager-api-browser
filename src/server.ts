@@ -913,12 +913,6 @@ app.post('/api/snapshots/create',
             }
 
             const composerJsonResponse = await axios(axiosConfig);
-            console.log('[SNAPSHOT API] composer.json response:', {
-                status: composerJsonResponse.status,
-                dataType: typeof composerJsonResponse.data,
-                dataLength: composerJsonResponse.data?.length || 0,
-                firstChars: typeof composerJsonResponse.data === 'string' ? composerJsonResponse.data.substring(0, 100) : '[not a string]'
-            });
 
             if (composerJsonResponse.status === 200 && composerJsonResponse.data) {
                 // With responseType: 'text', data should always be a string
@@ -927,7 +921,6 @@ app.post('/api/snapshots/create',
                     try {
                         JSON.parse(composerJsonResponse.data);
                         composerJson = composerJsonResponse.data;
-                        console.log('[SNAPSHOT API] Successfully validated composer.json');
                     } catch (parseError) {
                         console.error('[SNAPSHOT API] Invalid JSON in composer.json:', parseError);
                         composerJson = null;
@@ -959,12 +952,6 @@ app.post('/api/snapshots/create',
             }
 
             const composerLockResponse = await axios(axiosConfig);
-            console.log('[SNAPSHOT API] composer.lock response:', {
-                status: composerLockResponse.status,
-                dataType: typeof composerLockResponse.data,
-                dataLength: composerLockResponse.data?.length || 0,
-                firstChars: typeof composerLockResponse.data === 'string' ? composerLockResponse.data.substring(0, 100) : '[not a string]'
-            });
 
             if (composerLockResponse.status === 200 && composerLockResponse.data) {
                 // With responseType: 'text', data should always be a string
@@ -973,7 +960,6 @@ app.post('/api/snapshots/create',
                     try {
                         JSON.parse(composerLockResponse.data);
                         composerLock = composerLockResponse.data;
-                        console.log('[SNAPSHOT API] Successfully validated composer.lock');
                     } catch (parseError) {
                         console.error('[SNAPSHOT API] Invalid JSON in composer.lock:', parseError);
                         composerLock = null;
@@ -987,17 +973,6 @@ app.post('/api/snapshots/create',
         if (!composerJson && !composerLock) {
             return res.status(400).json({ error: 'Could not fetch composer.json or composer.lock files' });
         }
-        
-        console.log('[SNAPSHOT API] Fetched files:', {
-            hasComposerJson: !!composerJson,
-            composerJsonLength: composerJson?.length || 0,
-            composerJsonType: typeof composerJson,
-            composerJsonFirst50: typeof composerJson === 'string' ? composerJson.substring(0, 50) : `NOT A STRING: ${composerJson}`,
-            hasComposerLock: !!composerLock,
-            composerLockLength: composerLock?.length || 0,
-            composerLockType: typeof composerLock,
-            composerLockFirst50: typeof composerLock === 'string' ? composerLock.substring(0, 50) : `NOT A STRING: ${composerLock}`
-        });
 
         const snapshot = await snapshotService.createSnapshot({
             siteUrl,
