@@ -89,6 +89,14 @@ export const api = {
     return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/server/config`);
   },
 
+  async setServerConfig(siteUrl: string, config: { php_cli?: string; cloud?: boolean }): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/server/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+  },
+
   async getSessionStatus(siteUrl: string): Promise<any> {
     return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/session`);
   },

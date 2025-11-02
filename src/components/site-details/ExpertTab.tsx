@@ -30,6 +30,7 @@ import { TaskStatusModal } from '../modals/TaskStatusModal';
 import { SessionCredentialsModal } from '../modals/SessionCredentialsModal';
 import { TokenCreationModal } from '../modals/TokenCreationModal';
 import { FileSelectionModal } from '../modals/FileSelectionModal';
+import { ServerConfigModal } from '../modals/ServerConfigModal';
 
 interface SessionCredentials {
   username?: string;
@@ -68,6 +69,8 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
   const [tokenCreationModalOpen, setTokenCreationModalOpen] = useState(false);
   const [fileSelectionModalOpen, setFileSelectionModalOpen] = useState(false);
+  const [serverConfigModalOpen, setServerConfigModalOpen] = useState(false);
+  const [currentServerConfig, setCurrentServerConfig] = useState<{ php_cli?: string; cloud?: boolean } | undefined>(undefined);
   const [jsonModalState, setJsonModalState] = useState<{
     isOpen: boolean;
     title: string;
@@ -175,7 +178,7 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
     // Server Configuration APIs
     { category: 'Server Configuration', name: 'Manager Self-Update', description: 'Gets update status of the Contao Manager', technical: 'GET /api/server/self-update', handler: () => handleApiCallWithModal('update-status', ExpertApiService.getUpdateStatus, 'Update Status', formatUpdateStatus) },
     { category: 'Server Configuration', name: 'Server Config', description: 'Gets server configuration', technical: 'GET /api/server/config', handler: () => handleApiCallWithModal('server-config', () => ExpertApiService.getServerConfig(siteUrl), 'Server Configuration') },
-    { category: 'Server Configuration', name: 'Set Server Config', description: 'Sets server configuration', technical: 'PUT /api/server/config', handler: null },
+    { category: 'Server Configuration', name: 'Set Server Config', description: 'Sets server configuration', technical: 'PUT /api/server/config', handler: handleOpenServerConfigModal },
     { category: 'Server Configuration', name: 'PHP Web Config', description: 'Gets PHP web server configuration', technical: 'GET /api/server/php-web', handler: () => handleApiCallWithModal('php-web-config', () => ExpertApiService.getPhpWebConfig(siteUrl), 'PHP Web Server Configuration') },
     { category: 'Server Configuration', name: 'PHP CLI Config', description: 'Gets PHP command line configuration', technical: 'GET /api/server/php-cli', handler: null },
     { category: 'Server Configuration', name: 'PHP Info', description: 'Gets PHP Information', technical: 'GET /api/server/phpinfo', handler: () => handleApiCallWithModal('php-info', () => ExpertApiService.getPhpInfo(siteUrl), 'PHP Information', formatPhpInfo) },
@@ -319,6 +322,29 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
         formData.grantType || undefined
       ),
       'Create Token'
+    );
+  };
+
+  const handleOpenServerConfigModal = async () => {
+    setLoading('get-server-config-for-modal', true);
+    try {
+      // Fetch current server configuration
+      const config = await ExpertApiService.getServerConfig(siteUrl);
+      setCurrentServerConfig(config);
+      setServerConfigModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching server config:', error);
+      toast.showApiError(error as Error, 'Get Server Configuration');
+    } finally {
+      setLoading('get-server-config-for-modal', false);
+    }
+  };
+
+  const handleServerConfigSubmit = async (config: { php_cli?: string; cloud?: boolean }) => {
+    await handleApiCallWithModal(
+      'set-server-config',
+      () => ExpertApiService.setServerConfig(siteUrl, config),
+      'Set Server Configuration'
     );
   };
 
@@ -492,6 +518,14 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
         onClose={() => setFileSelectionModalOpen(false)}
         onSubmit={handleFileSelectionSubmit}
         loading={isLoading('get-file-content')}
+      />
+
+      <ServerConfigModal
+        isOpen={serverConfigModalOpen}
+        onClose={() => setServerConfigModalOpen(false)}
+        onSubmit={handleServerConfigSubmit}
+        loading={isLoading('set-server-config')}
+        initialValues={currentServerConfig}
       />
     </>
   );

@@ -268,6 +268,12 @@ export class ExpertApiService {
   static getServerConfig = (siteUrl: string) => api.getServerConfig(siteUrl);
 
   /**
+   * Set server configuration
+   */
+  static setServerConfig = (siteUrl: string, config: { php_cli?: string; cloud?: boolean }) =>
+    api.setServerConfig(siteUrl, config);
+
+  /**
    * Get PHP information
    */
   static getPhpInfo = (siteUrl: string) => api.getPhpInfo(siteUrl);
