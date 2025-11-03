@@ -146,13 +146,13 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
         // If it's not valid JSON, treat as raw text
         data = { content: result };
       }
-      
+
       setJsonModalState({
         isOpen: true,
         title: `${file} Content`,
         data
       });
-      
+
       // Show success toast
       toast.showApiSuccess('File content retrieved successfully', `Get ${file}`);
     } catch (error) {
@@ -162,6 +162,29 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
     } finally {
       setLoading('get-file-content', false);
     }
+  };
+
+  const handleOpenServerConfigModal = async () => {
+    setLoading('get-server-config-for-modal', true);
+    try {
+      // Fetch current server configuration
+      const config = await ExpertApiService.getServerConfig(siteUrl);
+      setCurrentServerConfig(config);
+      setServerConfigModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching server config:', error);
+      toast.showApiError(error as Error, 'Get Server Configuration');
+    } finally {
+      setLoading('get-server-config-for-modal', false);
+    }
+  };
+
+  const handleServerConfigSubmit = async (config: { php_cli?: string; cloud?: boolean }) => {
+    await handleApiCallWithModal(
+      'set-server-config',
+      () => ExpertApiService.setServerConfig(siteUrl, config),
+      'Set Server Configuration'
+    );
   };
 
   // Define all APIs from swagger.yaml
@@ -322,29 +345,6 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
         formData.grantType || undefined
       ),
       'Create Token'
-    );
-  };
-
-  const handleOpenServerConfigModal = async () => {
-    setLoading('get-server-config-for-modal', true);
-    try {
-      // Fetch current server configuration
-      const config = await ExpertApiService.getServerConfig(siteUrl);
-      setCurrentServerConfig(config);
-      setServerConfigModalOpen(true);
-    } catch (error) {
-      console.error('Error fetching server config:', error);
-      toast.showApiError(error as Error, 'Get Server Configuration');
-    } finally {
-      setLoading('get-server-config-for-modal', false);
-    }
-  };
-
-  const handleServerConfigSubmit = async (config: { php_cli?: string; cloud?: boolean }) => {
-    await handleApiCallWithModal(
-      'set-server-config',
-      () => ExpertApiService.setServerConfig(siteUrl, config),
-      'Set Server Configuration'
     );
   };
 

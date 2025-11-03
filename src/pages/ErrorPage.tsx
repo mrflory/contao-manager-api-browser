@@ -19,7 +19,14 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
     message,
     showHomeButton = true
 }) => {
-    const navigate = useNavigate();
+    // Try to use navigate, but handle case where it's not available (e.g., in ErrorBoundary)
+    let navigate: ReturnType<typeof useNavigate> | null = null;
+    try {
+        navigate = useNavigate();
+    } catch (e) {
+        // useNavigate not available (probably in ErrorBoundary)
+        console.warn('useNavigate not available in this context');
+    }
 
     // Determine default title and message based on status code
     const getDefaultContent = () => {
@@ -58,11 +65,21 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
     const displayMessage = message || defaultContent.message;
 
     const handleGoHome = () => {
-        navigate('/');
+        if (navigate) {
+            navigate('/');
+        } else {
+            // Fallback if navigate is not available
+            window.location.href = '/';
+        }
     };
 
     const handleGoBack = () => {
-        navigate(-1);
+        if (navigate) {
+            navigate(-1);
+        } else {
+            // Fallback if navigate is not available
+            window.history.back();
+        }
     };
 
     return (
