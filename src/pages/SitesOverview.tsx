@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -11,8 +11,9 @@ import {
   ButtonGroup,
   IconButton,
   Portal,
+  Spinner,
 } from '@chakra-ui/react';
-import { LuPlus as Plus, LuChevronRight as ChevronRight, LuChevronDown as ChevronDown, LuRefreshCw as RefreshCw } from 'react-icons/lu';
+import { LuPlus as Plus, LuChevronRight as ChevronRight, LuChevronDown as ChevronDown, LuRefreshCw as RefreshCw, LuExternalLink as ExternalLink, LuSettings as Tool } from 'react-icons/lu';
 import { ColumnDef } from '@tanstack/react-table';
 import { Tooltip } from "../components/ui/tooltip";
 import { EnhancedTable } from '../components/ui/enhanced-table';
@@ -25,11 +26,17 @@ import { EmptyState } from '../components/display/EmptyState';
 import { VersionBadges } from '../components/display/VersionBadges';
 import { extractDomain, encodeUrlParam } from '../utils/urlUtils';
 import { useSubscription } from '../hooks/useSubscription';
+import { useToastNotifications, TOAST_MESSAGES } from '../hooks/useToastNotifications';
+import { useOpenContaoManager } from '../hooks/useOpenContaoManager';
+import { getContaoAdminUrl, openInNewTab } from '../utils/contaoUtils';
 
 const SitesOverview: React.FC = () => {
   const navigate = useNavigate();
   const { isTokenReady, isLoading: authLoading } = useAuth();
   const { limits } = useSubscription();
+  const toast = useToastNotifications();
+  const [updatingVersionForSite, setUpdatingVersionForSite] = useState<string | null>(null);
+  const { openManager, isLoading: isOpeningManager } = useOpenContaoManager();
 
   const configApi = useApiCall(
     () => SiteApiService.getConfig(),
@@ -48,6 +55,13 @@ const SitesOverview: React.FC = () => {
     }
   );
 
+  const updateVersionInfoApi = useApiCall(
+    () => SiteApiService.updateVersionInfo(),
+    {
+      showErrorToast: false, // We'll handle toasts manually for more control
+    }
+  );
+
   useEffect(() => {
     // Only execute API call when auth is complete and token is ready
     if (!authLoading && isTokenReady) {
@@ -62,6 +76,41 @@ const SitesOverview: React.FC = () => {
 
   const handleAddSite = () => {
     navigate('/add-site');
+  };
+
+  const handleUpdateVersionInfo = async (siteUrl: string) => {
+    try {
+      setUpdatingVersionForSite(siteUrl);
+
+      // First, set the active site
+      await setActiveSiteApi.execute(siteUrl);
+
+      // Then update version info
+      await updateVersionInfoApi.execute();
+
+      // Show success toast
+      toast.showSuccess(TOAST_MESSAGES.VERSION_INFO_UPDATED);
+
+      // Refresh the config to get updated version info
+      await configApi.execute();
+    } catch (error) {
+      // Show error toast
+      toast.showApiError(error instanceof Error ? error : new Error('Failed to update version info'), 'Update Version Info');
+    } finally {
+      setUpdatingVersionForSite(null);
+    }
+  };
+
+  const handleOpenManager = (siteUrl: string, site: Site) => {
+    openManager({
+      siteUrl,
+      username: site.user?.username
+    });
+  };
+
+  const handleOpenAdmin = (siteUrl: string) => {
+    const adminUrl = getContaoAdminUrl(siteUrl);
+    openInNewTab(adminUrl);
   };
 
   const columns = useMemo<ColumnDef<Site>[]>(
@@ -151,9 +200,36 @@ const SitesOverview: React.FC = () => {
                   <Portal>
                     <Menu.Positioner>
                       <Menu.Content>
-                        <Menu.Item value="update-version">
-                          <RefreshCw size={16} />
-                          Update Version Info
+                        <Menu.Item
+                          value="update-version"
+                          onClick={() => handleUpdateVersionInfo(site.url)}
+                          disabled={updatingVersionForSite === site.url}
+                        >
+                          {updatingVersionForSite === site.url ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <RefreshCw size={16} />
+                          )}
+                          {updatingVersionForSite === site.url ? 'Updating...' : 'Update Version Info'}
+                        </Menu.Item>
+                        <Menu.Item
+                          value="open-manager"
+                          onClick={() => handleOpenManager(site.url, site)}
+                          disabled={isOpeningManager}
+                        >
+                          {isOpeningManager ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <ExternalLink size={16} />
+                          )}
+                          Open Contao Manager
+                        </Menu.Item>
+                        <Menu.Item
+                          value="open-admin"
+                          onClick={() => handleOpenAdmin(site.url)}
+                        >
+                          <Tool size={16} />
+                          Open Contao Admin
                         </Menu.Item>
                       </Menu.Content>
                     </Menu.Positioner>

@@ -23,8 +23,10 @@ import { Site, MaintenanceMode } from '../../types';
 import { formatDateTime } from '../../utils/dateUtils';
 import { SiteManagement } from './SiteManagement';
 import { useApiCall } from '../../hooks/useApiCall';
-import { TaskApiService, SiteApiService, ExpertApiService } from '../../services/apiCallService';
+import { TaskApiService, SiteApiService } from '../../services/apiCallService';
 import { useToastNotifications, TOAST_MESSAGES } from '../../hooks/useToastNotifications';
+import { useOpenContaoManager } from '../../hooks/useOpenContaoManager';
+import { getContaoAdminUrl, openInNewTab } from '../../utils/contaoUtils';
 
 export interface SiteInfoTabProps {
   site: Site;
@@ -96,34 +98,7 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
     }
   );
 
-  const generateOneTimeToken = useApiCall(
-    () => ExpertApiService.generateUserToken(
-      site.url,
-      site.user?.username || 'admin',
-      'contao-manager-api',
-      'admin',
-      'one-time'
-    ),
-    {
-      onSuccess: (data: unknown) => {
-        const tokenData = data as { url?: string; token?: string };
-        if (tokenData?.url) {
-          // Automatically open the one-time login URL in a new tab
-          window.open(tokenData.url, '_blank', 'noopener,noreferrer');
-          toast.showApiSuccess('Auto-login URL generated and opened', 'Open Contao Manager');
-        } else if (tokenData?.token) {
-          // Fallback: construct URL using site URL and token
-          const fallbackUrl = `${site.url}/#?token=${tokenData.token}`;
-          window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
-          toast.showApiSuccess('Auto-login URL generated and opened (fallback)', 'Open Contao Manager');
-        } else {
-          toast.showApiError('Token generated but no URL or token received', 'Open Contao Manager');
-        }
-      },
-      showErrorToast: true,
-      errorMessage: 'Failed to generate auto-login token'
-    }
-  );
+  const { openManager, isLoading: isOpeningManager } = useOpenContaoManager();
 
   // Only load maintenance mode status if not passed from parent
   useEffect(() => {
@@ -132,22 +107,19 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [site.url, maintenanceMode]); // Only reload when site changes and if no parent state
-  // Generate admin URL by replacing contao-manager.phar.php with contao
-  const adminUrl = useMemo(() => {
-    if (site.url.includes('contao-manager.phar.php')) {
-      return site.url.replace('contao-manager.phar.php', 'contao');
-    }
-    // If URL doesn't contain the manager script, append /contao
-    const baseUrl = site.url.endsWith('/') ? site.url.slice(0, -1) : site.url;
-    return `${baseUrl}/contao`;
-  }, [site.url]);
+
+  // Generate admin URL using the utility function
+  const adminUrl = useMemo(() => getContaoAdminUrl(site.url), [site.url]);
 
   const handleOpenManager = useCallback(() => {
-    generateOneTimeToken.execute();
-  }, [generateOneTimeToken]);
+    openManager({
+      siteUrl: site.url,
+      username: site.user?.username
+    });
+  }, [openManager, site.url, site.user?.username]);
 
   const handleOpenAdmin = useCallback(() => {
-    window.open(adminUrl, '_blank', 'noopener,noreferrer');
+    openInNewTab(adminUrl);
   }, [adminUrl]);
 
   const handleToggleMaintenance = useCallback(() => {
@@ -312,7 +284,7 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
           <Button
             colorPalette="blue"
             onClick={handleOpenManager}
-            loading={generateOneTimeToken.state.loading}
+            loading={isOpeningManager}
             size="md"
           >
             <ExternalLink size={16} />
