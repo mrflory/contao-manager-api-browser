@@ -5,7 +5,6 @@ import {
   Text,
   Textarea,
   Stack,
-  Box,
 } from '@chakra-ui/react';
 import {
   DialogRoot,
@@ -27,6 +26,7 @@ import {
 } from '../ui/select';
 import { createListCollection } from '@chakra-ui/react';
 import { Field } from '../ui/field';
+import { CodeBlock } from '../ui/code-block';
 
 interface TaskOption {
   name: string;
@@ -127,6 +127,7 @@ export const TaskConfigurationModal: React.FC<TaskConfigurationModalProps> = ({
   const [selectedTask, setSelectedTask] = useState<string>('');
   const [configValue, setConfigValue] = useState<string>('');
   const [configError, setConfigError] = useState<string>('');
+  const [isEditingConfig, setIsEditingConfig] = useState<boolean>(false);
 
   const taskOptions = createListCollection({
     items: availableTasks.map(task => ({
@@ -142,6 +143,7 @@ export const TaskConfigurationModal: React.FC<TaskConfigurationModalProps> = ({
       if (task) {
         setConfigValue(task.exampleConfig);
         setConfigError('');
+        setIsEditingConfig(false);
       }
     }
   }, [selectedTask]);
@@ -189,6 +191,7 @@ export const TaskConfigurationModal: React.FC<TaskConfigurationModalProps> = ({
     setSelectedTask('');
     setConfigValue('');
     setConfigError('');
+    setIsEditingConfig(false);
     onClose();
   };
 
@@ -224,43 +227,56 @@ export const TaskConfigurationModal: React.FC<TaskConfigurationModalProps> = ({
             </Field>
 
             {selectedTaskInfo && (
-              <Box>
-                <Text fontSize="sm" color="fg.muted" mb={2}>
-                  {selectedTaskInfo.description}
-                </Text>
-              </Box>
+              <Text fontSize="sm" color="fg.muted">
+                {selectedTaskInfo.description}
+              </Text>
             )}
 
             <Field
               label="Configuration (JSON)"
               helperText={selectedTaskInfo?.exampleConfig
-                ? "Example configuration is pre-filled. Modify as needed or leave empty for defaults."
+                ? "Click to edit the configuration. Leave empty for defaults."
                 : "This task does not require additional configuration."}
               invalid={!!configError}
               errorText={configError}
             >
-              <Textarea
-                value={configValue}
-                onChange={(e) => {
-                  setConfigValue(e.target.value);
-                  setConfigError('');
-                }}
-                placeholder={selectedTask
-                  ? (selectedTaskInfo?.exampleConfig || "No configuration required")
-                  : "Select a task first..."}
-                rows={12}
-                fontFamily="mono"
-                fontSize="sm"
-                disabled={!selectedTask}
-              />
+              {isEditingConfig || !configValue ? (
+                <Textarea
+                  value={configValue}
+                  onChange={(e) => {
+                    setConfigValue(e.target.value);
+                    setConfigError('');
+                  }}
+                  placeholder={selectedTask
+                    ? (selectedTaskInfo?.exampleConfig || "No configuration required")
+                    : "Select a task first..."}
+                  rows={12}
+                  fontFamily="mono"
+                  fontSize="sm"
+                  disabled={!selectedTask}
+                  onBlur={() => {
+                    // Only exit edit mode if there's valid content
+                    if (configValue.trim()) {
+                      setIsEditingConfig(false);
+                    }
+                  }}
+                  autoFocus
+                />
+              ) : (
+                <div
+                  onClick={() => selectedTask && setIsEditingConfig(true)}
+                  style={{ cursor: selectedTask ? 'pointer' : 'default' }}
+                >
+                  <CodeBlock
+                    language="json"
+                    showLineNumbers={true}
+                    maxHeight="400px"
+                  >
+                    {configValue}
+                  </CodeBlock>
+                </div>
+              )}
             </Field>
-
-            {selectedTask && (
-              <Box bg="blue.50" borderRadius="md" p={3} fontSize="sm">
-                <Text fontWeight="medium" mb={1}>Task Endpoint:</Text>
-                <Text fontFamily="mono" color="blue.700">PUT /api/task</Text>
-              </Box>
-            )}
           </VStack>
         </DialogBody>
         <DialogFooter>
