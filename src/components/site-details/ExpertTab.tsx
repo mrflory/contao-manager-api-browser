@@ -24,7 +24,7 @@ import { useModalState } from '../../hooks/useModalState';
 import { useToastNotifications } from '../../hooks/useToastNotifications';
 import { ExpertApiService, TaskApiService } from '../../services/apiCallService';
 import { ApiResultModal, JsonDisplayModal } from '../modals/ApiResultModal';
-import { TaskSelectionModal } from '../modals/TaskSelectionModal';
+import { TaskConfigurationModal } from '../modals/TaskConfigurationModal';
 import { MigrationConfigModal } from '../modals/MigrationConfigModal';
 import { TaskStatusModal } from '../modals/TaskStatusModal';
 import { SessionCredentialsModal } from '../modals/SessionCredentialsModal';
@@ -467,10 +467,11 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
         {modalState.content}
       </ApiResultModal>
 
-      <TaskSelectionModal
+      <TaskConfigurationModal
         isOpen={taskModalOpen}
         onClose={() => setTaskModalOpen(false)}
-        onTaskSelected={handleTaskSelected}
+        onSubmit={handleTaskSelected}
+        loading={isLoading('set-task')}
       />
 
       <MigrationConfigModal
