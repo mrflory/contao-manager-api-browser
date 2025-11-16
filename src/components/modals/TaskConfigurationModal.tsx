@@ -213,7 +213,7 @@ export const TaskConfigurationModal: React.FC<TaskConfigurationModalProps> = ({
                 <SelectTrigger>
                   <SelectValueText placeholder="Select a task..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent portalled={false}>
                   {taskOptions.items.map((item) => (
                     <SelectItem key={item.value} item={item.value}>
                       <SelectItemText>{item.label}</SelectItemText>
