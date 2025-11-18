@@ -37,6 +37,7 @@ const SitesOverview: React.FC = () => {
   const toast = useToastNotifications();
   const [updatingVersionForSite, setUpdatingVersionForSite] = useState<string | null>(null);
   const { openManager, isLoading: isOpeningManager } = useOpenContaoManager();
+  const [sites, setSites] = useState<Site[]>([]);
 
   const configApi = useApiCall(
     () => SiteApiService.getConfig(),
@@ -69,6 +70,15 @@ const SitesOverview: React.FC = () => {
     }
   }, [authLoading, isTokenReady]);
 
+  // Sync sites state when config data changes
+  useEffect(() => {
+    if (configApi.state.data) {
+      const config = configApi.state.data as Config;
+      const sitesArray = config?.sites ? Object.values(config.sites) : [];
+      setSites(sitesArray);
+    }
+  }, [configApi.state.data]);
+
   const handleSiteClick = async (url: string) => {
     await setActiveSiteApi.execute(url);
     navigate(`/site/${encodeUrlParam(url)}`);
@@ -86,13 +96,21 @@ const SitesOverview: React.FC = () => {
       await setActiveSiteApi.execute(siteUrl);
 
       // Then update version info
-      await updateVersionInfoApi.execute();
+      const result = await updateVersionInfoApi.execute() as { success: boolean; versionInfo: any } | undefined;
+
+      // Update only the specific site in local state
+      if (result?.success && result.versionInfo) {
+        setSites(prevSites =>
+          prevSites.map(site =>
+            site.url === siteUrl
+              ? { ...site, versionInfo: result.versionInfo }
+              : site
+          )
+        );
+      }
 
       // Show success toast
       toast.showSuccess(TOAST_MESSAGES.VERSION_INFO_UPDATED);
-
-      // Refresh the config to get updated version info
-      await configApi.execute();
     } catch (error) {
       // Show error toast
       toast.showApiError(error instanceof Error ? error : new Error('Failed to update version info'), 'Update Version Info');
@@ -261,9 +279,6 @@ const SitesOverview: React.FC = () => {
       </Container>
     );
   }
-
-  const config = configApi.state.data as Config | undefined;
-  const sites = config?.sites ? Object.values(config.sites) : [];
 
   return (
     <Container maxW="6xl">
