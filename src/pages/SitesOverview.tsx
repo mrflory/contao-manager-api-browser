@@ -147,6 +147,19 @@ const SitesOverview: React.FC = () => {
         header: 'Version & Status',
         cell: ({ row }) => {
           const site = row.original;
+          const isUpdating = updatingVersionForSite === site.url;
+
+          if (isUpdating) {
+            return (
+              <Flex align="center" gap={2}>
+                <Spinner size="sm" />
+                <Text fontSize="sm" color="gray.600">
+                  Updating...
+                </Text>
+              </Flex>
+            );
+          }
+
           return site.versionInfo ? (
             <VersionBadges
               versionInfo={site.versionInfo}
@@ -205,12 +218,8 @@ const SitesOverview: React.FC = () => {
                           onClick={() => handleUpdateVersionInfo(site.url)}
                           disabled={updatingVersionForSite === site.url}
                         >
-                          {updatingVersionForSite === site.url ? (
-                            <Spinner size="sm" />
-                          ) : (
-                            <RefreshCw size={16} />
-                          )}
-                          {updatingVersionForSite === site.url ? 'Updating...' : 'Update Version Info'}
+                          <RefreshCw size={16} />
+                          Update Version Info
                         </Menu.Item>
                         <Menu.Item
                           value="open-manager"
