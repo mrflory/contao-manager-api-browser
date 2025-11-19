@@ -210,6 +210,11 @@ const SitesOverview: React.FC = () => {
       {
         id: 'actions',
         header: 'Actions',
+        meta: {
+          headerProps: {
+            textAlign: 'right',
+          },
+        },
         cell: ({ row }) => {
           const site = row.original;
           return (
