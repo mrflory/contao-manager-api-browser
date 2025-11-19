@@ -36,7 +36,7 @@ export const SiteManagement: React.FC<SiteManagementProps> = ({
   const toast = useToastNotifications();
 
   const updateVersionInfo = useApiCall(
-    () => SiteApiService.updateVersionInfo(),
+    () => SiteApiService.updateVersionInfo(site.url),
     {
       onSuccess: () => {
         toast.showSuccess(TOAST_MESSAGES.VERSION_INFO_UPDATED);

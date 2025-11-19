@@ -89,7 +89,7 @@ export const SiteInfoTab: React.FC<SiteInfoTabProps> = ({
   });
 
   const updateVersionInfo = useApiCall(
-    () => SiteApiService.updateVersionInfo(),
+    () => SiteApiService.updateVersionInfo(site.url),
     {
       onSuccess: () => {
         toast.showSuccess(TOAST_MESSAGES.VERSION_INFO_UPDATED);

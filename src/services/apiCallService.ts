@@ -169,10 +169,17 @@ export class SiteApiService {
   }
 
   /**
-   * Update version information for current site
+   * Update version information for a specific site
    */
-  static async updateVersionInfo() {
-    return ApiCallService.executeApiCall(api.updateVersionInfo, undefined, 'Update version info');
+  static async updateVersionInfo(siteUrl: string) {
+    return ApiCallService.executeApiCall(
+      (params?: string) => {
+        if (!params) throw new Error('Site URL is required');
+        return api.updateVersionInfo(params);
+      },
+      siteUrl,
+      'Update version info'
+    );
   }
 }
 

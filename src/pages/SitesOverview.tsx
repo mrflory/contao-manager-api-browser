@@ -57,7 +57,10 @@ const SitesOverview: React.FC = () => {
   );
 
   const updateVersionInfoApi = useApiCall(
-    () => SiteApiService.updateVersionInfo(),
+    (siteUrl?: string) => {
+      if (!siteUrl) throw new Error('Site URL is required for updateVersionInfo');
+      return SiteApiService.updateVersionInfo(siteUrl);
+    },
     {
       showErrorToast: false, // We'll handle toasts manually for more control
     }
@@ -92,17 +95,14 @@ const SitesOverview: React.FC = () => {
     try {
       setUpdatingVersionForSite(siteUrl);
 
-      // First, set the active site
-      await setActiveSiteApi.execute(siteUrl);
-
-      // Then update version info
-      const result = await updateVersionInfoApi.execute() as { success: boolean; versionInfo: any } | undefined;
+      // Update version info for the specific site (no need to set active site)
+      const result = await updateVersionInfoApi.execute(siteUrl) as { success: boolean; versionInfo: any; siteUrl: string } | undefined;
 
       // Update only the specific site in local state
       if (result?.success && result.versionInfo) {
         setSites(prevSites =>
           prevSites.map(site =>
-            site.url === siteUrl
+            site.url === result.siteUrl
               ? { ...site, versionInfo: result.versionInfo }
               : site
           )

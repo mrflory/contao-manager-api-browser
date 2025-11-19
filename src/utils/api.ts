@@ -69,10 +69,11 @@ export const api = {
     });
   },
 
-  async updateVersionInfo(): Promise<{ success: boolean; versionInfo: any; error?: string }> {
+  async updateVersionInfo(siteUrl: string): Promise<{ success: boolean; versionInfo: any; siteUrl: string; error?: string }> {
     return makeApiCall('/update-version-info', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ siteUrl })
     });
   },
 

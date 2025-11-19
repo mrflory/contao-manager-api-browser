@@ -27,13 +27,21 @@ export class UpdateVersionsTimelineItem extends BaseTimelineItem {
     try {
       // Emit initial progress update
       if (this.context?.engine) {
-        this.context.engine.emitProgress(this, { 
-          status: 'active', 
-          message: 'Updating version information...' 
+        this.context.engine.emitProgress(this, {
+          status: 'active',
+          message: 'Updating version information...'
         });
       }
-      
-      const result = await api.updateVersionInfo();
+
+      // Get site URL from context
+      const activeSite = context?.get('activeSite') as { url?: string } | undefined;
+      const siteUrl = activeSite?.url;
+
+      if (!siteUrl) {
+        throw new Error('Site URL not found in workflow context');
+      }
+
+      const result = await api.updateVersionInfo(siteUrl);
       
       // Create UI content to display version information
       const uiContent = result.success && result.versionInfo 
