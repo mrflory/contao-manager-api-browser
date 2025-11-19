@@ -398,18 +398,27 @@ app.post('/api/update-status',
     userAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         const userId = req.userId!;
+        const { siteUrl } = req.body;
 
-        // Get the active site for this user
-        const activeSite = await configService.getActiveSiteAsync(userId);
-        if (!activeSite) {
-            return res.status(400).json({ error: 'No active site configured for user' });
+        // Validate siteUrl parameter
+        if (!siteUrl) {
+            return res.status(400).json({ error: 'siteUrl parameter is required' });
         }
 
-        // Set the active site context for the proxy service (temporary compatibility)
-        (req as any).activeSite = activeSite;
+        // Verify the user has access to this site
+        const sites = await configService.getAllSitesAsync(userId);
+        if (!sites[siteUrl]) {
+            return res.status(404).json({ error: 'Site not found or access denied' });
+        }
+
+        // Set the active site temporarily for this operation
+        await configService.setActiveSiteAsync(siteUrl, userId);
 
         const result = await proxyService.updateStatus(userId);
-        return res.json(result);
+        return res.json({
+            ...result,
+            siteUrl: siteUrl
+        });
     })
 );
 

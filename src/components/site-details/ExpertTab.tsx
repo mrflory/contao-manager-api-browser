@@ -199,7 +199,7 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
     { category: 'Files', name: 'Write File Content', description: 'Writes content to composer.json or composer.lock', technical: 'PUT /api/files/{file}', handler: null },
     
     // Server Configuration APIs
-    { category: 'Server Configuration', name: 'Manager Self-Update', description: 'Gets update status of the Contao Manager', technical: 'GET /api/server/self-update', handler: () => handleApiCallWithModal('update-status', ExpertApiService.getUpdateStatus, 'Update Status', formatUpdateStatus) },
+    { category: 'Server Configuration', name: 'Manager Self-Update', description: 'Gets update status of the Contao Manager', technical: 'GET /api/server/self-update', handler: () => handleApiCallWithModal('update-status', () => ExpertApiService.getUpdateStatus(siteUrl), 'Update Status', formatUpdateStatus) },
     { category: 'Server Configuration', name: 'Server Config', description: 'Gets server configuration', technical: 'GET /api/server/config', handler: () => handleApiCallWithModal('server-config', () => ExpertApiService.getServerConfig(siteUrl), 'Server Configuration') },
     { category: 'Server Configuration', name: 'Set Server Config', description: 'Sets server configuration', technical: 'PUT /api/server/config', handler: handleOpenServerConfigModal },
     { category: 'Server Configuration', name: 'PHP Web Config', description: 'Gets PHP web server configuration', technical: 'GET /api/server/php-web', handler: () => handleApiCallWithModal('php-web-config', () => ExpertApiService.getPhpWebConfig(siteUrl), 'PHP Web Server Configuration') },

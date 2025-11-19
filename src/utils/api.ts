@@ -62,10 +62,11 @@ export const api = {
     });
   },
 
-  async getUpdateStatus(): Promise<UpdateStatus> {
+  async getUpdateStatus(siteUrl: string): Promise<UpdateStatus & { siteUrl: string }> {
     return makeApiCall('/update-status', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ siteUrl })
     });
   },
 
@@ -277,8 +278,8 @@ export const api = {
   },
 
   // Server self-update status (using existing getUpdateStatus for consistency)
-  async getServerSelfUpdateStatus(): Promise<any> {
-    const updateStatus = await this.getUpdateStatus();
+  async getServerSelfUpdateStatus(siteUrl: string): Promise<any> {
+    const updateStatus = await this.getUpdateStatus(siteUrl);
     return updateStatus.selfUpdate;
   },
 

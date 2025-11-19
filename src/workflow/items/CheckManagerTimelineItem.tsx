@@ -19,17 +19,25 @@ export class CheckManagerTimelineItem extends BaseTimelineItem {
   async execute(context?: WorkflowContext): Promise<TimelineResult> {
     this.context = context;
     this.setActive();
-    
+
     try {
       // Emit initial progress update
       if (this.context?.engine) {
-        this.context.engine.emitProgress(this, { 
-          status: 'active', 
-          message: 'Checking Contao Manager version status...' 
+        this.context.engine.emitProgress(this, {
+          status: 'active',
+          message: 'Checking Contao Manager version status...'
         });
       }
-      
-      const updateStatus = await api.getUpdateStatus();
+
+      // Get site URL from context
+      const activeSite = context?.get('activeSite') as { url?: string } | undefined;
+      const siteUrl = activeSite?.url;
+
+      if (!siteUrl) {
+        throw new Error('Site URL not found in workflow context');
+      }
+
+      const updateStatus = await api.getUpdateStatus(siteUrl);
       const selfUpdate = updateStatus.selfUpdate;
       
       if (!selfUpdate) {
