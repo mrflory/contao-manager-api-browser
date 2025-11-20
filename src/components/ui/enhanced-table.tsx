@@ -124,9 +124,13 @@ export function EnhancedTable<TData>({
           <Table.Header>
             {table.getHeaderGroups().map((headerGroup) => (
               <Table.Row key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <Table.ColumnHeader key={header.id}>
-                    <VStack gap={2} align="start">
+                {headerGroup.headers.map((header) => {
+                  const meta = header.column.columnDef.meta as { headerProps?: { textAlign?: string } } | undefined;
+                  const headerProps = meta?.headerProps || {};
+                  const alignItems = headerProps.textAlign === 'right' ? 'end' : 'start';
+                  return (
+                    <Table.ColumnHeader key={header.id} {...headerProps}>
+                      <VStack gap={2} align={alignItems}>
                       <Flex align="center" gap={2}>
                         {header.isPlaceholder ? null : (
                           <>
@@ -172,7 +176,8 @@ export function EnhancedTable<TData>({
                       )}
                     </VStack>
                   </Table.ColumnHeader>
-                ))}
+                  );
+                })}
               </Table.Row>
             ))}
           </Table.Header>
