@@ -98,15 +98,9 @@ const SitesOverview: React.FC = () => {
       // Update version info for the specific site (no need to set active site)
       const result = await updateVersionInfoApi.execute(siteUrl) as { success: boolean; versionInfo: any; siteUrl: string } | undefined;
 
-      // Update only the specific site in local state
-      if (result?.success && result.versionInfo) {
-        setSites(prevSites =>
-          prevSites.map(site =>
-            site.url === result.siteUrl
-              ? { ...site, versionInfo: result.versionInfo }
-              : site
-          )
-        );
+      // Reload config to get fresh data from the database
+      if (result?.success) {
+        await configApi.execute();
       }
 
       // Show success toast
@@ -274,7 +268,7 @@ const SitesOverview: React.FC = () => {
         enableSorting: false,
       },
     ],
-    [handleSiteClick]
+    [handleSiteClick, updatingVersionForSite, handleUpdateVersionInfo, handleOpenManager, handleOpenAdmin, isOpeningManager]
   );
 
   if (configApi.state.loading) {
