@@ -21,13 +21,26 @@ describe('getResumeActionDescription', () => {
     // Get the next item that will be executed
     const timeline = mockWorkflow.engine.getTimeline();
     const currentIndex = mockWorkflow.currentIndex;
-    
+
     // If we're at the end of the timeline, return default
     if (currentIndex >= timeline.length) {
       return 'Resume Workflow';
     }
 
-    const nextItem = timeline[currentIndex];
+    const currentItem = timeline[currentIndex];
+
+    // If the current item is complete or waiting for user action, the next item to execute is currentIndex + 1
+    // This happens when a step completes and requires user confirmation before continuing
+    const nextIndexToExecute = (currentItem.status === 'complete' || currentItem.status === 'user_action_required')
+      ? currentIndex + 1
+      : currentIndex;
+
+    // If the next index is beyond the timeline, return default
+    if (nextIndexToExecute >= timeline.length) {
+      return 'Resume Workflow';
+    }
+
+    const nextItem = timeline[nextIndexToExecute];
     
     // Map timeline item IDs to user-friendly action descriptions
     const actionMap: Record<string, string> = {
@@ -252,6 +265,61 @@ describe('getResumeActionDescription', () => {
       currentIndex: 0
     };
 
+    expect(getResumeActionDescription(mockWorkflow)).toBe('Resume Workflow');
+  });
+
+  it('shows next step when current step is complete', () => {
+    // Simulate the bug scenario: dry-run is complete, should show "Continue with composer update"
+    const timeline = [
+      { ...createMockTimelineItem('composer-dry-run', 'Composer Dry Run'), status: 'complete' as const },
+      createMockTimelineItem('composer-update', 'Composer Update')
+    ];
+
+    const mockWorkflow = {
+      engine: {
+        getTimeline: () => timeline
+      },
+      isPaused: true,
+      currentIndex: 0 // Still pointing at dry-run (which is complete)
+    };
+
+    // Should show the NEXT step (composer-update), not the current complete step
+    expect(getResumeActionDescription(mockWorkflow)).toBe('Continue with composer update');
+  });
+
+  it('shows next step when current step requires user action', () => {
+    // Simulate user action required: dry-run requires action, should show "Continue with composer update"
+    const timeline = [
+      { ...createMockTimelineItem('composer-dry-run', 'Composer Dry Run'), status: 'user_action_required' as const },
+      createMockTimelineItem('composer-update', 'Composer Update')
+    ];
+
+    const mockWorkflow = {
+      engine: {
+        getTimeline: () => timeline
+      },
+      isPaused: true,
+      currentIndex: 0 // Still pointing at dry-run (which requires user action)
+    };
+
+    // Should show the NEXT step (composer-update), not the current step requiring action
+    expect(getResumeActionDescription(mockWorkflow)).toBe('Continue with composer update');
+  });
+
+  it('returns default when next step after complete is beyond timeline', () => {
+    const timeline = [
+      { ...createMockTimelineItem('composer-update', 'Composer Update'), status: 'complete' as const }
+    ];
+
+    const mockWorkflow = {
+      engine: {
+        getTimeline: () => timeline
+      },
+      isPaused: true,
+      currentIndex: 0 // At last item which is complete
+    };
+
+    // Next step would be index 1, which is beyond the timeline
     expect(getResumeActionDescription(mockWorkflow)).toBe('Resume Workflow');
   });
 });

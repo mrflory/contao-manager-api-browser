@@ -27,13 +27,26 @@ const getResumeActionDescription = (workflow: ReturnType<typeof useUpdateWorkflo
   // Get the next item that will be executed
   const timeline = workflow.engine.getTimeline();
   const currentIndex = workflow.currentIndex;
-  
+
   // If we're at the end of the timeline, return default
   if (currentIndex >= timeline.length) {
     return 'Resume Workflow';
   }
 
-  const nextItem = timeline[currentIndex];
+  const currentItem = timeline[currentIndex];
+
+  // If the current item is complete or waiting for user action, the next item to execute is currentIndex + 1
+  // This happens when a step completes and requires user confirmation before continuing
+  const nextIndexToExecute = (currentItem.status === 'complete' || currentItem.status === 'user_action_required')
+    ? currentIndex + 1
+    : currentIndex;
+
+  // If the next index is beyond the timeline, return default
+  if (nextIndexToExecute >= timeline.length) {
+    return 'Resume Workflow';
+  }
+
+  const nextItem = timeline[nextIndexToExecute];
   
   // Map timeline item IDs to user-friendly action descriptions
   const actionMap: Record<string, string> = {
