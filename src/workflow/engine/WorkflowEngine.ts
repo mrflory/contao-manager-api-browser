@@ -823,26 +823,41 @@ export class WorkflowEngine implements WorkflowEngineInterface {
           // Try to filter by completed operations first
           const completedOps = data.operations.filter((op: any) => op.status === 'complete');
           const opsToCount = completedOps.length > 0 ? completedOps : data.operations; // Fallback to all operations
-          
-          const installCount = opsToCount.filter((op: any) => 
+
+          const installCount = opsToCount.filter((op: any) =>
             op.summary?.includes('install') || op.summary?.includes('Installing') ||
             op.details?.includes('install') || op.details?.includes('Installing') ||
             op.type === 'install'
           ).length;
-          const updateCount = opsToCount.filter((op: any) => 
+          const updateCount = opsToCount.filter((op: any) =>
             op.summary?.includes('update') || op.summary?.includes('Updating') ||
             op.details?.includes('update') || op.details?.includes('Updating') ||
             op.type === 'update'
           ).length;
-          
+
           const parts = [];
           if (installCount > 0) parts.push(`${installCount} installed`);
           if (updateCount > 0) parts.push(`${updateCount} updated`);
-          
+
+          // Add snapshot information if available
+          if (data?.snapshot) {
+            const fileCount = Object.keys(data.snapshot.files || {}).length;
+            if (fileCount > 0) {
+              parts.push(`${fileCount} files backed up`);
+            }
+          }
+
           if (parts.length > 0) {
             return `Packages: ${parts.join(', ')}`;
           }
           return 'No package changes made';
+        }
+        // Check if snapshot exists even if no operations
+        if (data?.snapshot) {
+          const fileCount = Object.keys(data.snapshot.files || {}).length;
+          if (fileCount > 0) {
+            return `Snapshot created: ${fileCount} files backed up`;
+          }
         }
         return 'Package update completed';
         

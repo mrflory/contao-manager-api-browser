@@ -129,14 +129,25 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
       
       // Start polling for task completion
       return this.startPolling();
-      
+
     } catch (error) {
-      return this.setEnhancedError({
+      // Create error result but include snapshot data if it exists
+      const errorResult = this.setEnhancedError({
         category: 'composer',
         summary: 'Failed to start composer update',
         message: error instanceof Error ? error.message : 'Failed to start composer update',
         operationType: 'composer'
       });
+
+      // Merge snapshot information into error result data even if composer update failed to start
+      if (this.data?.snapshot) {
+        errorResult.data = {
+          ...errorResult.data,
+          snapshot: this.data.snapshot
+        };
+      }
+
+      return errorResult;
     }
   }
   
@@ -213,11 +224,23 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
             
           } else if (taskData.status === 'error') {
             this.stopPolling();
-            resolve(this.createEnhancedErrorFromConsole(
+
+            // Create error result but include snapshot data if it exists
+            const errorResult = this.createEnhancedErrorFromConsole(
               taskData.console || 'Composer update failed',
               'composer',
               'Composer update failed'
-            ));
+            );
+
+            // Merge snapshot information into error result data
+            if (this.data?.snapshot) {
+              errorResult.data = {
+                ...errorResult.data,
+                snapshot: this.data.snapshot
+              };
+            }
+
+            resolve(errorResult);
           }
           // If status is 'active', continue polling
           
@@ -235,12 +258,24 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
             resolve(this.setComplete());
           } else {
             this.stopPolling();
-            resolve(this.setEnhancedError({
+
+            // Create error result but include snapshot data if it exists
+            const errorResult = this.setEnhancedError({
               category: 'composer',
               summary: 'Composer update failed',
               message: error instanceof Error ? error.message : 'Composer update failed',
               operationType: 'composer'
-            }));
+            });
+
+            // Merge snapshot information into error result data
+            if (this.data?.snapshot) {
+              errorResult.data = {
+                ...errorResult.data,
+                snapshot: this.data.snapshot
+              };
+            }
+
+            resolve(errorResult);
           }
         }
       };
@@ -259,13 +294,25 @@ export class ComposerUpdateTimelineItem extends BaseTimelineItem {
       setTimeout(() => {
         if (this.pollingInterval && !this.isCancelled) {
           this.stopPolling();
-          resolve(this.setEnhancedError({
+
+          // Create timeout error result but include snapshot data if it exists
+          const timeoutResult = this.setEnhancedError({
             category: 'system',
             summary: 'Composer update timeout',
             message: 'Composer update timeout after 30 minutes',
             details: 'The operation took longer than expected. This could be due to slow network connections, large package dependencies, or server performance issues.',
             operationType: 'composer'
-          }));
+          });
+
+          // Merge snapshot information into timeout error result data
+          if (this.data?.snapshot) {
+            timeoutResult.data = {
+              ...timeoutResult.data,
+              snapshot: this.data.snapshot
+            };
+          }
+
+          resolve(timeoutResult);
         }
       }, 30 * 60 * 1000);
     });
