@@ -148,7 +148,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
 
       const snapshotResult = await SnapshotApiService.createSnapshot(site.url);
 
-      if (!snapshotResult?.id) {
+      if (!snapshotResult?.snapshot?.id) {
         throw new Error('Failed to create composer snapshot');
       }
 
@@ -207,7 +207,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
             startTime: historyEntry.startTime,
             endTime: new Date().toISOString(),
             data: {
-              snapshot: snapshotResult,
+              snapshot: snapshotResult.snapshot,
               databaseBackup: backupFilename
             }
           }]
