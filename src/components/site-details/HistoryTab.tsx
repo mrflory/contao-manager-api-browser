@@ -14,13 +14,15 @@ import {
   Portal,
   Text,
 } from '@chakra-ui/react';
-import { LuEye as Eye, LuRefreshCw as RefreshCw, LuEllipsis as MoreVertical, LuTrash2 as Trash } from 'react-icons/lu';
+import { LuEye as Eye, LuRefreshCw as RefreshCw, LuEllipsis as MoreVertical, LuTrash2 as Trash, LuUndo2 as Undo } from 'react-icons/lu';
 import { Site, HistoryEntry, HistoryResponse } from '../../types';
-import { HistoryApiService } from '../../services/apiCallService';
+import { HistoryApiService, BackupApiService, SnapshotApiService } from '../../services/apiCallService';
+import { api } from '../../utils/api';
 import { useApiCall } from '../../hooks/useApiCall';
 import { useToastNotifications } from '../../hooks/useToastNotifications';
 import { HistoryDetailsModal } from '../modals/HistoryDetailsModal';
 import { ConfirmationDialog } from '../modals/ConfirmationDialog';
+import { RestoreBackupDialog } from '../modals/RestoreBackupDialog';
 import { formatDateTime, formatDuration } from '../../utils/dateUtils';
 import { ComposerFilesDialog } from '../ui/ComposerFilesDialog';
 
@@ -39,7 +41,13 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
     snapshotId: string | null;
     filename: 'composer.json' | 'composer.lock' | null;
   }>({ isOpen: false, snapshotId: null, filename: null });
-  
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [restoreDialogState, setRestoreDialogState] = useState<{
+    isOpen: boolean;
+    entry: HistoryEntry | null;
+  }>({ isOpen: false, entry: null });
+  const [isRestoring, setIsRestoring] = useState(false);
+
   const toast = useToastNotifications();
 
   // Always initialize hooks to maintain hook order
@@ -129,9 +137,251 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
     }
   };
 
+  const handleCreateBackup = async () => {
+    setIsCreatingBackup(true);
+
+    try {
+      toast.showInfo({
+        title: 'Creating Backup',
+        description: 'Fetching composer files...'
+      });
+
+      const [composerJson, composerLock] = await Promise.all([
+        api.getComposerFile(site.url, 'composer.json'),
+        api.getComposerFile(site.url, 'composer.lock')
+      ]);
+
+      toast.showInfo({
+        title: 'Creating Backup',
+        description: 'Creating composer snapshot...'
+      });
+
+      const snapshotResult = await SnapshotApiService.createSnapshot(
+        site.url,
+        JSON.stringify(composerJson, null, 2),
+        JSON.stringify(composerLock, null, 2)
+      );
+
+      if (!snapshotResult?.id) {
+        throw new Error('Failed to create composer snapshot');
+      }
+
+      toast.showInfo({
+        title: 'Creating Backup',
+        description: 'Starting database backup...'
+      });
+
+      await BackupApiService.createDatabaseBackup(site.url);
+
+      // Poll for task completion
+      const pollTask = async (): Promise<string | null> => {
+        for (let i = 0; i < 60; i++) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          const taskData = await api.getTaskData(site.url);
+
+          if (!taskData || Object.keys(taskData).length === 0) {
+            const backups = await api.getDatabaseBackups(site.url);
+            if (backups && backups.length > 0) {
+              const sorted = backups.sort((a: any, b: any) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              );
+              return sorted[0].name;
+            }
+            return null;
+          }
+
+          if (taskData.status === 'error') {
+            throw new Error('Database backup task failed');
+          }
+        }
+
+        throw new Error('Database backup timeout');
+      };
+
+      const backupFilename = await pollTask();
+
+      // Create history entry
+      const historyEntry = await HistoryApiService.createHistoryEntry(
+        site.url,
+        'manual-backup'
+      );
+
+      if (historyEntry) {
+        await HistoryApiService.updateHistoryEntry(historyEntry.id, {
+          siteUrl: site.url,
+          status: 'completed',
+          endTime: new Date().toISOString(),
+          steps: [{
+            id: 'backup-creation',
+            name: 'Manual Backup',
+            title: 'Manual Backup Creation',
+            description: 'Created manual backup of composer files and database',
+            status: 'completed',
+            startTime: historyEntry.startTime,
+            endTime: new Date().toISOString(),
+            data: {
+              snapshot: snapshotResult,
+              databaseBackup: backupFilename
+            }
+          }]
+        });
+      }
+
+      toast.showSuccess({
+        title: 'Backup Created',
+        description: 'Successfully created backup'
+      });
+
+      await loadHistory.execute();
+
+    } catch (error) {
+      console.error('Backup creation error:', error);
+      toast.showError({
+        title: 'Backup Failed',
+        description: `Failed to create backup: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
+  const getDatabaseBackupFromHistoryEntry = (entry: HistoryEntry): string | null => {
+    const backupStep = entry.steps.find(step => step.data?.databaseBackup);
+    return backupStep?.data?.databaseBackup || null;
+  };
+
+  const handleRestore = async (entry: HistoryEntry) => {
+    const snapshot = getSnapshotFromHistoryEntry(entry);
+
+    if (!snapshot) {
+      toast.showError({
+        title: 'Restore Not Available',
+        description: 'This entry does not have composer file backups'
+      });
+      return;
+    }
+
+    setRestoreDialogState({ isOpen: true, entry });
+  };
+
+  const handleRestoreConfirm = async (restoreComposer: boolean, restoreDatabase: boolean) => {
+    if (!restoreDialogState.entry) return;
+
+    const entry = restoreDialogState.entry;
+    const snapshot = getSnapshotFromHistoryEntry(entry);
+    const databaseBackup = getDatabaseBackupFromHistoryEntry(entry);
+
+    if (!snapshot) return;
+
+    setIsRestoring(true);
+
+    try {
+      // Create safety backup of composer files if restoring composer files
+      if (restoreComposer) {
+        toast.showInfo({
+          title: 'Creating Safety Backup',
+          description: 'Creating backup of current composer files...'
+        });
+
+        const [currentComposerJson, currentComposerLock] = await Promise.all([
+          api.getComposerFile(site.url, 'composer.json'),
+          api.getComposerFile(site.url, 'composer.lock')
+        ]);
+
+        await SnapshotApiService.createSnapshot(
+          site.url,
+          JSON.stringify(currentComposerJson, null, 2),
+          JSON.stringify(currentComposerLock, null, 2)
+        );
+      }
+
+      // Restore composer files if selected
+      if (restoreComposer) {
+        toast.showInfo({
+          title: 'Restoring Composer Files',
+          description: 'Restoring composer.json and composer.lock...'
+        });
+
+        const composerJsonContent = await SnapshotApiService.getSnapshotFile(
+          snapshot.id,
+          'composer.json'
+        );
+
+        const composerLockContent = await SnapshotApiService.getSnapshotFile(
+          snapshot.id,
+          'composer.lock'
+        );
+
+        if (composerJsonContent) {
+          await api.putComposerFile(site.url, 'composer.json', composerJsonContent);
+        }
+
+        if (composerLockContent) {
+          await api.putComposerFile(site.url, 'composer.lock', composerLockContent);
+        }
+      }
+
+      // Restore database if selected and available
+      if (restoreDatabase && databaseBackup) {
+        toast.showInfo({
+          title: 'Restoring Database',
+          description: 'Starting database restoration...'
+        });
+
+        await BackupApiService.restoreDatabaseBackup(
+          site.url,
+          databaseBackup,
+          false
+        );
+
+        // Poll for restoration completion
+        const pollRestore = async (): Promise<void> => {
+          for (let i = 0; i < 120; i++) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            const taskData = await api.getTaskData(site.url);
+
+            if (!taskData || Object.keys(taskData).length === 0) {
+              return;
+            }
+
+            if (taskData.status === 'error') {
+              throw new Error('Database restoration failed');
+            }
+          }
+
+          throw new Error('Database restoration timeout');
+        };
+
+        await pollRestore();
+      }
+
+      const restoredComponents = [];
+      if (restoreComposer) restoredComponents.push('composer files');
+      if (restoreDatabase) restoredComponents.push('database');
+
+      toast.showSuccess({
+        title: 'Restoration Complete',
+        description: `Successfully restored ${restoredComponents.join(' and ')}`
+      });
+
+      setRestoreDialogState({ isOpen: false, entry: null });
+
+    } catch (error) {
+      console.error('Restore error:', error);
+      toast.showError({
+        title: 'Restoration Failed',
+        description: `Failed to restore backup: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   const getSnapshotFromHistoryEntry = (entry: HistoryEntry) => {
     // Look for composer update step that has snapshot data
-    const composerStep = entry.steps.find(step => 
+    const composerStep = entry.steps.find(step =>
       step.id === 'composer-update' && step.data?.snapshot
     );
     return composerStep?.data?.snapshot || null;
@@ -228,13 +478,24 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
       <VStack gap={6} align="stretch">
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Heading size="lg">Update History</Heading>
-          <IconButton
-            variant="outline"
-            onClick={() => loadHistory.execute()}
-            loading={loadHistory.state.loading}
-          >
-            <RefreshCw />
-          </IconButton>
+          <HStack gap={2}>
+            <Button
+              variant="solid"
+              colorPalette="blue"
+              onClick={handleCreateBackup}
+              loading={isCreatingBackup}
+              disabled={isCreatingBackup}
+            >
+              Create Backup
+            </Button>
+            <IconButton
+              variant="outline"
+              onClick={() => loadHistory.execute()}
+              loading={loadHistory.state.loading}
+            >
+              <RefreshCw />
+            </IconButton>
+          </HStack>
         </Box>
 
         {history.length === 0 ? (
@@ -255,7 +516,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
                   <Table.ColumnHeader>Date & Time</Table.ColumnHeader>
                   <Table.ColumnHeader>Type</Table.ColumnHeader>
                   <Table.ColumnHeader>Status</Table.ColumnHeader>
-                  <Table.ColumnHeader>Duration</Table.ColumnHeader>
+                  <Table.ColumnHeader>Database Backup</Table.ColumnHeader>
                   <Table.ColumnHeader>Files</Table.ColumnHeader>
                   <Table.ColumnHeader width="120px">Actions</Table.ColumnHeader>
                 </Table.Row>
@@ -282,14 +543,21 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
                       </Badge>
                     </Table.Cell>
                     <Table.Cell>
-                      <Box fontSize="sm" color="gray.600">
-                        {entry.endTime
-                          ? formatDuration(new Date(entry.startTime), new Date(entry.endTime))
-                          : entry.status === 'started'
-                          ? 'Running...'
-                          : '-'
+                      {(() => {
+                        const databaseBackup = getDatabaseBackupFromHistoryEntry(entry);
+                        if (databaseBackup) {
+                          return (
+                            <Badge colorPalette="green" variant="subtle">
+                              Available
+                            </Badge>
+                          );
                         }
-                      </Box>
+                        return (
+                          <Text fontSize="sm" color="gray.400">
+                            -
+                          </Text>
+                        );
+                      })()}
                     </Table.Cell>
                     <Table.Cell>
                       {(() => {
@@ -339,19 +607,37 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
                               <Portal>
                                 <Menu.Positioner>
                                   <Menu.Content>
+                                    {(() => {
+                                      const snapshot = getSnapshotFromHistoryEntry(entry);
+                                      const hasSnapshot = snapshot && getSnapshotFileCount(snapshot) > 0;
+
+                                      return hasSnapshot && (
+                                        <>
+                                          <Menu.Item
+                                            value="restore-backup"
+                                            onClick={() => handleRestore(entry)}
+                                            colorPalette="orange"
+                                          >
+                                            <Undo size={16} />
+                                            Restore Backup
+                                          </Menu.Item>
+                                          <Menu.Separator />
+                                        </>
+                                      );
+                                    })()}
                                     {hasSnapshotFiles && (
                                       <>
                                         {snapshot!.files['composer.json']?.exists && (
-                                          <Menu.Item 
-                                            value="view-composer-json" 
+                                          <Menu.Item
+                                            value="view-composer-json"
                                             onClick={() => handleViewComposerFile(snapshot!.id, 'composer.json')}
                                           >
                                             View composer.json
                                           </Menu.Item>
                                         )}
                                         {snapshot!.files['composer.lock']?.exists && (
-                                          <Menu.Item 
-                                            value="view-composer-lock" 
+                                          <Menu.Item
+                                            value="view-composer-lock"
                                             onClick={() => handleViewComposerFile(snapshot!.id, 'composer.lock')}
                                           >
                                             View composer.lock
@@ -360,8 +646,8 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
                                         <Menu.Separator />
                                       </>
                                     )}
-                                    <Menu.Item 
-                                      value="delete-entry" 
+                                    <Menu.Item
+                                      value="delete-entry"
                                       onClick={() => handleDeleteButtonClick(entry)}
                                       color="red.500"
                                       _hover={{ bg: 'red.50' }}
@@ -419,6 +705,29 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
         cancelLabel="Cancel"
         confirmColorPalette="red"
       />
+
+      {/* Restore Backup Dialog */}
+      {restoreDialogState.entry && (() => {
+        const snapshot = getSnapshotFromHistoryEntry(restoreDialogState.entry);
+        const databaseBackup = getDatabaseBackupFromHistoryEntry(restoreDialogState.entry);
+
+        if (!snapshot) return null;
+
+        return (
+          <RestoreBackupDialog
+            isOpen={restoreDialogState.isOpen}
+            onClose={() => setRestoreDialogState({ isOpen: false, entry: null })}
+            onConfirm={handleRestoreConfirm}
+            isRestoring={isRestoring}
+            backupInfo={{
+              snapshotId: snapshot.id,
+              snapshotFileCount: getSnapshotFileCount(snapshot),
+              databaseBackup: databaseBackup,
+              timestamp: formatDateTime(restoreDialogState.entry.startTime)
+            }}
+          />
+        );
+      })()}
     </>
   );
 };
