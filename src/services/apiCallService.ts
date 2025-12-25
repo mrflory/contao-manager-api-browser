@@ -471,3 +471,33 @@ export class AuthApiService {
    */
   static getTokenInfo = api.getTokenInfo;
 }
+
+/**
+ * Snapshot API Service
+ * Handles composer file snapshots
+ */
+export class SnapshotApiService {
+  static createSnapshot = (siteUrl: string, composerJson?: string, composerLock?: string) =>
+    api.createSnapshot(siteUrl, { composerJson, composerLock });
+
+  static getSnapshotFile = (snapshotId: string, filename: string) =>
+    api.getSnapshotFile(snapshotId, filename);
+}
+
+/**
+ * Backup API Service
+ * Handles database backups and restore operations
+ */
+export class BackupApiService {
+  static createComposerSnapshot = (siteUrl: string, composerJson?: string, composerLock?: string) =>
+    api.createSnapshot(siteUrl, { composerJson, composerLock });
+
+  static createDatabaseBackup = (siteUrl: string) =>
+    api.createDatabaseBackup(siteUrl);
+
+  static restoreDatabaseBackup = (siteUrl: string, filename: string, createBackup?: boolean) =>
+    api.restoreDatabaseBackup(siteUrl, filename, createBackup);
+
+  static getDatabaseBackups = (siteUrl: string) =>
+    api.getDatabaseBackups(siteUrl);
+}

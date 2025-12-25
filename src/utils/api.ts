@@ -205,6 +205,39 @@ export const api = {
     return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/contao/backup`);
   },
 
+  // File management endpoints
+  async getComposerFile(siteUrl: string, filename: 'composer.json' | 'composer.lock'): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/files/${filename}`);
+  },
+
+  async putComposerFile(siteUrl: string, filename: 'composer.json' | 'composer.lock', content: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/files/${filename}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'text/plain' },
+      body: content
+    });
+  },
+
+  // Backup task endpoints
+  async createDatabaseBackup(siteUrl: string): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/task`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'contao/backup-create' })
+    });
+  },
+
+  async restoreDatabaseBackup(siteUrl: string, filename: string, createBackup: boolean = true): Promise<any> {
+    return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/task`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'contao/backup-restore',
+        config: { file: filename, backup: createBackup }
+      })
+    });
+  },
+
   async getMaintenanceModeStatus(siteUrl: string): Promise<any> {
     return makeApiCall(`/site/${encodeURIComponent(siteUrl)}/maintenance-mode`);
   },

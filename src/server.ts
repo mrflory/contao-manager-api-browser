@@ -690,6 +690,29 @@ app.get('/api/site/:siteUrl/files/:file', userAuthMiddleware.requireAuth, ErrorH
     }
 }));
 
+app.put('/api/site/:siteUrl/files/:file', userAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId!;
+        const siteUrl = decodeURIComponent(req.params.siteUrl);
+        const file = req.params.file;
+
+        const config = await configService.getConfigAsync(userId);
+        const site = config.sites?.[siteUrl];
+
+        if (!site) {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+
+        const contaoPath = `/api/files/${file}`;
+        const response = await proxyService.proxyToSpecificSite(site, contaoPath, 'PUT', req.body, req.headers.cookie);
+        const result = proxyService.handleApiResponse(contaoPath, response);
+        return res.status(result.status).json(result.data);
+    } catch (error) {
+        console.error('Files PUT error:', error);
+        return res.status(500).json({ error: 'Failed to update file' });
+    }
+}));
+
 // Create proxy routes for all HTTP methods
 proxyEndpoints.forEach(endpoint => {
     const methods: ('get' | 'post' | 'put' | 'patch' | 'delete')[] = ['get', 'post', 'put', 'patch', 'delete'];
