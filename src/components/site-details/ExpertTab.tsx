@@ -22,7 +22,7 @@ import { LuPlay, LuSearch } from 'react-icons/lu';
 import { useLoadingStates } from '../../hooks/useApiCall';
 import { useModalState } from '../../hooks/useModalState';
 import { useToastNotifications } from '../../hooks/useToastNotifications';
-import { ExpertApiService, TaskApiService } from '../../services/apiCallService';
+import { ExpertApiService, TaskApiService, BackupApiService } from '../../services/apiCallService';
 import { ApiResultModal, JsonDisplayModal } from '../modals/ApiResultModal';
 import { TaskConfigurationModal } from '../modals/TaskConfigurationModal';
 import { MigrationConfigModal } from '../modals/MigrationConfigModal';
@@ -265,6 +265,10 @@ export const ExpertTab: React.FC<ExpertTabProps> = ({ site }) => {
     { category: 'Contao API', name: 'Start Migration Task', description: 'Starts a database migration task', technical: 'PUT /api/contao/database-migration', handler: () => setMigrationModalOpen(true) },
     { category: 'Contao API', name: 'Delete Migration Task', description: 'Delete the current migration task', technical: 'DELETE /api/contao/database-migration', handler: () => handleApiCallWithModal('delete-migration', () => TaskApiService.deleteDatabaseMigrationTask(siteUrl), 'Delete Migration Task') },
     { category: 'Contao API', name: 'Database Backups', description: 'Gets a list of database backups', technical: 'GET /api/contao/backup', handler: () => handleApiCallWithModal('db-backups', () => ExpertApiService.getDatabaseBackups(siteUrl), 'Database Backups', formatDatabaseBackups) },
+    { category: 'Contao API', name: 'Create Database Backup', description: 'Creates a new database backup task', technical: 'PUT /api/task (name: contao/backup-create)', handler: () => handleApiCallWithModal('create-db-backup', () => BackupApiService.createDatabaseBackup(siteUrl), 'Create Database Backup') },
+    { category: 'Contao API', name: 'Restore Database Backup', description: 'Restores a database from backup file', technical: 'PUT /api/task (name: contao/backup-restore)', handler: null },
+    { category: 'Files API', name: 'Get Composer File', description: 'Gets content of composer.json or composer.lock', technical: 'GET /api/files/{file}', handler: null },
+    { category: 'Files API', name: 'Update Composer File', description: 'Updates composer.json or composer.lock content', technical: 'PUT /api/files/{file}', handler: null },
     { category: 'Contao API', name: 'Install Tool Lock Status', description: 'Get install tool lock status', technical: 'GET /api/contao/install-tool/lock', handler: null },
     { category: 'Contao API', name: 'Lock Install Tool', description: 'Lock the install tool', technical: 'PUT /api/contao/install-tool/lock', handler: null },
     { category: 'Contao API', name: 'Unlock Install Tool', description: 'Unlock the install tool', technical: 'DELETE /api/contao/install-tool/lock', handler: null },
