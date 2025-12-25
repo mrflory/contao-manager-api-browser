@@ -44,7 +44,7 @@ export const RestoreBackupDialog: React.FC<RestoreBackupDialogProps> = ({
   const canRestore = restoreComposer || restoreDatabase;
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(e) => !isRestoring && onClose()}>
+    <Dialog.Root open={isOpen} onOpenChange={() => !isRestoring && onClose()}>
       <Dialog.Backdrop />
       <Dialog.Positioner>
         <Dialog.Content>

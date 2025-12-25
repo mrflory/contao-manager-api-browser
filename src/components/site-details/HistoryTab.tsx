@@ -23,7 +23,7 @@ import { useToastNotifications } from '../../hooks/useToastNotifications';
 import { HistoryDetailsModal } from '../modals/HistoryDetailsModal';
 import { ConfirmationDialog } from '../modals/ConfirmationDialog';
 import { RestoreBackupDialog } from '../modals/RestoreBackupDialog';
-import { formatDateTime, formatDuration } from '../../utils/dateUtils';
+import { formatDateTime } from '../../utils/dateUtils';
 import { ComposerFilesDialog } from '../ui/ComposerFilesDialog';
 
 export interface HistoryTabProps {
@@ -188,10 +188,10 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
       const backupFilename = await pollTask();
 
       // Create history entry
-      const historyEntry = await HistoryApiService.createHistoryEntry(
-        site.url,
-        'manual-backup'
-      );
+      const historyEntry = await HistoryApiService.createHistoryEntry({
+        siteUrl: site.url,
+        workflowType: 'manual-backup'
+      });
 
       if (historyEntry) {
         await HistoryApiService.updateHistoryEntry(historyEntry.id, {

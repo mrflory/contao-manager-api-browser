@@ -150,19 +150,19 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
                     Available Snapshots:
                   </Text>
                   <HStack gap={3}>
-                    {step.data.snapshot.files?.['composer.json']?.exists && (
+                    {step.data?.snapshot.files?.['composer.json']?.exists && (
                       <Link
                         fontSize="xs"
-                        onClick={() => onDownloadSnapshot(step.data.snapshot.id, 'composer.json')}
+                        onClick={() => onDownloadSnapshot(step.data!.snapshot.id, 'composer.json')}
                         title="Download composer.json snapshot"
                       >
                         composer.json
                       </Link>
                     )}
-                    {step.data.snapshot.files?.['composer.lock']?.exists && (
+                    {step.data?.snapshot.files?.['composer.lock']?.exists && (
                       <Link
                         fontSize="xs"
-                        onClick={() => onDownloadSnapshot(step.data.snapshot.id, 'composer.lock')}
+                        onClick={() => onDownloadSnapshot(step.data!.snapshot.id, 'composer.lock')}
                         title="Download composer.lock snapshot"
                       >
                         composer.lock
