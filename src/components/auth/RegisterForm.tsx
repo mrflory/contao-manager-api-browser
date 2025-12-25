@@ -115,7 +115,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
                     Create Account
                 </Text>
                 <Text color="fg.muted" textAlign="center" mt={2}>
-                    Join Contao Manager API Browser
+                    Join Contao Update & Backup Service
                 </Text>
             </Card.Header>
 

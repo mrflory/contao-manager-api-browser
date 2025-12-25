@@ -455,7 +455,7 @@ export class UserAuthService {
             to: email,
             subject: 'Verify your email address',
             html: `
-                <h1>Welcome to Contao Manager API Browser</h1>
+                <h1>Welcome to Contao Update & Backup Service</h1>
                 <p>Please click the link below to verify your email address:</p>
                 <a href="${verificationUrl}">Verify Email</a>
                 <p>If you didn't create this account, please ignore this email.</p>

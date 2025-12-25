@@ -96,7 +96,7 @@ export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, SubscriptionPlan> = {
       hasApiAccess: false,
       hasPrioritySupport: false
     },
-    description: 'Perfect for trying out Contao Manager API Browser'
+    description: 'Perfect for trying out Contao Update & Backup Service'
   },
   [SubscriptionTier.ADVANCED]: {
     tier: SubscriptionTier.ADVANCED,

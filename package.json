@@ -1,7 +1,7 @@
 {
-  "name": "contao-manager-api-browser",
+  "name": "contao-update-backup-service",
   "version": "1.0.0",
-  "description": "A web-based interface for managing multiple Contao Manager instances through their APIs",
+  "description": "Automated Contao updates with comprehensive backup and restore functionality",
   "main": "server.js",
   "repository": {
     "type": "git",

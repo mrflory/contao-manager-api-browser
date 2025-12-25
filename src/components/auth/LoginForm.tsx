@@ -100,7 +100,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, redirectTo = '/
                     Sign In
                 </Text>
                 <Text color="fg.muted" textAlign="center" mt={2}>
-                    Welcome back to Contao Manager API Browser
+                    Welcome back to Contao Update & Backup Service
                 </Text>
             </Card.Header>
 

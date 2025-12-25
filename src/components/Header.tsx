@@ -28,7 +28,7 @@ const Header: React.FC = () => {
           onClick={() => navigate('/')}
           _hover={{ textDecoration: 'underline' }}
         >
-          Contao Manager API Browser
+          Contao Update & Backup Service
         </Heading>
 
         <Stack direction="row" align="center" gap={4}>

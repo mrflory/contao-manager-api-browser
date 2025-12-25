@@ -75,7 +75,7 @@ export const OAUTH_SCOPES: ScopeOption[] = [
   }
 ];
 
-export const DEFAULT_OAUTH_CLIENT_ID = 'Contao Manager API Browser';
+export const DEFAULT_OAUTH_CLIENT_ID = 'Contao Update & Backup Service';
 
 export const AUTH_METHOD_OPTIONS: AuthMethodOption[] = [
   {
