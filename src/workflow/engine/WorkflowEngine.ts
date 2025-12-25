@@ -340,22 +340,28 @@ export class WorkflowEngine implements WorkflowEngineInterface {
     if (!item) {
       return;
     }
-    
+
+    // Find the index of this item in the timeline
+    const itemIndex = this.state.timeline.findIndex(t => t.id === itemId);
+    if (itemIndex === -1) {
+      return;
+    }
+
     const record = this.state.executionHistory.find(r => r.item.id === itemId);
     const userActions = record?.result?.userActions;
-    
+
     if (!userActions) {
       return;
     }
-    
+
     const action = userActions.find(a => a.id === actionId);
     if (!action) {
       return;
     }
-    
+
     try {
       const result = await action.execute();
-      
+
       // Record user action
       if (record) {
         record.userActions.push({
@@ -364,29 +370,29 @@ export class WorkflowEngine implements WorkflowEngineInterface {
           result
         });
       }
-      
+
       // Handle action result
       switch (result.action) {
         case 'continue':
           // Insert additional items if provided
           if (result.additionalItems && result.additionalItems.length > 0) {
-            this.insertItems(result.additionalItems);
+            this.insertItems(result.additionalItems, itemIndex + 1);
           }
-          
+
           // Update item data if provided
           if (result.data !== undefined && record?.result) {
             record.result.data = result.data;
           }
-          
+
           // Mark current item as complete and update its end time
           if (item) {
             item.status = 'complete';
             item.endTime = new Date();
             this.emit('item_completed', item, record?.result);
           }
-          
-          // Move to next item and continue
-          this.state.currentIndex++;
+
+          // Move to next item after the one that triggered the action
+          this.state.currentIndex = itemIndex + 1;
           await this.resume();
           break;
           
@@ -397,9 +403,9 @@ export class WorkflowEngine implements WorkflowEngineInterface {
             item.endTime = new Date();
             this.emit('item_completed', item, record?.result);
           }
-          
-          // Skip the NEXT item in the workflow
-          const nextIndex = this.state.currentIndex + 1;
+
+          // Skip the NEXT item in the workflow (after the one that triggered the action)
+          const nextIndex = itemIndex + 1;
           if (nextIndex < this.state.timeline.length) {
             const nextItem = this.state.timeline[nextIndex];
             nextItem.status = 'skipped';
@@ -407,10 +413,10 @@ export class WorkflowEngine implements WorkflowEngineInterface {
             nextItem.endTime = new Date();
             this.emit('item_completed', nextItem, { status: 'success', data: null });
           }
-          
+
           // Move to the item after the skipped one
           this.state.currentIndex = nextIndex + 1;
-          
+
           // Continue workflow
           await this.resume();
           break;
@@ -425,7 +431,7 @@ export class WorkflowEngine implements WorkflowEngineInterface {
           break;
           
         case 'retry':
-          await this.retryItem(this.state.currentIndex);
+          await this.retryItem(itemIndex);
           break;
       }
       
