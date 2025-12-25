@@ -477,11 +477,11 @@ export class AuthApiService {
  * Handles composer file snapshots
  */
 export class SnapshotApiService {
-  static createSnapshot = (siteUrl: string, composerJson?: string, composerLock?: string) =>
-    api.createSnapshot(siteUrl, { composerJson, composerLock });
+  static createSnapshot = (siteUrl: string, workflowId?: string, stepId?: string) =>
+    api.createSnapshot({ siteUrl, workflowId, stepId });
 
-  static getSnapshotFile = (snapshotId: string, filename: string) =>
-    api.getSnapshotFile(snapshotId, filename);
+  static getSnapshotFile = (snapshotId: string, filename: 'composer.json' | 'composer.lock') =>
+    api.getSnapshotFileContent(snapshotId, filename);
 }
 
 /**
@@ -489,8 +489,8 @@ export class SnapshotApiService {
  * Handles database backups and restore operations
  */
 export class BackupApiService {
-  static createComposerSnapshot = (siteUrl: string, composerJson?: string, composerLock?: string) =>
-    api.createSnapshot(siteUrl, { composerJson, composerLock });
+  static createComposerSnapshot = (siteUrl: string, workflowId?: string, stepId?: string) =>
+    api.createSnapshot({ siteUrl, workflowId, stepId });
 
   static createDatabaseBackup = (siteUrl: string) =>
     api.createDatabaseBackup(siteUrl);

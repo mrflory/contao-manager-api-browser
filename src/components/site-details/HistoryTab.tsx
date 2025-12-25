@@ -143,24 +143,10 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
     try {
       toast.showInfo({
         title: 'Creating Backup',
-        description: 'Fetching composer files...'
-      });
-
-      const [composerJson, composerLock] = await Promise.all([
-        api.getComposerFile(site.url, 'composer.json'),
-        api.getComposerFile(site.url, 'composer.lock')
-      ]);
-
-      toast.showInfo({
-        title: 'Creating Backup',
         description: 'Creating composer snapshot...'
       });
 
-      const snapshotResult = await SnapshotApiService.createSnapshot(
-        site.url,
-        JSON.stringify(composerJson, null, 2),
-        JSON.stringify(composerLock, null, 2)
-      );
+      const snapshotResult = await SnapshotApiService.createSnapshot(site.url);
 
       if (!snapshotResult?.id) {
         throw new Error('Failed to create composer snapshot');
@@ -284,16 +270,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
           description: 'Creating backup of current composer files...'
         });
 
-        const [currentComposerJson, currentComposerLock] = await Promise.all([
-          api.getComposerFile(site.url, 'composer.json'),
-          api.getComposerFile(site.url, 'composer.lock')
-        ]);
-
-        await SnapshotApiService.createSnapshot(
-          site.url,
-          JSON.stringify(currentComposerJson, null, 2),
-          JSON.stringify(currentComposerLock, null, 2)
-        );
+        await SnapshotApiService.createSnapshot(site.url);
       }
 
       // Restore composer files if selected
