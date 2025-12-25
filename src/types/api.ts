@@ -37,7 +37,11 @@ export interface WorkflowStep {
   startTime?: string;
   endTime?: string;
   error?: string;
-  data?: any;
+  data?: {
+    snapshot?: any;          // Existing: composer snapshot
+    databaseBackup?: string; // NEW: database backup filename
+    [key: string]: any;      // Allow other custom data
+  };
 }
 
 export interface ProxyConfig {

@@ -94,8 +94,35 @@ export class ExecuteMigrationsTimelineItem extends BaseTimelineItem {
             } catch (cleanupError) {
               console.warn('Failed to clean up migration task:', cleanupError);
             }
-            
-            resolve(this.setComplete());
+
+            // NEW: Fetch latest database backup after migration
+            let databaseBackupFilename: string | undefined;
+            try {
+              console.log('[MIGRATION] Fetching database backups after migration...');
+              const backups = await api.getDatabaseBackups(siteUrl);
+
+              if (backups && Array.isArray(backups) && backups.length > 0) {
+                const sortedBackups = backups.sort((a: any, b: any) =>
+                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                );
+                databaseBackupFilename = sortedBackups[0].name;
+                console.log(`[MIGRATION] Found latest backup: ${databaseBackupFilename}`);
+              } else {
+                console.warn('[MIGRATION] No database backups found after migration');
+              }
+            } catch (backupError) {
+              console.error('[MIGRATION] Failed to fetch database backups:', backupError);
+            }
+
+            const result = this.setComplete();
+            if (databaseBackupFilename) {
+              result.data = {
+                ...(result.data || {}),
+                databaseBackup: databaseBackupFilename
+              };
+            }
+
+            resolve(result);
             return;
           }
           
@@ -113,7 +140,21 @@ export class ExecuteMigrationsTimelineItem extends BaseTimelineItem {
             } catch (cleanupError) {
               console.warn('Failed to clean up migration task:', cleanupError);
             }
-            
+
+            // NEW: Fetch latest database backup
+            let databaseBackupFilename: string | undefined;
+            try {
+              const backups = await api.getDatabaseBackups(siteUrl);
+              if (backups && Array.isArray(backups) && backups.length > 0) {
+                const sortedBackups = backups.sort((a: any, b: any) =>
+                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                );
+                databaseBackupFilename = sortedBackups[0].name;
+              }
+            } catch (backupError) {
+              console.error('[MIGRATION] Failed to fetch database backups:', backupError);
+            }
+
             // Create UI content showing the migration results
             const migrationSummary = createMigrationSummary(migrationStatus, this.id);
             const uiContent = migrationStatus.operations ? (
@@ -122,17 +163,20 @@ export class ExecuteMigrationsTimelineItem extends BaseTimelineItem {
                 summary={migrationSummary}
               />
             ) : null;
-            
+
             // Set the timeline item status to complete before resolving
             this.status = 'complete';
             this.endTime = new Date();
-            
+
             resolve({
               status: 'success',
-              data: migrationStatus,
+              data: {
+                ...migrationStatus,
+                databaseBackup: databaseBackupFilename
+              },
               uiContent
             });
-            
+
           } else if (migrationStatus.status === 'error') {
             this.stopPolling();
             resolve(this.setError('Database migration execution failed'));
