@@ -40,7 +40,7 @@
     "seed:database:append": "ts-node --project tsconfig.backend.json src/scripts/seed-database.ts --append"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.21.0",
+    "@chakra-ui/react": "^3.30.0",
     "@emotion/react": "^11.14.0",
     "@prisma/client": "^6.16.2",
     "@tanstack/react-table": "^8.21.3",
