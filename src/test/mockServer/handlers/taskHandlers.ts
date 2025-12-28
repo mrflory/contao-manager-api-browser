@@ -83,10 +83,40 @@ export const taskHandlers = {
             state.currentTask.console = realResponseData.taskOperations.contaoMigrate.console;
           } else if (name === 'manager/self-update') {
             state.currentTask.console = `Manager update completed successfully!\nVersion updated from 1.9.4 to 1.9.5\nRestarting manager services...`;
+          } else if (name === 'contao/backup-create') {
+            // Add the newly created backup to the state
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('.')[0].replace('T', '_');
+            const backupFilename = `backup_${timestamp}.sql`;
+
+            if (!state.backups) {
+              state.backups = [];
+            }
+
+            state.backups.unshift({
+              name: backupFilename,
+              createdAt: new Date().toISOString(),
+              size: 15728640 // 15 MB in bytes
+            });
+          } else if (name === 'contao/backup-restore') {
+            // Add a new backup if one was created during restore
+            if (config?.backup !== false) {
+              const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('.')[0].replace('T', '_');
+              const backupFilename = `backup_${timestamp}.sql`;
+
+              if (!state.backups) {
+                state.backups = [];
+              }
+
+              state.backups.unshift({
+                name: backupFilename,
+                createdAt: new Date().toISOString(),
+                size: 12288000 // 12 MB in bytes
+              });
+            }
           } else {
             state.currentTask.console += `\n${name} completed successfully`;
           }
-          
+
           // Mark all operations as complete
           if (state.currentTask.operations) {
             state.currentTask.operations.forEach(op => {
@@ -209,12 +239,45 @@ Version updated from 1.9.4 to 1.9.5`,
       status: 'active' as 'active' | 'complete' | 'error' | 'stopped'
     });
   } else if (taskName === 'contao/backup-create') {
+    // Generate backup filename with current timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('.')[0].replace('T', '_');
+    const backupFilename = `backup_${timestamp}.sql`;
+    const backupSize = '15.7 MB';
+
     operations.push({
       summary: 'Creating database backup',
       details: 'Dumping database to backup file',
-      console: 'mysqldump --single-transaction --routines --triggers contao_db > backup_2024-06-18_17-30-45.sql\nBackup created successfully (15.7 MB)',
+      console: `mysqldump --single-transaction --routines --triggers contao_db > ${backupFilename}\nBackup created successfully (${backupSize})`,
       status: 'active' as 'active' | 'complete' | 'error' | 'stopped'
     });
+  } else if (taskName === 'contao/backup-restore') {
+    const filename = config?.file || 'backup_2024-06-18_17-30-45.sql';
+    const createBackup = config?.backup !== false;
+
+    const restoreOps = [];
+
+    // Add backup creation step if requested
+    if (createBackup) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('.')[0].replace('T', '_');
+      const backupFilename = `backup_${timestamp}.sql`;
+
+      restoreOps.push({
+        summary: 'Creating backup before restore',
+        details: 'Dumping current database state',
+        console: `mysqldump --single-transaction --routines --triggers contao_db > ${backupFilename}\nPre-restore backup created successfully (12.3 MB)`,
+        status: 'active' as 'active' | 'complete' | 'error' | 'stopped'
+      });
+    }
+
+    // Add restore operation
+    restoreOps.push({
+      summary: 'Restoring database backup',
+      details: `Restoring from ${filename}`,
+      console: `mysql contao_db < ${filename}\nDropping existing tables...\nCreating table structure...\nImporting data...\nDatabase restored successfully from ${filename}`,
+      status: 'active' as 'active' | 'complete' | 'error' | 'stopped'
+    });
+
+    operations.push(...restoreOps);
   } else if (taskName === 'contao/rebuild-cache') {
     operations.push({
       summary: 'Clearing Symfony cache',

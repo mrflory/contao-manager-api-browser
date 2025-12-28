@@ -25,19 +25,39 @@ interface MockSnapshot {
 // In-memory snapshot storage for testing
 let mockSnapshots: MockSnapshot[] = [];
 
+// Mock composer files for automatic fetching
+const MOCK_COMPOSER_JSON = JSON.stringify({
+  "name": "contao/managed-edition",
+  "type": "project",
+  "require": {
+    "php": "^8.1",
+    "contao/core-bundle": "^5.3"
+  }
+}, null, 2);
+
+const MOCK_COMPOSER_LOCK = JSON.stringify({
+  "_readme": ["This file locks the dependencies"],
+  "content-hash": "5c3c5d4b2f1234567890abcdef1234567890abcd",
+  "packages": []
+}, null, 2);
+
 export const snapshotsHandlers = {
   createSnapshot: (_getState: () => MockState) => {
     return (req: Request, res: Response) => {
-      const { siteUrl, composerJson, composerLock, workflowId, stepId } = req.body;
-      
+      const { siteUrl, workflowId, stepId } = req.body;
+      let { composerJson, composerLock } = req.body;
+
       console.log(`[MOCK] POST /api/snapshots/create - Creating snapshot for: ${siteUrl}`);
-      
+
       if (!siteUrl) {
         return res.status(400).json({ error: 'siteUrl is required' });
       }
-      
+
+      // If no composer files provided, fetch them automatically (simulate real backend behavior)
       if (!composerJson && !composerLock) {
-        return res.status(400).json({ error: 'At least one of composerJson or composerLock is required' });
+        console.log(`[MOCK] No composer files provided, fetching from mock filesystem...`);
+        composerJson = MOCK_COMPOSER_JSON;
+        composerLock = MOCK_COMPOSER_LOCK;
       }
       
       // Generate mock snapshot ID

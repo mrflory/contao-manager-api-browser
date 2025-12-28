@@ -87,6 +87,7 @@ export class MockServer {
 
     // Files endpoints
     router.get('/files/:filename', filesHandlers.getFile(() => this.state));
+    router.put('/files/:filename', filesHandlers.putFile(() => this.state));
 
     // Snapshots endpoints (Note: These will be proxied to the main server in real scenarios)
     router.post('/snapshots/create', snapshotsHandlers.createSnapshot(() => this.state));

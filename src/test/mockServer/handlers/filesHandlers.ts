@@ -136,25 +136,52 @@ export const filesHandlers = {
   getFile: (_getState: () => MockState) => {
     return (req: Request, res: Response) => {
       const { filename } = req.params;
-      
+
       console.log(`[MOCK] GET /api/files/${filename} - Fetching file content`);
-      
+
       // Return mock file content based on filename
       switch (filename) {
         case 'composer.json':
           res.setHeader('Content-Type', 'application/json');
           return res.send(MOCK_COMPOSER_JSON);
-          
+
         case 'composer.lock':
           res.setHeader('Content-Type', 'application/json');
           return res.send(MOCK_COMPOSER_LOCK);
-          
+
         default:
           return res.status(404).json({
             title: 'File not found',
             detail: `File '${filename}' does not exist or is not accessible`
           });
       }
+    };
+  },
+
+  putFile: (_getState: () => MockState) => {
+    return (req: Request, res: Response) => {
+      const { filename } = req.params;
+      const content = req.body;
+
+      console.log(`[MOCK] PUT /api/files/${filename} - Updating file content (${typeof content === 'string' ? content.length : 0} bytes)`);
+
+      // Validate filename
+      if (filename !== 'composer.json' && filename !== 'composer.lock') {
+        return res.status(400).json({
+          title: 'Invalid filename',
+          detail: 'Only composer.json and composer.lock can be updated via this endpoint'
+        });
+      }
+
+      // In a real implementation, we would save the file
+      // For mock purposes, we just acknowledge the update
+      console.log(`[MOCK] File ${filename} updated successfully (content stored in memory)`);
+
+      return res.status(200).json({
+        success: true,
+        filename,
+        size: typeof content === 'string' ? content.length : 0
+      });
     };
   }
 };
