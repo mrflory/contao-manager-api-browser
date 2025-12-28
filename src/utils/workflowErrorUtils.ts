@@ -25,6 +25,7 @@ export class WorkflowErrorUtils {
       manager: 0,
       validation: 0,
       system: 0,
+      database: 0,
       unknown: 0
     };
 
@@ -133,6 +134,7 @@ export class WorkflowErrorUtils {
       manager: 0,
       validation: 0,
       system: 0,
+      database: 0,
       unknown: errorItems.length // Default to unknown category
     };
 

@@ -19,7 +19,7 @@ export function useWorkflowHistory() {
   const { siteUrl } = useSiteContext();
   
   return {
-    startHistoryTracking: async (engine: any, workflowType: 'update' | 'migration' | 'composer') => {
+    startHistoryTracking: async (engine: any, workflowType: 'update' | 'migration' | 'composer' | 'restore' | 'manual-backup') => {
       // Populate the workflow engine's context with site information
       const context = engine.getContext();
       context.set('activeSite', { url: siteUrl });

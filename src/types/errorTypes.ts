@@ -6,6 +6,7 @@ export type ErrorCategory =
   | 'manager'
   | 'validation'
   | 'system'
+  | 'database'
   | 'unknown';
 
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';

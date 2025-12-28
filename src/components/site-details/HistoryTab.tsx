@@ -16,15 +16,15 @@ import {
 } from '@chakra-ui/react';
 import { LuEye as Eye, LuRefreshCw as RefreshCw, LuEllipsis as MoreVertical, LuTrash2 as Trash, LuUndo2 as Undo } from 'react-icons/lu';
 import { Site, HistoryEntry, HistoryResponse } from '../../types';
-import { HistoryApiService, BackupApiService, SnapshotApiService } from '../../services/apiCallService';
-import { api } from '../../utils/api';
+import { HistoryApiService } from '../../services/apiCallService';
 import { useApiCall } from '../../hooks/useApiCall';
 import { useToastNotifications } from '../../hooks/useToastNotifications';
 import { HistoryDetailsModal } from '../modals/HistoryDetailsModal';
 import { ConfirmationDialog } from '../modals/ConfirmationDialog';
-import { RestoreBackupDialog } from '../modals/RestoreBackupDialog';
 import { formatDateTime } from '../../utils/dateUtils';
 import { ComposerFilesDialog } from '../ui/ComposerFilesDialog';
+import { RestoreWorkflow } from '../RestoreWorkflow';
+import { BackupWorkflow } from '../BackupWorkflow';
 
 export interface HistoryTabProps {
   site: Site;
@@ -41,12 +41,13 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
     snapshotId: string | null;
     filename: 'composer.json' | 'composer.lock' | null;
   }>({ isOpen: false, snapshotId: null, filename: null });
-  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
-  const [restoreDialogState, setRestoreDialogState] = useState<{
+  const [backupWorkflowOpen, setBackupWorkflowOpen] = useState(false);
+  const [restoreWorkflowState, setRestoreWorkflowState] = useState<{
     isOpen: boolean;
     entry: HistoryEntry | null;
-  }>({ isOpen: false, entry: null });
-  const [isRestoring, setIsRestoring] = useState(false);
+    restoreComposer: boolean;
+    restoreDatabase: boolean;
+  }>({ isOpen: false, entry: null, restoreComposer: true, restoreDatabase: true });
 
   const toast = useToastNotifications();
 
@@ -137,99 +138,14 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
     }
   };
 
-  const handleCreateBackup = async () => {
-    setIsCreatingBackup(true);
+  const handleCreateBackup = () => {
+    setBackupWorkflowOpen(true);
+  };
 
-    try {
-      toast.showInfo({
-        title: 'Creating Backup',
-        description: 'Creating composer snapshot...'
-      });
-
-      const snapshotResult = await SnapshotApiService.createSnapshot(site.url);
-
-      if (!snapshotResult?.snapshot?.id) {
-        throw new Error('Failed to create composer snapshot');
-      }
-
-      toast.showInfo({
-        title: 'Creating Backup',
-        description: 'Starting database backup...'
-      });
-
-      await BackupApiService.createDatabaseBackup(site.url);
-
-      // Poll for task completion
-      const pollTask = async (): Promise<string | null> => {
-        for (let i = 0; i < 60; i++) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-
-          const taskData = await api.getTaskData(site.url);
-
-          if (!taskData || Object.keys(taskData).length === 0) {
-            const backups = await api.getDatabaseBackups(site.url);
-            if (backups && backups.length > 0) {
-              const sorted = backups.sort((a: any, b: any) =>
-                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-              );
-              return sorted[0].name;
-            }
-            return null;
-          }
-
-          if (taskData.status === 'error') {
-            throw new Error('Database backup task failed');
-          }
-        }
-
-        throw new Error('Database backup timeout');
-      };
-
-      const backupFilename = await pollTask();
-
-      // Create history entry
-      const historyEntry = await HistoryApiService.createHistoryEntry({
-        siteUrl: site.url,
-        workflowType: 'manual-backup'
-      });
-
-      if (historyEntry) {
-        await HistoryApiService.updateHistoryEntry(historyEntry.id, {
-          siteUrl: site.url,
-          status: 'completed',
-          endTime: new Date().toISOString(),
-          steps: [{
-            id: 'backup-creation',
-            name: 'Manual Backup',
-            title: 'Manual Backup Creation',
-            description: 'Created manual backup of composer files and database',
-            status: 'completed',
-            startTime: historyEntry.startTime,
-            endTime: new Date().toISOString(),
-            data: {
-              snapshot: snapshotResult.snapshot,
-              databaseBackup: backupFilename
-            }
-          }]
-        });
-      }
-
-      toast.showSuccess({
-        title: 'Backup Created',
-        description: 'Successfully created backup'
-      });
-
-      await loadHistory.execute();
-
-    } catch (error) {
-      console.error('Backup creation error:', error);
-      toast.showError({
-        title: 'Backup Failed',
-        description: `Failed to create backup: ${error instanceof Error ? error.message : 'Unknown error'}`
-      });
-    } finally {
-      setIsCreatingBackup(false);
-    }
+  const handleCloseBackupWorkflow = () => {
+    setBackupWorkflowOpen(false);
+    // Reload history after backup completes
+    loadHistory.execute();
   };
 
   const getDatabaseBackupFromHistoryEntry = (entry: HistoryEntry): string | null => {
@@ -239,6 +155,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
 
   const handleRestore = async (entry: HistoryEntry) => {
     const snapshot = getSnapshotFromHistoryEntry(entry);
+    const databaseBackup = getDatabaseBackupFromHistoryEntry(entry);
 
     if (!snapshot) {
       toast.showError({
@@ -248,120 +165,35 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
       return;
     }
 
-    setRestoreDialogState({ isOpen: true, entry });
+    // Open the restore workflow dialog
+    setRestoreWorkflowState({
+      isOpen: true,
+      entry,
+      restoreComposer: true,
+      restoreDatabase: !!databaseBackup
+    });
   };
 
-  const handleRestoreConfirm = async (restoreComposer: boolean, restoreDatabase: boolean) => {
-    if (!restoreDialogState.entry) return;
-
-    const entry = restoreDialogState.entry;
-    const snapshot = getSnapshotFromHistoryEntry(entry);
-    const databaseBackup = getDatabaseBackupFromHistoryEntry(entry);
-
-    if (!snapshot) return;
-
-    setIsRestoring(true);
-
-    try {
-      // Create safety backup of composer files if restoring composer files
-      if (restoreComposer) {
-        toast.showInfo({
-          title: 'Creating Safety Backup',
-          description: 'Creating backup of current composer files...'
-        });
-
-        await SnapshotApiService.createSnapshot(site.url);
-      }
-
-      // Restore composer files if selected
-      if (restoreComposer) {
-        toast.showInfo({
-          title: 'Restoring Composer Files',
-          description: 'Restoring composer.json and composer.lock...'
-        });
-
-        const composerJsonContent = await SnapshotApiService.getSnapshotFile(
-          snapshot.id,
-          'composer.json'
-        );
-
-        const composerLockContent = await SnapshotApiService.getSnapshotFile(
-          snapshot.id,
-          'composer.lock'
-        );
-
-        if (composerJsonContent) {
-          await api.putComposerFile(site.url, 'composer.json', composerJsonContent);
-        }
-
-        if (composerLockContent) {
-          await api.putComposerFile(site.url, 'composer.lock', composerLockContent);
-        }
-      }
-
-      // Restore database if selected and available
-      if (restoreDatabase && databaseBackup) {
-        toast.showInfo({
-          title: 'Restoring Database',
-          description: 'Starting database restoration...'
-        });
-
-        await BackupApiService.restoreDatabaseBackup(
-          site.url,
-          databaseBackup,
-          false
-        );
-
-        // Poll for restoration completion
-        const pollRestore = async (): Promise<void> => {
-          for (let i = 0; i < 120; i++) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            const taskData = await api.getTaskData(site.url);
-
-            if (!taskData || Object.keys(taskData).length === 0) {
-              return;
-            }
-
-            if (taskData.status === 'error') {
-              throw new Error('Database restoration failed');
-            }
-          }
-
-          throw new Error('Database restoration timeout');
-        };
-
-        await pollRestore();
-      }
-
-      const restoredComponents = [];
-      if (restoreComposer) restoredComponents.push('composer files');
-      if (restoreDatabase) restoredComponents.push('database');
-
-      toast.showSuccess({
-        title: 'Restoration Complete',
-        description: `Successfully restored ${restoredComponents.join(' and ')}`
-      });
-
-      setRestoreDialogState({ isOpen: false, entry: null });
-
-    } catch (error) {
-      console.error('Restore error:', error);
-      toast.showError({
-        title: 'Restoration Failed',
-        description: `Failed to restore backup: ${error instanceof Error ? error.message : 'Unknown error'}`
-      });
-    } finally {
-      setIsRestoring(false);
-    }
+  const handleCloseRestoreWorkflow = () => {
+    setRestoreWorkflowState({
+      isOpen: false,
+      entry: null,
+      restoreComposer: true,
+      restoreDatabase: true
+    });
+    // Reload history after restore completes
+    loadHistory.execute();
   };
 
   const getSnapshotFromHistoryEntry = (entry: HistoryEntry) => {
-    // Look for composer update step that has snapshot data
-    const composerStep = entry.steps.find(step =>
-      step.id === 'composer-update' && step.data?.snapshot
+    // Look for any step that has snapshot data
+    const snapshotStep = entry.steps.find(step =>
+      (step.id === 'composer-update' ||
+       step.id === 'create-snapshot' ||
+       step.id === 'create-safety-snapshot') &&
+      step.data?.snapshot
     );
-    return composerStep?.data?.snapshot || null;
+    return snapshotStep?.data?.snapshot || null;
   };
 
   const getSnapshotFileCount = (snapshot: any) => {
@@ -413,6 +245,10 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
         return 'Migration';
       case 'composer':
         return 'Composer';
+      case 'restore':
+        return 'Restore';
+      case 'manual-backup':
+        return 'Backup';
       default:
         return type;
     }
@@ -460,8 +296,6 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
               variant="solid"
               colorPalette="blue"
               onClick={handleCreateBackup}
-              loading={isCreatingBackup}
-              disabled={isCreatingBackup}
             >
               Create Backup
             </Button>
@@ -683,28 +517,32 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
         confirmColorPalette="red"
       />
 
-      {/* Restore Backup Dialog */}
-      {restoreDialogState.entry && (() => {
-        const snapshot = getSnapshotFromHistoryEntry(restoreDialogState.entry);
-        const databaseBackup = getDatabaseBackupFromHistoryEntry(restoreDialogState.entry);
+      {/* Restore Workflow Dialog */}
+      {restoreWorkflowState.entry && (() => {
+        const snapshot = getSnapshotFromHistoryEntry(restoreWorkflowState.entry);
+        const databaseBackup = getDatabaseBackupFromHistoryEntry(restoreWorkflowState.entry);
 
         if (!snapshot) return null;
 
         return (
-          <RestoreBackupDialog
-            isOpen={restoreDialogState.isOpen}
-            onClose={() => setRestoreDialogState({ isOpen: false, entry: null })}
-            onConfirm={handleRestoreConfirm}
-            isRestoring={isRestoring}
-            backupInfo={{
-              snapshotId: snapshot.id,
-              snapshotFileCount: getSnapshotFileCount(snapshot),
-              databaseBackup: databaseBackup,
-              timestamp: formatDateTime(restoreDialogState.entry.startTime)
-            }}
+          <RestoreWorkflow
+            isOpen={restoreWorkflowState.isOpen}
+            onClose={handleCloseRestoreWorkflow}
+            snapshotId={snapshot.id}
+            databaseBackupFilename={databaseBackup || null}
+            restoreComposer={restoreWorkflowState.restoreComposer}
+            restoreDatabase={restoreWorkflowState.restoreDatabase}
+            timestamp={formatDateTime(restoreWorkflowState.entry.startTime)}
           />
         );
       })()}
+
+      {/* Backup Workflow Dialog */}
+      <BackupWorkflow
+        isOpen={backupWorkflowOpen}
+        onClose={handleCloseBackupWorkflow}
+        siteUrl={site.url}
+      />
     </>
   );
 };
