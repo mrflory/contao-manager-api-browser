@@ -104,7 +104,7 @@ export class HistoryService {
 
     public async createHistoryEntry(request: CreateHistoryRequest, userId?: string): Promise<HistoryEntry | null> {
         try {
-            const { siteUrl, workflowType } = request;
+            const { siteUrl, workflowType, initialVersionInfo } = request;
 
             if (!siteUrl || !workflowType) {
                 throw new Error('siteUrl and workflowType are required');
@@ -128,16 +128,17 @@ export class HistoryService {
                 workflowType,
                 status: 'started',
                 startTime: new Date().toISOString(),
-                steps: []
+                steps: [],
+                initialVersionInfo
             };
 
             const result = await this.storage.history.createHistoryEntry(historyParams);
-            
+
             if (!result.success) {
                 console.error('Create history error:', result.error);
                 return null;
             }
-            
+
             return result.data || null;
         } catch (error) {
             console.error('Create history error:', error instanceof Error ? error.message : 'Unknown error');

@@ -13,6 +13,7 @@ import { DialogRoot, DialogContent, DialogHeader, DialogTitle, DialogBody, Dialo
 import { DataListRoot, DataListItem } from '../ui/data-list';
 import { HistoryEntry, HistoryStep } from '../../types';
 import { formatDateTime, formatDuration } from '../../utils/dateUtils';
+import { VersionComparisonDisplay } from '../workflow/VersionComparisonDisplay';
 
 export interface HistoryDetailsModalProps {
   isOpen: boolean;
@@ -247,6 +248,29 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
             </Box>
 
             <Separator />
+
+            {/* Version Comparison (for Update workflows) */}
+            {historyEntry.workflowType === 'update' && historyEntry.initialVersionInfo && (() => {
+              // Find the update-versions step to get the final version info
+              const versionStep = historyEntry.steps.find(
+                step => step.id.includes('update-versions') || step.id.includes('version-info')
+              );
+              const finalVersionInfo = versionStep?.data?.versionInfo;
+
+              return finalVersionInfo ? (
+                <>
+                  <Box>
+                    <Heading size="md" mb={4}>Version Changes</Heading>
+                    <VersionComparisonDisplay
+                      before={historyEntry.initialVersionInfo}
+                      after={finalVersionInfo}
+                      size="md"
+                    />
+                  </Box>
+                  <Separator />
+                </>
+              ) : null;
+            })()}
 
             {/* Step Details */}
             <Box>

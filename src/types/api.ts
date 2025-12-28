@@ -25,6 +25,7 @@ export interface HistoryEntry {
   status: 'started' | 'completed' | 'failed' | 'cancelled' | 'finished' | 'error';
   steps: WorkflowStep[];
   workflowType: string;
+  initialVersionInfo?: VersionInfoResult; // Version info captured before workflow started
 }
 
 export interface WorkflowStep {
@@ -86,6 +87,7 @@ export interface HistoryResponse {
 export interface CreateHistoryRequest {
   siteUrl: string;
   workflowType: string;
+  initialVersionInfo?: VersionInfoResult; // Initial version info to capture before workflow starts
 }
 
 export interface UpdateHistoryRequest {

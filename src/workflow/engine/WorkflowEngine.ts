@@ -1,8 +1,8 @@
-import { 
-  TimelineItem, 
-  TimelineExecutionRecord, 
-  WorkflowEvent, 
-  EventHandler, 
+import {
+  TimelineItem,
+  TimelineExecutionRecord,
+  WorkflowEvent,
+  EventHandler,
   WorkflowEngineState,
   WorkflowContext,
   WorkflowEngineInterface,
@@ -10,6 +10,7 @@ import {
 } from './types';
 import { HistoryApiService } from '../../services/apiCallService';
 import { HistoryEntry, HistoryStep, WorkflowStepStatus, CreateHistoryRequest, UpdateHistoryRequest } from '../../types';
+import { api } from '../../utils/api';
 
 /**
  * Generic workflow engine that manages timeline-based execution
@@ -624,11 +625,25 @@ export class WorkflowEngine implements WorkflowEngineInterface {
   // History tracking methods
   async startHistoryTracking(siteUrl: string, workflowType: 'update' | 'migration' | 'composer'): Promise<void> {
     try {
+      // For Update workflows, capture version info before starting
+      let initialVersionInfo;
+      if (workflowType === 'update') {
+        try {
+          const versionResponse = await api.updateVersionInfo(siteUrl);
+          if (versionResponse.success && versionResponse.versionInfo) {
+            initialVersionInfo = versionResponse.versionInfo;
+          }
+        } catch (error) {
+          console.warn('Failed to capture initial version info:', error);
+        }
+      }
+
       const request: CreateHistoryRequest = {
         siteUrl,
-        workflowType
+        workflowType,
+        initialVersionInfo
       };
-      
+
       const response = await HistoryApiService.createHistoryEntry(request);
       this.currentHistoryEntry = response.historyEntry;
     } catch (error) {
@@ -883,9 +898,36 @@ export class WorkflowEngine implements WorkflowEngineInterface {
         }
         return 'No database migrations executed';
         
-      // (8) Update version info - State new version numbers
+      // (8) Update version info - Compare before/after versions
       case item.id.includes('update-versions') || item.id.includes('version-info'):
-        if (data?.versionInfo) {
+        if (data?.versionInfo && this.currentHistoryEntry?.initialVersionInfo) {
+          const before = this.currentHistoryEntry.initialVersionInfo;
+          const after = data.versionInfo;
+          const changes = [];
+
+          // Compare Contao version
+          if (before.contaoVersion !== after.contaoVersion) {
+            changes.push(`Contao ${before.contaoVersion || 'unknown'} → ${after.contaoVersion || 'unknown'}`);
+          }
+
+          // Compare Manager version
+          if (before.contaoManagerVersion !== after.contaoManagerVersion) {
+            changes.push(`Manager ${before.contaoManagerVersion || 'unknown'} → ${after.contaoManagerVersion || 'unknown'}`);
+          }
+
+          // Compare PHP version
+          if (before.phpVersion !== after.phpVersion) {
+            changes.push(`PHP ${before.phpVersion || 'unknown'} → ${after.phpVersion || 'unknown'}`);
+          }
+
+          if (changes.length > 0) {
+            return `Versions updated: ${changes.join(', ')}`;
+          }
+
+          // No changes detected
+          return 'No version changes detected';
+        } else if (data?.versionInfo) {
+          // Fallback: just show current versions (no comparison available)
           const parts = [];
           if (data.versionInfo.contaoVersion) {
             parts.push(`Contao ${data.versionInfo.contaoVersion}`);
@@ -896,7 +938,7 @@ export class WorkflowEngine implements WorkflowEngineInterface {
           if (data.versionInfo.phpVersion) {
             parts.push(`PHP ${data.versionInfo.phpVersion}`);
           }
-          
+
           if (parts.length > 0) {
             return `Version info updated: ${parts.join(', ')}`;
           }

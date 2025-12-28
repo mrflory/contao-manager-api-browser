@@ -127,6 +127,7 @@ export interface HistoryParams {
   startTime?: string;
   endTime?: string;
   steps?: HistoryEntry['steps'];
+  initialVersionInfo?: HistoryEntry['initialVersionInfo']; // Version info before workflow started
 }
 
 /**

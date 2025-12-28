@@ -370,7 +370,7 @@ class JsonHistoryStorage implements HistoryStorage {
 
     async createHistoryEntry(params: HistoryParams): Promise<StorageResult<HistoryEntry>> {
         try {
-            const { siteUrl, userId, workflowType, status, startTime, steps } = params;
+            const { siteUrl, userId, workflowType, status, startTime, steps, initialVersionInfo } = params;
 
             if (!userId) {
                 return {
@@ -394,7 +394,8 @@ class JsonHistoryStorage implements HistoryStorage {
                 startTime: startTime || new Date().toISOString(),
                 status: status || 'started',
                 steps: steps || [],
-                workflowType
+                workflowType,
+                initialVersionInfo
             };
 
             // Save to history file
@@ -402,7 +403,7 @@ class JsonHistoryStorage implements HistoryStorage {
             if (!result.success) {
                 return { success: false, error: result.error };
             }
-            
+
             return { success: true, data: historyEntry };
         } catch (error) {
             return {
