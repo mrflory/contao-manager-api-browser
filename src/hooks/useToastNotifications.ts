@@ -113,6 +113,10 @@ export const TOAST_MESSAGES = {
     title: 'Workflow Stopped',
     description: 'Update workflow has been paused',
   },
+  WORKFLOW_PAUSED: {
+    title: 'Workflow Paused',
+    description: 'Workflow has been paused',
+  },
   WORKFLOW_RESUMED: {
     title: 'Workflow Resumed',
     description: 'Update workflow is continuing',
