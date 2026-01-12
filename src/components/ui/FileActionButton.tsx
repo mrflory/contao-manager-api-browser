@@ -147,6 +147,7 @@ export const FileActionButton: React.FC<FileActionButtonProps> = ({
           onClose={() => setShowComposerDialog(false)}
           snapshotId={snapshotId}
           title={`${filename} - Package Details`}
+          initialTab={fileType === 'lock' ? 'lock' : 'json'}
         />
       </>
     );
@@ -185,6 +186,7 @@ export const FileActionButton: React.FC<FileActionButtonProps> = ({
         onClose={() => setShowComposerDialog(false)}
         snapshotId={snapshotId}
         title={`${filename} - Package Details`}
+        initialTab={fileType === 'lock' ? 'lock' : 'json'}
       />
     </>
   );

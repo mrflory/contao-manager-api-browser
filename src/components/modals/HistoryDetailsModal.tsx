@@ -19,14 +19,14 @@ export interface HistoryDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   historyEntry: HistoryEntry;
-  onDownloadSnapshot?: (snapshotId: string, filename: 'composer.json' | 'composer.lock') => void;
+  onViewSnapshot?: (snapshotId: string, filename: 'composer.json' | 'composer.lock') => void;
 }
 
 export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
   isOpen,
   onClose,
   historyEntry,
-  onDownloadSnapshot,
+  onViewSnapshot,
 }) => {
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -144,8 +144,8 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
                 </Box>
               )}
               
-              {/* Snapshot Downloads */}
-              {step.data?.snapshot && onDownloadSnapshot && (
+              {/* Snapshot Links */}
+              {step.data?.snapshot && onViewSnapshot && (
                 <Box mt={3} p={2} bg="gray.100" borderRadius="sm" _dark={{ bg: 'gray.700' }}>
                   <Text fontSize="xs" fontWeight="medium" color="gray.600" mb={2} _dark={{ color: 'gray.300' }}>
                     Available Snapshots:
@@ -154,19 +154,21 @@ export const HistoryDetailsModal: React.FC<HistoryDetailsModalProps> = ({
                     {step.data?.snapshot.files?.['composer.json']?.exists && (
                       <Link
                         fontSize="xs"
-                        onClick={() => onDownloadSnapshot(step.data!.snapshot.id, 'composer.json')}
-                        title="Download composer.json snapshot"
+                        onClick={() => onViewSnapshot(step.data!.snapshot.id, 'composer.json')}
+                        title="View composer.json snapshot"
+                        cursor="pointer"
                       >
-                        composer.json
+                        View composer.json
                       </Link>
                     )}
                     {step.data?.snapshot.files?.['composer.lock']?.exists && (
                       <Link
                         fontSize="xs"
-                        onClick={() => onDownloadSnapshot(step.data!.snapshot.id, 'composer.lock')}
-                        title="Download composer.lock snapshot"
+                        onClick={() => onViewSnapshot(step.data!.snapshot.id, 'composer.lock')}
+                        title="View composer.lock snapshot"
+                        cursor="pointer"
                       >
-                        composer.lock
+                        View composer.lock
                       </Link>
                     )}
                   </HStack>

@@ -38,15 +38,17 @@ interface ComposerFilesDialogProps {
   onClose: () => void;
   snapshotId: string;
   title?: string;
+  initialTab?: 'json' | 'lock';
 }
 
 export const ComposerFilesDialog: React.FC<ComposerFilesDialogProps> = ({
   isOpen,
   onClose,
   snapshotId,
-  title = 'Composer Files'
+  title = 'Composer Files',
+  initialTab = 'json'
 }) => {
-  const [activeTab, setActiveTab] = useState<'json' | 'lock'>('json');
+  const [activeTab, setActiveTab] = useState<'json' | 'lock'>(initialTab);
   const [composerJsonData, setComposerJsonData] = useState<ParsedComposerData | null>(null);
   const [composerLockData, setComposerLockData] = useState<ParsedComposerData | null>(null);
   const [rawJsonContent, setRawJsonContent] = useState<string>('');
@@ -92,11 +94,12 @@ export const ComposerFilesDialog: React.FC<ComposerFilesDialogProps> = ({
 
   useEffect(() => {
     if (isOpen && snapshotId) {
+      setActiveTab(initialTab);
       loadComposerJson.execute();
       loadComposerLock.execute();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, snapshotId]);
+  }, [isOpen, snapshotId, initialTab]);
 
   const handleDownload = async (filename: 'composer.json' | 'composer.lock') => {
     try {

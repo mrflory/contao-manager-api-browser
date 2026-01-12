@@ -488,7 +488,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           historyEntry={selectedEntry}
-          onDownloadSnapshot={() => {}} // Not used anymore since download is handled in the dialog
+          onViewSnapshot={handleViewComposerFile}
         />
       )}
 
@@ -499,6 +499,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ site }) => {
           onClose={() => setComposerDialogState({ isOpen: false, snapshotId: null, filename: null })}
           snapshotId={composerDialogState.snapshotId}
           title={`${composerDialogState.filename} - Package Details`}
+          initialTab={composerDialogState.filename === 'composer.lock' ? 'lock' : 'json'}
         />
       )}
 
