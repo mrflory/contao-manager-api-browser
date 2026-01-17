@@ -88,6 +88,7 @@ app.use(securityHeaders);
 app.use(generalRateLimit);
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
+app.use(express.text({ limit: '10mb', type: 'text/plain' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
@@ -703,12 +704,50 @@ app.put('/api/site/:siteUrl/files/:file', userAuthMiddleware.requireAuth, ErrorH
             return res.status(404).json({ error: 'Site not found' });
         }
 
-        const contaoPath = `/api/files/${file}`;
-        const response = await proxyService.proxyToSpecificSite(site, contaoPath, 'PUT', req.body, req.headers.cookie);
-        const result = proxyService.handleApiResponse(contaoPath, response);
-        return res.status(result.status).json(result.data);
-    } catch (error) {
-        console.error('Files PUT error:', error);
+        // Get the body content - it should be a string for text/plain content
+        const bodyContent = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+
+        console.log(`[FILES PUT] Writing ${file} to ${siteUrl}, content length: ${bodyContent?.length || 0}`);
+
+        if (!bodyContent || bodyContent.length === 0) {
+            console.error('[FILES PUT] Empty body content received');
+            return res.status(400).json({ error: 'Empty file content' });
+        }
+
+        // Build axios config for the Contao Manager API
+        // The /api/files/{file} endpoint expects text/plain content
+        const axiosConfig: any = {
+            method: 'PUT',
+            url: `${site.url}/api/files/${file}`,
+            data: bodyContent,
+            headers: {
+                'Content-Type': 'text/plain'
+            },
+            timeout: 30000,
+            // Don't let axios transform the data
+            transformRequest: [(data: any) => data]
+        };
+
+        // Add authentication headers based on site auth method
+        if (site.authMethod === 'token' && site.token) {
+            axiosConfig.headers['Contao-Manager-Auth'] = site.token;
+        } else if (site.authMethod === 'cookie' && req.headers.cookie) {
+            axiosConfig.headers['Cookie'] = req.headers.cookie;
+        }
+
+        console.log(`[FILES PUT] Sending request to ${axiosConfig.url}`);
+
+        const response = await axios(axiosConfig);
+
+        console.log(`[FILES PUT] Response status: ${response.status}`);
+
+        return res.status(response.status).json(response.data || { success: true });
+    } catch (error: any) {
+        console.error('Files PUT error:', error?.message || error);
+        if (error?.response) {
+            console.error('Files PUT error response:', error.response.status, error.response.data);
+            return res.status(error.response.status).json(error.response.data || { error: 'Failed to update file' });
+        }
         return res.status(500).json({ error: 'Failed to update file' });
     }
 }));
