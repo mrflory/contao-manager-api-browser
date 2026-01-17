@@ -704,28 +704,43 @@ app.put('/api/site/:siteUrl/files/:file', userAuthMiddleware.requireAuth, ErrorH
             return res.status(404).json({ error: 'Site not found' });
         }
 
-        // Get the body content - it should be a string for text/plain content
-        const bodyContent = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+        // Get the body content - can be string (text/plain) or already parsed JSON
+        let bodyContent: string;
+        if (typeof req.body === 'string') {
+            bodyContent = req.body;
+        } else if (typeof req.body === 'object' && req.body !== null) {
+            // If it's already an object, stringify it
+            bodyContent = JSON.stringify(req.body);
+        } else {
+            bodyContent = '';
+        }
 
-        console.log(`[FILES PUT] Writing ${file} to ${siteUrl}, content length: ${bodyContent?.length || 0}`);
+        console.log(`[FILES PUT] Writing ${file} to ${siteUrl}, content length: ${bodyContent?.length || 0}, bodyType: '${typeof req.body}'`);
 
         if (!bodyContent || bodyContent.length === 0) {
             console.error('[FILES PUT] Empty body content received');
             return res.status(400).json({ error: 'Empty file content' });
         }
 
-        // Build axios config for the Contao Manager API
-        // The /api/files/{file} endpoint expects text/plain content
+        // The Contao Manager API requires application/json for all requests
+        // The file content should be sent as raw JSON string in the body
+        // Parse the content to ensure it's valid JSON, then send it as the body
+        let jsonData: any;
+        try {
+            jsonData = JSON.parse(bodyContent);
+        } catch (e) {
+            console.error('[FILES PUT] Invalid JSON content:', e);
+            return res.status(400).json({ error: 'Invalid JSON content' });
+        }
+
         const axiosConfig: any = {
             method: 'PUT',
             url: `${site.url}/api/files/${file}`,
-            data: bodyContent,
+            data: jsonData,
             headers: {
-                'Content-Type': 'text/plain'
+                'Content-Type': 'application/json'
             },
-            timeout: 30000,
-            // Don't let axios transform the data
-            transformRequest: [(data: any) => data]
+            timeout: 30000
         };
 
         // Add authentication headers based on site auth method
