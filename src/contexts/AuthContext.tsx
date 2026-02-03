@@ -46,7 +46,7 @@ export interface AuthContextType extends AuthState {
   // Passkey methods
   registerPasskey: (name?: string) => Promise<void>;
   signInWithPasskey: () => Promise<void>;
-  listPasskeys: () => Promise<Array<{ id: string; name: string | null; createdAt: Date | null }>>;
+  listPasskeys: () => Promise<Array<{ id: string; name?: string; createdAt: Date | null }>>;
   deletePasskey: (id: string) => Promise<void>;
 
   // Password management
@@ -63,14 +63,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authError, setAuthError] = useState<string | null>(null);
 
   const isAuthenticated = !!session?.user;
-  const user = session?.user
+  const user: User | null = session?.user
     ? {
         id: session.user.id,
         email: session.user.email,
         name: session.user.name,
         emailVerified: session.user.emailVerified,
         image: session.user.image,
-        twoFactorEnabled: session.user.twoFactorEnabled,
+        twoFactorEnabled: session.user.twoFactorEnabled ?? undefined,
         createdAt: session.user.createdAt,
         updatedAt: session.user.updatedAt,
       }
@@ -161,9 +161,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const enableTwoFactor = useCallback(async (password: string): Promise<{ totpURI: string; backupCodes: string[] }> => {
     try {
       setAuthError(null);
-      console.log('[Auth] Enabling 2FA...');
       const result = await twoFactor.enable({ password });
-      console.log('[Auth] 2FA enable response:', result);
 
       if (result.error) {
         throw new Error(result.error.message || 'Failed to enable 2FA');
@@ -171,8 +169,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const totpURI = result.data?.totpURI || '';
       const backupCodes = result.data?.backupCodes || [];
-      console.log('[Auth] TOTP URI:', totpURI);
-      console.log('[Auth] Backup codes count:', backupCodes.length);
 
       return { totpURI, backupCodes };
     } catch (err: any) {
@@ -223,18 +219,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const registerPasskey = useCallback(async (name?: string): Promise<void> => {
     try {
       setAuthError(null);
-      console.log('[Auth] Registering passkey with name:', name);
       const result = await passkey.addPasskey({ name });
-      console.log('[Auth] addPasskey response:', result);
 
       if (result?.error) {
-        console.error('[Auth] addPasskey error:', result.error);
         throw new Error(result.error.message || 'Failed to register passkey');
       }
-
-      console.log('[Auth] Passkey registered successfully');
     } catch (err: any) {
-      console.error('[Auth] registerPasskey exception:', err);
       const message = err.message || 'Failed to register passkey';
       setAuthError(message);
       throw new Error(message);
@@ -256,23 +246,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  const listPasskeys = useCallback(async (): Promise<Array<{ id: string; name: string | null; createdAt: Date | null }>> => {
+  const listPasskeys = useCallback(async (): Promise<Array<{ id: string; name?: string; createdAt: Date | null }>> => {
     try {
-      // Better Auth uses listUserPasskeys, not listPasskeys
       const result = await passkey.listUserPasskeys();
-      console.log('[Auth] listUserPasskeys response:', result);
 
       if (result.error) {
-        console.error('[Auth] listUserPasskeys error:', result.error);
         return [];
       }
 
-      // Better Auth returns passkeys in result.data
-      const passkeys = result.data || [];
-      console.log('[Auth] Parsed passkeys:', passkeys);
-      return passkeys;
-    } catch (err: any) {
-      console.error('[Auth] Failed to list passkeys:', err);
+      // Map Better Auth passkeys to our format
+      return (result.data || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        createdAt: p.createdAt ?? null,
+      }));
+    } catch {
       return [];
     }
   }, []);
@@ -296,10 +284,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const forgotPassword = useCallback(async (email: string): Promise<void> => {
     try {
       setAuthError(null);
-      const result = await authClient.forgetPassword({ email });
+      // Use fetch directly for Better Auth password reset request
+      const response = await fetch('/api/auth/forget-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+        credentials: 'include',
+      });
 
-      if (result?.error) {
-        throw new Error(result.error.message || 'Failed to send reset email');
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to send reset email');
       }
     } catch (err: any) {
       const message = err.message || 'Failed to send password reset email';
@@ -311,13 +306,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const resetPassword = useCallback(async (token: string, newPassword: string): Promise<void> => {
     try {
       setAuthError(null);
-      const result = await authClient.resetPassword({
-        token,
-        newPassword,
+      // Use fetch directly for Better Auth password reset
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword }),
+        credentials: 'include',
       });
 
-      if (result?.error) {
-        throw new Error(result.error.message || 'Failed to reset password');
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to reset password');
       }
     } catch (err: any) {
       const message = err.message || 'Failed to reset password';

@@ -54,19 +54,16 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
       setBackupCodes(result.backupCodes);
 
       // Generate QR code from TOTP URI
-      // Use the URI as-is - authenticator apps handle URL-encoded URIs
-      console.log('[2FA] TOTP URI for QR code:', result.totpURI);
       const qr = await QRCode.toDataURL(result.totpURI, {
-        width: 300,  // Larger for better scanning
+        width: 300,
         margin: 2,
-        errorCorrectionLevel: 'L',  // Low error correction for simpler QR
+        errorCorrectionLevel: 'L',
         color: {
           dark: '#000000',
           light: '#ffffff',
         },
       });
       setQrCodeDataUrl(qr);
-      console.log('[2FA] QR code generated successfully');
 
       setStep('qr');
     } catch (err: any) {

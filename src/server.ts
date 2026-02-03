@@ -31,9 +31,6 @@ import {
     authErrorHandler
 } from './middleware/securityMiddleware';
 
-// Routes
-import { createAuthRoutes } from './routes/authRoutes';
-
 // Better Auth
 import { auth } from './lib/auth';
 
@@ -177,9 +174,6 @@ app.get('/api/database/status', (_req: Request, res: Response) => {
     });
 });
 
-// Phase 2: Legacy User Authentication Routes (deprecated, use Better Auth at /api/auth)
-// Keeping at /api/auth-legacy during transition for backward compatibility
-app.use('/api/auth-legacy', requireDatabaseHealth, createAuthRoutes(prisma));
 
 // Configuration endpoints
 // Phase 3: Updated to use JWT authentication and user context

@@ -10,13 +10,12 @@ import {
     Link as ChakraLink,
 } from '@chakra-ui/react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { HttpClient } from '../../services/httpClient';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const ResetPasswordPage: React.FC = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { csrfToken } = useAuth();
+    const { resetPassword } = useAuth();
 
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,13 +25,12 @@ export const ResetPasswordPage: React.FC = () => {
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
     const token = searchParams.get('token');
-    const email = searchParams.get('email');
 
     useEffect(() => {
-        if (!token || !email) {
+        if (!token) {
             setError('Invalid or missing reset token. Please request a new password reset link.');
         }
-    }, [token, email]);
+    }, [token]);
 
     const validateForm = (): boolean => {
         const errors: Record<string, string> = {};
@@ -56,7 +54,7 @@ export const ResetPasswordPage: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!validateForm() || !token || !email) {
+        if (!validateForm() || !token) {
             return;
         }
 
@@ -64,26 +62,12 @@ export const ResetPasswordPage: React.FC = () => {
         setError(null);
 
         try {
-            const httpClient = HttpClient.getInstance();
-            const response = await httpClient.makeApiCall('/api/auth/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: decodeURIComponent(email),
-                    token,
-                    newPassword: password,
-                }),
-            }, csrfToken || undefined);
-
-            if (response.success) {
-                setIsSuccess(true);
-                // Redirect to login after 3 seconds
-                setTimeout(() => {
-                    navigate('/login');
-                }, 3000);
-            } else {
-                setError(response.error || 'Failed to reset password. Please try again.');
-            }
+            await resetPassword(token, password);
+            setIsSuccess(true);
+            // Redirect to login after 3 seconds
+            setTimeout(() => {
+                navigate('/login');
+            }, 3000);
         } catch (err: any) {
             console.error('Reset password error:', err);
             setError(err.message || 'An error occurred while resetting your password. Please try again.');
@@ -187,7 +171,7 @@ export const ResetPasswordPage: React.FC = () => {
                                         handleInputChange('password');
                                     }}
                                     placeholder="Enter new password (min 8 characters)"
-                                    disabled={isLoading || !token || !email}
+                                    disabled={isLoading || !token}
                                 />
                                 {validationErrors.password && (
                                     <Field.ErrorText>{validationErrors.password}</Field.ErrorText>
@@ -204,7 +188,7 @@ export const ResetPasswordPage: React.FC = () => {
                                         handleInputChange('confirmPassword');
                                     }}
                                     placeholder="Confirm new password"
-                                    disabled={isLoading || !token || !email}
+                                    disabled={isLoading || !token}
                                 />
                                 {validationErrors.confirmPassword && (
                                     <Field.ErrorText>{validationErrors.confirmPassword}</Field.ErrorText>
@@ -218,7 +202,7 @@ export const ResetPasswordPage: React.FC = () => {
                                 width="full"
                                 loading={isLoading}
                                 loadingText="Resetting password..."
-                                disabled={!token || !email}
+                                disabled={!token}
                             >
                                 Reset Password
                             </Button>

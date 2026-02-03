@@ -10,7 +10,6 @@ import {
     Link as ChakraLink,
 } from '@chakra-ui/react';
 import { Link } from 'react-router-dom';
-import { HttpClient } from '../../services/httpClient';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const ForgotPasswordPage: React.FC = () => {
@@ -19,7 +18,7 @@ export const ForgotPasswordPage: React.FC = () => {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [validationError, setValidationError] = useState<string>('');
-    const { csrfToken } = useAuth();
+    const { forgotPassword } = useAuth();
 
     const validateEmail = (): boolean => {
         if (!email.trim()) {
@@ -45,19 +44,8 @@ export const ForgotPasswordPage: React.FC = () => {
         setError(null);
 
         try {
-            const httpClient = HttpClient.getInstance();
-            const response = await httpClient.makeApiCall('/api/auth/forgot-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email.trim() }),
-            }, csrfToken || undefined);
-
-            if (response.success) {
-                setIsSubmitted(true);
-            } else {
-                // Even on error, we show success message to prevent email enumeration
-                setIsSubmitted(true);
-            }
+            await forgotPassword(email.trim());
+            setIsSubmitted(true);
         } catch (err: any) {
             console.error('Forgot password error:', err);
             // Show success message even on error to prevent email enumeration

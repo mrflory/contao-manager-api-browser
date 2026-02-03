@@ -16,7 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface Passkey {
   id: string;
-  name: string | null;
+  name?: string;
   createdAt: Date | null;
 }
 
@@ -94,7 +94,7 @@ export const PasskeyManager: React.FC<PasskeyManagerProps> = ({
     });
   };
 
-  const getDeviceIcon = (name: string | null) => {
+  const getDeviceIcon = (name?: string) => {
     if (!name) return FiKey;
     const lowerName = name.toLowerCase();
     if (lowerName.includes('phone') || lowerName.includes('mobile') || lowerName.includes('iphone') || lowerName.includes('android')) {
