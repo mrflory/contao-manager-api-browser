@@ -38,6 +38,8 @@
     "src/services/**/*.ts",
     "src/middleware/**/*.ts",
     "src/types/**/*.ts",
+    "src/lib/**/*.ts",
+    "src/scripts/**/*.ts",
     "src/server.ts"
   ],
   "exclude": [

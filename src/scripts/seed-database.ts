@@ -263,13 +263,13 @@ class DatabaseSeeder {
       const sessionCount = Math.floor(Math.random() * 3) + 1;
 
       for (let i = 0; i < sessionCount; i++) {
-        const sessionToken = `session_${user.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const token = `session_${user.id}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
 
         await this.prisma.session.create({
           data: {
             userId: user.id,
-            sessionToken: sessionToken,
+            token: token,
             expiresAt: expiresAt,
             ipAddress: `192.168.1.${Math.floor(Math.random() * 254) + 1}`,
             userAgent: 'Mozilla/5.0 (compatible; Contao Manager Browser/1.0)'

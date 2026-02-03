@@ -9,7 +9,9 @@ import {
     Field,
     Checkbox,
     Link as ChakraLink,
+    Separator,
 } from '@chakra-ui/react';
+import { FiKey } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 
@@ -25,9 +27,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, redirectTo = '/
     const [isLoading, setIsLoading] = useState(false);
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-    const { login, error, clearError } = useAuth();
+    const { login, signInWithPasskey, error, clearError } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
 
     // Check if coming from successful registration
     const searchParams = new URLSearchParams(location.search);
@@ -198,6 +201,51 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, redirectTo = '/
                             loadingText="Signing in..."
                         >
                             Sign In
+                        </Button>
+
+                        <Box position="relative" py={2}>
+                            <Separator />
+                            <Text
+                                position="absolute"
+                                top="50%"
+                                left="50%"
+                                transform="translate(-50%, -50%)"
+                                bg="bg"
+                                px={2}
+                                fontSize="sm"
+                                color="fg.muted"
+                            >
+                                or
+                            </Text>
+                        </Box>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="lg"
+                            width="full"
+                            loading={isPasskeyLoading}
+                            loadingText="Authenticating..."
+                            disabled={isLoading}
+                            onClick={async () => {
+                                setIsPasskeyLoading(true);
+                                clearError();
+                                try {
+                                    await signInWithPasskey();
+                                    if (onSuccess) {
+                                        onSuccess();
+                                    } else {
+                                        navigate(redirectTo);
+                                    }
+                                } catch (err) {
+                                    console.error('Passkey sign-in failed:', err);
+                                } finally {
+                                    setIsPasskeyLoading(false);
+                                }
+                            }}
+                        >
+                            <FiKey style={{ marginRight: '8px' }} />
+                            Sign in with Passkey
                         </Button>
                     </Stack>
                 </form>

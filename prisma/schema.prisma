@@ -8,31 +8,39 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
   // Neon.tech connection pooling optimizations for Railway
   relationMode = "prisma"
 }
 
 // Core user model for multi-tenant architecture
 // Foundation for Phase 2 authentication system
+
 model User {
-  id                     String   @id @default(cuid())
-  email                  String   @unique
+  id                     String    @id @default(cuid())
+  email                  String    @unique
   passwordHash           String
   emailVerified          DateTime?
-  isActive               Boolean  @default(true)
-  passwordResetToken     String?  @db.VarChar(255)
+  isActive               Boolean   @default(true)
+  passwordResetToken     String?   @db.VarChar(255)
   passwordResetExpires   DateTime?
-  emailVerificationToken String?  @db.VarChar(255)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  emailVerificationToken String?   @db.VarChar(255)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   // Relationships
   sites         Site[]
   subscriptions Subscription[]
   sessions      Session[]
   usageLogs     UsageLog[]
+
+  name             String?
+  image            String?
+  twoFactorEnabled Boolean     @default(false)
+  accounts         Account[]
+  passkeys         Passkey[]
+  twofactors       TwoFactor[]
 
   @@index([passwordResetToken])
   @@index([emailVerificationToken])
@@ -41,6 +49,7 @@ model User {
 
 // Site configurations with user ownership
 // Maps to existing SiteConfig type structure
+
 model Site {
   id             String   @id @default(cuid())
   userId         String
@@ -54,14 +63,14 @@ model Site {
   lastUsed       DateTime @updatedAt
 
   // JSON field for flexible version info storage
-  versionInfo    Json?
+  versionInfo Json?
 
   // JSON field for Contao Manager user info (username, etc.)
-  userInfo       Json?
+  userInfo Json?
 
   // Relationships
-  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  usageLogs      UsageLog[]
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usageLogs UsageLog[]
 
   // Constraints and indexes
   @@unique([userId, url])
@@ -73,20 +82,21 @@ model Site {
 
 // Subscription management for SaaS transformation (Phase 3)
 // Currently supports free tier, extensible for paid plans
+
 model Subscription {
-  id                   String   @id @default(cuid())
+  id                   String    @id @default(cuid())
   userId               String
-  planType             String   @default("free")
-  status               String   @default("active")
-  startedAt            DateTime @default(now())
+  planType             String    @default("free")
+  status               String    @default("active")
+  startedAt            DateTime  @default(now())
   expiresAt            DateTime?
   stripeSubscriptionId String?
 
   // Additional subscription metadata
-  features             Json?    @default("{}")
+  features Json? @default("{}")
 
   // Relationships
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Constraints and indexes
   @@index([userId])
@@ -97,27 +107,29 @@ model Subscription {
 
 // Session management for Phase 2 authentication
 // Supports JWT token validation and refresh
+
 model Session {
-  id           String   @id @default(cuid())
-  userId       String
-  sessionToken String   @unique
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  ipAddress    String?
-  userAgent    String?
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
 
   // Relationships
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Constraints and indexes
   @@index([userId])
   @@index([expiresAt])
-  @@index([sessionToken])
+  @@index([token])
   @@map("sessions")
 }
 
 // Usage analytics and audit logging
 // Foundation for freemium model analytics
+
 model UsageLog {
   id          String   @id @default(cuid())
   userId      String
@@ -128,13 +140,13 @@ model UsageLog {
   timestamp   DateTime @default(now())
 
   // Additional metadata for analytics
-  requestData Json?
+  requestData  Json?
   responseData Json?
-  duration    Int?     // Request duration in milliseconds
+  duration     Int? // Request duration in milliseconds
 
   // Relationships
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  site        Site?    @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site Site? @relation(fields: [siteId], references: [id], onDelete: SetNull)
 
   // Constraints and indexes
   @@index([userId])
@@ -142,4 +154,67 @@ model UsageLog {
   @@index([actionType])
   @@index([siteId])
   @@map("usage_logs")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Passkey {
+  id           String    @id
+  name         String?
+  publicKey    String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime?
+  aaguid       String?
+
+  @@index([userId])
+  @@index([credentialID])
+  @@map("passkey")
+}
+
+model TwoFactor {
+  id          String @id
+  secret      String
+  backupCodes String
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([secret])
+  @@index([userId])
+  @@map("twoFactor")
 }

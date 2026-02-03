@@ -21,6 +21,7 @@ import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import TwoFactorVerify from './pages/TwoFactorVerify';
 import ErrorPage from './pages/ErrorPage';
 
 const App: React.FC = () => {
@@ -80,6 +81,9 @@ const App: React.FC = () => {
                   </PublicRoute>
                 }
               />
+
+              {/* 2FA verification - accessible during login flow */}
+              <Route path="/2fa-verify" element={<TwoFactorVerify />} />
 
               {/* Protected routes - require authentication */}
               <Route

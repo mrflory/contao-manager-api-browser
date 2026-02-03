@@ -1,16 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { UserAuthService, AuthenticatedUser } from '../services/userAuthService';
+import { UserAuthService } from '../services/userAuthService';
 import { PrismaClient } from '@prisma/client';
-
-// Extend Express Request type to include user
-declare global {
-    namespace Express {
-        interface Request {
-            user?: AuthenticatedUser;
-            userId?: string;
-        }
-    }
-}
+// Import shared Express type declarations (side-effect import for global augmentation)
+import '../types/express';
 
 export interface AuthMiddlewareOptions {
     required?: boolean; // If false, middleware continues even if no token is provided

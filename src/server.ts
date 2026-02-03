@@ -4,6 +4,7 @@ import cors from 'cors';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import axios from 'axios';
+import { toNodeHandler } from 'better-auth/node';
 
 // Services
 import { ConfigService } from './services/configService';
@@ -19,7 +20,7 @@ import { UnifiedStorage, StorageType } from './storage/interfaces';
 
 // Middleware
 import { ErrorHandler, ResponseLogger } from './middleware';
-import { UserAuthMiddleware } from './middleware/userAuthMiddleware';
+import { betterAuthMiddleware } from './middleware/betterAuthMiddleware';
 import { SubscriptionMiddleware } from './middleware/subscriptionMiddleware';
 import { requireDatabaseHealth } from './middleware/databaseHealthMiddleware';
 import {
@@ -32,6 +33,9 @@ import {
 
 // Routes
 import { createAuthRoutes } from './routes/authRoutes';
+
+// Better Auth
+import { auth } from './lib/auth';
 
 // Database
 import { PrismaClient } from './generated/prisma';
@@ -79,7 +83,6 @@ const authService = new AuthService(configService, loggingService);
 const proxyService = new ProxyService(configService, loggingService, authService);
 
 // Initialize middleware
-const userAuthMiddleware = new UserAuthMiddleware(prisma);
 const subscriptionMiddleware = new SubscriptionMiddleware(prisma);
 const responseLogger = new ResponseLogger(loggingService);
 
@@ -87,6 +90,12 @@ const responseLogger = new ResponseLogger(loggingService);
 app.use(securityHeaders);
 app.use(generalRateLimit);
 app.use(cors(corsOptions));
+
+// Better Auth handler - MUST be mounted BEFORE express.json()
+// Better Auth handles its own body parsing for auth routes
+// Note: Using regex pattern for Express 5 / path-to-regexp v8 compatibility
+app.all(/^\/api\/auth\/.*/, toNodeHandler(auth));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.text({ limit: '10mb', type: 'text/plain' }));
 app.use(express.urlencoded({ extended: true }));
@@ -168,14 +177,15 @@ app.get('/api/database/status', (_req: Request, res: Response) => {
     });
 });
 
-// Phase 2: User Authentication Routes
-app.use('/api/auth', requireDatabaseHealth, createAuthRoutes(prisma));
+// Phase 2: Legacy User Authentication Routes (deprecated, use Better Auth at /api/auth)
+// Keeping at /api/auth-legacy during transition for backward compatibility
+app.use('/api/auth-legacy', requireDatabaseHealth, createAuthRoutes(prisma));
 
 // Configuration endpoints
 // Phase 3: Updated to use JWT authentication and user context
 app.get('/api/config',
     requireDatabaseHealth,
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     async (req: Request, res: Response) => {
         try {
             const userId = req.userId!; // TypeScript knows this exists due to middleware
@@ -254,7 +264,7 @@ app.get('/api/storage/database/status', (_req: Request, res: Response) => {
 });
 
 app.post('/api/set-active-site',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         const { url } = req.body;
         const userId = req.userId!;
@@ -279,7 +289,7 @@ app.post('/api/set-active-site',
 );
 
 app.delete('/api/sites/:url',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         const url = decodeURIComponent(req.params.url);
         const userId = req.userId!;
@@ -308,7 +318,7 @@ app.delete('/api/sites/:url',
 );
 
 app.post('/api/update-site-name',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         const { url, name } = req.body;
         const userId = req.userId!;
@@ -328,7 +338,7 @@ app.post('/api/update-site-name',
 
 // Authentication endpoints
 app.get('/api/token-info',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         const userId = req.userId!;
         const tokenInfo = await authService.getTokenInfo(req.headers.cookie, userId);
@@ -340,7 +350,7 @@ app.get('/api/token-info',
 );
 
 app.post('/api/save-token',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     subscriptionMiddleware.checkSiteLimit,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         const userId = req.userId!;
@@ -379,7 +389,7 @@ app.post('/api/cookie-logout', ErrorHandler.asyncWrapper(async (req: ApiRequest,
 }));
 
 app.post('/api/save-site-cookie',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         console.log('[SAVE-SITE-COOKIE] Request body:', req.body);
         const userId = req.userId!;
@@ -396,7 +406,7 @@ app.post('/api/save-site-cookie',
 
 // Status and version endpoints
 app.post('/api/update-status',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         const userId = req.userId!;
         const { siteUrl } = req.body;
@@ -424,7 +434,7 @@ app.post('/api/update-status',
 );
 
 app.post('/api/update-version-info',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         const userId = req.userId!;
         const { siteUrl } = req.body;
@@ -534,16 +544,16 @@ const createSiteProxyHandler = (contaoPath: string, method: 'GET' | 'POST' | 'PU
 };
 
 // Maintenance mode endpoints
-app.get('/api/site/:siteUrl/maintenance-mode', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/maintenance-mode', 'GET'));
-app.put('/api/site/:siteUrl/maintenance-mode', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/maintenance-mode', 'PUT'));
-app.delete('/api/site/:siteUrl/maintenance-mode', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/maintenance-mode', 'DELETE'));
+app.get('/api/site/:siteUrl/maintenance-mode', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/maintenance-mode', 'GET'));
+app.put('/api/site/:siteUrl/maintenance-mode', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/maintenance-mode', 'PUT'));
+app.delete('/api/site/:siteUrl/maintenance-mode', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/maintenance-mode', 'DELETE'));
 
 // Packages endpoints
-app.get('/api/site/:siteUrl/packages/root', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/packages/root'));
-app.get('/api/site/:siteUrl/packages/cloud', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/packages/cloud'));
+app.get('/api/site/:siteUrl/packages/root', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/packages/root'));
+app.get('/api/site/:siteUrl/packages/cloud', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/packages/cloud'));
 
 // Packages local with dynamic paths (regex to handle /packages/local/ and /packages/local/:packageName)
-app.get(/^\/api\/site\/([^\/]+)\/packages\/local(\/.*)?$/, userAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+app.get(/^\/api\/site\/([^\/]+)\/packages\/local(\/.*)?$/, betterAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const userId = req.userId!;
         const siteUrl = decodeURIComponent(req.params[0]);
@@ -567,24 +577,24 @@ app.get(/^\/api\/site\/([^\/]+)\/packages\/local(\/.*)?$/, userAuthMiddleware.re
 }));
 
 // Server configuration endpoints
-app.get('/api/site/:siteUrl/server/config', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/config'));
-app.get('/api/site/:siteUrl/server/php-web', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/php-web'));
-app.get('/api/site/:siteUrl/server/contao', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/contao'));
-app.get('/api/site/:siteUrl/server/phpinfo', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/phpinfo'));
-app.get('/api/site/:siteUrl/server/composer', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/composer'));
-app.get('/api/site/:siteUrl/server/database', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/database'));
-app.get('/api/site/:siteUrl/server/self-update', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/self-update'));
+app.get('/api/site/:siteUrl/server/config', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/config'));
+app.get('/api/site/:siteUrl/server/php-web', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/php-web'));
+app.get('/api/site/:siteUrl/server/contao', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/contao'));
+app.get('/api/site/:siteUrl/server/phpinfo', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/phpinfo'));
+app.get('/api/site/:siteUrl/server/composer', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/composer'));
+app.get('/api/site/:siteUrl/server/database', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/database'));
+app.get('/api/site/:siteUrl/server/self-update', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/server/self-update'));
 
 // Session endpoints
-app.get('/api/site/:siteUrl/session', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/session', 'GET'));
-app.post('/api/site/:siteUrl/session', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/session', 'POST'));
-app.delete('/api/site/:siteUrl/session', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/session', 'DELETE'));
+app.get('/api/site/:siteUrl/session', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/session', 'GET'));
+app.post('/api/site/:siteUrl/session', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/session', 'POST'));
+app.delete('/api/site/:siteUrl/session', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/session', 'DELETE'));
 
 // Users endpoints
-app.get('/api/site/:siteUrl/users', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/users'));
+app.get('/api/site/:siteUrl/users', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/users'));
 
 // Users with username parameter
-app.get('/api/site/:siteUrl/users/:username/tokens', userAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+app.get('/api/site/:siteUrl/users/:username/tokens', betterAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const userId = req.userId!;
         const siteUrl = decodeURIComponent(req.params.siteUrl);
@@ -607,7 +617,7 @@ app.get('/api/site/:siteUrl/users/:username/tokens', userAuthMiddleware.requireA
     }
 }));
 
-app.post('/api/site/:siteUrl/users/:username/tokens', userAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+app.post('/api/site/:siteUrl/users/:username/tokens', betterAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const userId = req.userId!;
         const siteUrl = decodeURIComponent(req.params.siteUrl);
@@ -630,7 +640,7 @@ app.post('/api/site/:siteUrl/users/:username/tokens', userAuthMiddleware.require
     }
 }));
 
-app.delete('/api/site/:siteUrl/users/:username/tokens/:tokenId', userAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+app.delete('/api/site/:siteUrl/users/:username/tokens/:tokenId', betterAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const userId = req.userId!;
         const siteUrl = decodeURIComponent(req.params.siteUrl);
@@ -655,20 +665,20 @@ app.delete('/api/site/:siteUrl/users/:username/tokens/:tokenId', userAuthMiddlew
 }));
 
 // Contao endpoints
-app.get('/api/site/:siteUrl/contao/database-migration', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/database-migration', 'GET'));
-app.put('/api/site/:siteUrl/contao/database-migration', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/database-migration', 'PUT'));
-app.delete('/api/site/:siteUrl/contao/database-migration', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/database-migration', 'DELETE'));
-app.get('/api/site/:siteUrl/contao/backup', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/backup'));
+app.get('/api/site/:siteUrl/contao/database-migration', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/database-migration', 'GET'));
+app.put('/api/site/:siteUrl/contao/database-migration', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/database-migration', 'PUT'));
+app.delete('/api/site/:siteUrl/contao/database-migration', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/database-migration', 'DELETE'));
+app.get('/api/site/:siteUrl/contao/backup', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/contao/backup'));
 
 // Task endpoints - Use taskPollingRateLimit for workflow polling operations
 // GET is used for frequent polling during workflow execution
-app.get('/api/site/:siteUrl/task', taskPollingRateLimit, userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'GET'));
-app.put('/api/site/:siteUrl/task', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'PUT'));
-app.delete('/api/site/:siteUrl/task', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'DELETE'));
-app.patch('/api/site/:siteUrl/task', userAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'PATCH'));
+app.get('/api/site/:siteUrl/task', taskPollingRateLimit, betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'GET'));
+app.put('/api/site/:siteUrl/task', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'PUT'));
+app.delete('/api/site/:siteUrl/task', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'DELETE'));
+app.patch('/api/site/:siteUrl/task', betterAuthMiddleware.requireAuth, createSiteProxyHandler('/api/task', 'PATCH'));
 
 // Files endpoints
-app.get('/api/site/:siteUrl/files/:file', userAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+app.get('/api/site/:siteUrl/files/:file', betterAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const userId = req.userId!;
         const siteUrl = decodeURIComponent(req.params.siteUrl);
@@ -691,7 +701,7 @@ app.get('/api/site/:siteUrl/files/:file', userAuthMiddleware.requireAuth, ErrorH
     }
 }));
 
-app.put('/api/site/:siteUrl/files/:file', userAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
+app.put('/api/site/:siteUrl/files/:file', betterAuthMiddleware.requireAuth, ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const userId = req.userId!;
         const siteUrl = decodeURIComponent(req.params.siteUrl);
@@ -773,7 +783,7 @@ proxyEndpoints.forEach(endpoint => {
 
     methods.forEach(method => {
         app[method](endpoint,
-            userAuthMiddleware.requireAuth,
+            betterAuthMiddleware.requireAuth,
             ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
                 const userId = req.userId!;
 
@@ -803,7 +813,7 @@ proxyEndpoints.forEach(endpoint => {
 // Special handler for /api/packages/local with dynamic paths
 // This must come after the static proxyEndpoints to handle both /api/packages/local/ and /api/packages/local/:name
 app.get(/^\/api\/packages\/local(\/.*)?$/,
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         const userId = req.userId!;
 
@@ -830,7 +840,7 @@ app.get(/^\/api\/packages\/local(\/.*)?$/,
 
 // Local logs endpoints (our own logging system)
 app.get('/api/logs/:siteUrl',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
             const userId = req.userId!;
@@ -845,7 +855,7 @@ app.get('/api/logs/:siteUrl',
 );
 
 app.delete('/api/logs/:siteUrl/cleanup',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
             const userId = req.userId!;
@@ -864,7 +874,7 @@ app.delete('/api/logs/:siteUrl/cleanup',
 
 // History API endpoints
 app.post('/api/history/create',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
             const userId = req.userId!;
@@ -883,7 +893,7 @@ app.post('/api/history/create',
 );
 
 app.put('/api/history/:id',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         console.log('[HISTORY UPDATE] Request received:', {
             id: req.params.id,
@@ -914,7 +924,7 @@ app.put('/api/history/:id',
 );
 
 app.get('/api/history/:siteUrl',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
             const userId = req.userId!;
@@ -931,7 +941,7 @@ app.get('/api/history/:siteUrl',
 );
 
 app.delete('/api/history/:siteUrl/:id',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
             const userId = req.userId!;
@@ -954,7 +964,7 @@ app.delete('/api/history/:siteUrl/:id',
 
 // Snapshot API endpoints
 app.post('/api/snapshots/create',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const userId = req.userId!;
@@ -1087,7 +1097,7 @@ app.post('/api/snapshots/create',
 }));
 
 app.get('/api/snapshots/list/:siteUrl',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const userId = req.userId!;
@@ -1104,7 +1114,7 @@ app.get('/api/snapshots/list/:siteUrl',
 );
 
 app.get('/api/snapshots/:snapshotId/:filename',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const userId = req.userId!;
@@ -1134,7 +1144,7 @@ app.get('/api/snapshots/:snapshotId/:filename',
 );
 
 app.get('/api/snapshots/:snapshotId/:filename/content',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const userId = req.userId!;
@@ -1179,7 +1189,7 @@ app.get('/api/snapshots/:snapshotId/:filename/content',
 );
 
 app.delete('/api/snapshots/:snapshotId',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
         const userId = req.userId!;
@@ -1200,7 +1210,7 @@ app.delete('/api/snapshots/:snapshotId',
 );
 
 app.post('/api/snapshots/cleanup/:siteUrl',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
     try {
             const userId = req.userId!;
@@ -1231,7 +1241,7 @@ app.get('/', (_req, res) => {
 
 // Phase 3.2: Subscription Management API Endpoints
 app.get('/api/subscription/status',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
             const userId = req.userId!;
@@ -1259,7 +1269,7 @@ app.get('/api/subscription/status',
 );
 
 app.get('/api/subscription/features',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
             const userId = req.userId!;
@@ -1281,7 +1291,7 @@ app.get('/api/subscription/features',
 );
 
 app.get('/api/subscription/limits',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
             const userId = req.userId!;
@@ -1304,7 +1314,7 @@ app.get('/api/subscription/limits',
 );
 
 app.post('/api/subscription/validate-action',
-    userAuthMiddleware.requireAuth,
+    betterAuthMiddleware.requireAuth,
     ErrorHandler.asyncWrapper(async (req: Request, res: Response) => {
         try {
             const userId = req.userId!;
