@@ -43,6 +43,10 @@ export const auth = betterAuth({
   baseURL: appUrl,
   basePath: "/api/auth",
 
+  // Secret for signing session tokens (sessions persist across restarts)
+  // Generate with: openssl rand -base64 32
+  secret: process.env.BETTER_AUTH_SECRET,
+
   // Email and password authentication
   emailAndPassword: {
     enabled: true,
