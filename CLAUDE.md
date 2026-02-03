@@ -90,7 +90,24 @@ The application supports multiple storage backends through a unified abstraction
 - Usage analytics foundation with detailed logging for SaaS metrics
 - Hybrid architecture: database for configs, files for logs/history/snapshots
 
-### Authentication Flow (OAuth Token-based)
+### User Authentication (Better Auth)
+
+The application uses Better Auth for user authentication with modern security features:
+
+- **Email/Password Authentication** - bcrypt password hashing (12 rounds)
+- **Passkey/WebAuthn Support** - Passwordless authentication with hardware keys
+- **Two-Factor Authentication** - TOTP-based 2FA with backup codes
+- **Session Management** - Secure HTTP-only cookies with configurable expiry
+- **Password Reset** - Email-based password recovery flow
+
+Key files:
+- `src/lib/auth.ts` - Better Auth server configuration
+- `src/lib/auth-client.ts` - Better Auth React client
+- `src/middleware/betterAuthMiddleware.ts` - Express session validation
+- `src/contexts/AuthContext.tsx` - React authentication context
+
+### Site Authentication (OAuth Token-based)
+For connecting to Contao Manager instances:
 1. User enters Contao Manager URL and selects required permissions (scope)
 2. Application redirects to Contao Manager OAuth endpoint with parameters:
    - `response_type=token`
@@ -110,7 +127,8 @@ The application supports multiple storage backends through a unified abstraction
 - **Storage Abstraction Layer** - Pluggable storage backends (JSON file, PostgreSQL database)
 - **JSON File Storage** - No database dependency, uses `data/config.json` for configuration (default)
 - **PostgreSQL Database** - Production-ready multi-tenant backend with Prisma ORM and Neon.tech hosting
-- **OAuth Token Authentication** - Supports TOTP/2FA through Contao Manager integration
+- **Better Auth** - Modern authentication with passkeys, 2FA, and session management
+- **OAuth Token Authentication** - Supports TOTP/2FA through Contao Manager integration (for sites)
 - **Request/Response Logging** - Comprehensive audit trails with structured logging
 - **History Tracking** - Workflow execution history with detailed step information
 - **Modern React Architecture** - React v19 with Chakra UI v3 component system
