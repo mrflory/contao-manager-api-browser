@@ -12,7 +12,7 @@ FROM deps AS build
 COPY . .
 RUN npx prisma generate && npm run build:all
 
-FROM node:20-bookworm-slim AS runtime
+FROM base AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
@@ -23,6 +23,8 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/dist-server ./dist-server
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/src/generated ./src/generated
+COPY --from=build /app/scripts/start-production.sh ./scripts/start-production.sh
+RUN chmod +x ./scripts/start-production.sh
 
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
+CMD ["./scripts/start-production.sh"]
