@@ -48,23 +48,27 @@ A modern web-based interface for managing multiple Contao Manager instances thro
 
 ## Production Deployment
 
-### Railway Deployment (Recommended) 🚀
+### Hostim Deployment (Pilot Recommendation) 🚀
 
-Deploy to Railway in 5 minutes:
+Deploy to Hostim with managed PostgreSQL and a one-time Neon migration:
 
-1. **Fork this repository** to your GitHub account
+1. **Create Hostim app + PostgreSQL** in an EU region
 
-2. **Deploy to Railway**:
-   - Visit [railway.app](https://railway.app)
-   - Click "Deploy from GitHub repo"
-   - Select your forked repository
-   - Add PostgreSQL database service
+2. **Configure environment variables** from `.env.example`
 
-3. **Configure environment variables** (see [.railway/QUICK_START.md](.railway/QUICK_START.md))
+3. **Deploy with Dockerfile** (includes Prisma migration on startup)
 
-4. **Deploy automatically** on every git push!
+4. **Run smoke tests** and switch DNS
 
-📚 **Full Railway deployment guide**: [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md)
+📚 Full guides:
+- [HOSTIM_DEPLOYMENT.md](HOSTIM_DEPLOYMENT.md)
+- [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md)
+
+### Scalingo Fallback (Scale-Up Option)
+
+When the pilot needs stronger operational controls, use Scalingo as the EU fallback:
+
+- [SCALINGO_DEPLOYMENT.md](SCALINGO_DEPLOYMENT.md)
 
 ### Self-Hosted Production
 
@@ -79,6 +83,12 @@ Deploy to Railway in 5 minutes:
    ```
 
 The application will serve the built React frontend and API backend on http://localhost:3000
+
+### Railway (Legacy Option)
+
+Railway-specific setup is still documented for existing deployments:
+
+- [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md)
 
 ## Using the Application
 
