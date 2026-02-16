@@ -4,6 +4,23 @@ import rateLimit from 'express-rate-limit';
 import { body, validationResult, ValidationChain } from 'express-validator';
 import crypto from 'crypto';
 
+function normalizeOrigin(value: string | undefined): string | null {
+    if (!value) {
+        return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    try {
+        return new URL(trimmed).origin;
+    } catch {
+        return null;
+    }
+}
+
 // Extend Express Request type to include CSRF token
 declare global {
     namespace Express {
@@ -55,7 +72,17 @@ export const corsOptions = {
         }
 
         // Production - check against allowed origins
-        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [];
+        const configuredOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+        const allowedOrigins = Array.from(new Set(
+            [
+                ...configuredOrigins,
+                process.env.APP_URL || '',
+                process.env.FRONTEND_URL || ''
+            ]
+                .map(normalizeOrigin)
+                .filter((v): v is string => v !== null)
+        ));
+        const normalizedOrigin = normalizeOrigin(origin);
 
         // If no allowed origins configured, allow same-origin requests
         if (allowedOrigins.length === 0 || (allowedOrigins.length === 1 && allowedOrigins[0] === '')) {
@@ -64,7 +91,7 @@ export const corsOptions = {
         }
 
         // Check if origin is in allowed list
-        if (allowedOrigins.includes(origin)) {
+        if (normalizedOrigin && allowedOrigins.includes(normalizedOrigin)) {
             return callback(null, true);
         }
 
